@@ -450,6 +450,7 @@ export default function AlunoPage() {
             email: registerForm.email.trim().toLowerCase(),
             password: registerForm.password,
             phone: registerForm.phone.trim(),
+            nome_completo: registerForm.username.trim(),
           }),
         });
         const data = await res.json();
@@ -709,11 +710,11 @@ export default function AlunoPage() {
             )}
 
             <div className="pa-alert pa-alert-info">
-              📋 Este é o mesmo cadastro da ficha de inscrição. Depois de criar sua conta, complete o que faltar (núcleo, endereço, documentos) na aba <strong>Meus Dados</strong>.
+              📋 Sua conta já cria o cadastro na associação. Depois, complete o que faltar (núcleo, endereço, documentos) na aba <strong>Meus Dados</strong>.
             </div>
 
             <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {/* Nome completo (used as username for name-based lookup) */}
+              {/* Nome completo */}
               <div className="pa-field">
                 <label htmlFor="reg-nome">Nome completo *</label>
                 <input
@@ -724,18 +725,30 @@ export default function AlunoPage() {
                   placeholder="Ex: João da Silva Santos"
                   required autoFocus
                 />
-                <p className="pa-hint">Exatamente como consta no seu cadastro na associação</p>
+                <p className="pa-hint">Seu nome completo — ele será seu cadastro na associação</p>
               </div>
 
-              {/* CPF (optional — faster lookup) */}
+              {/* CPF (opcional) */}
               <div className="pa-field">
-                <label htmlFor="reg-cpf">CPF <span style={{ opacity: 0.6, textTransform: 'none', fontWeight: 400 }}>(opcional — localiza seu cadastro na hora)</span></label>
+                <label htmlFor="reg-cpf">CPF <span style={{ opacity: 0.6, textTransform: 'none', fontWeight: 400 }}>(opcional)</span></label>
                 <input
                   id="reg-cpf"
                   type="text" inputMode="numeric"
                   value={registerForm.cpf_or_doc}
                   onChange={e => setRegisterForm(p => ({ ...p, cpf_or_doc: e.target.value }))}
                   placeholder="000.000.000-00"
+                />
+              </div>
+
+              {/* Telefone (opcional) */}
+              <div className="pa-field">
+                <label htmlFor="reg-phone">Telefone/WhatsApp <span style={{ opacity: 0.6, textTransform: 'none', fontWeight: 400 }}>(opcional)</span></label>
+                <input
+                  id="reg-phone"
+                  type="tel"
+                  value={registerForm.phone}
+                  onChange={e => setRegisterForm(p => ({ ...p, phone: e.target.value }))}
+                  placeholder="(21) 99999-9999"
                 />
               </div>
 

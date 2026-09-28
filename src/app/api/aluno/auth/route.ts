@@ -365,22 +365,52 @@ export async function POST(req: NextRequest) {
         .from('students')
         .select('id, nome_completo, telefone, email, cpf');
 
-      const found = (allStudents || []).find(s =>
+      const existing = (allStudents || []).find(s =>
         normalizeName(s.nome_completo || '') === normInput
       );
-      if (!found) {
-        return NextResponse.json({
-          error: 'Nome não encontrado no banco da associação. Verifique se seu nome está exatamente como foi cadastrado.',
-          candidates: (allStudents || [])
-            .filter(s => normalizeName(s.nome_completo || '').includes(normInput.split(' ')[0]))
-            .slice(0, 5)
-            .map(s => s.nome_completo),
-        }, { status: 404 });
+
+      // Self-service: aluno novo tem o cadastro criado na hora da criação da conta
+      type StudentRef = { id: string; nome_completo: string; telefone: string | null; email: string | null; cpf: string | null };
+      let target: StudentRef | null = existing ?? null;
+      if (!target) {
+        const nomeTrim = nome_completo.trim().replace(/\s+/g, ' ');
+        if (nomeTrim.split(' ').filter(Boolean).length < 2) {
+          return NextResponse.json({ error: 'Informe seu nome completo (nome e sobrenome).' }, { status: 400 });
+        }
+        const cpfIn = typeof body.cpf_or_doc === 'string' && body.cpf_or_doc.trim() ? body.cpf_or_doc.trim() : null;
+        const phoneIn = typeof body.phone === 'string' && body.phone.trim() ? body.phone.trim() : null;
+        const base: Record<string, unknown> = { nome_completo: nomeTrim, email: emailNorm };
+        if (cpfIn) base.cpf = cpfIn;
+        if (phoneIn) base.telefone = phoneIn;
+        // Placeholders para colunas legadas com NOT NULL (mesma estratégia de /api/inscricao)
+        const placeholders: Record<string, unknown> = {
+          cpf: cpfIn || '', identidade: '', data_nascimento: '1900-01-01',
+          telefone: phoneIn || '', cep: '', endereco: '', numero: '', complemento: '',
+          bairro: '', cidade: '', estado: '', graduacao: 'Cru', tipo_graduacao: 'corda',
+          nucleo: '', nome_pai: '', nome_mae: '', nome_responsavel: '', cpf_responsavel: '',
+          apelido: '', nome_social: '', sexo: '',
+        };
+        let payload: Record<string, unknown> = { ...base };
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const { data, error } = await supabaseAdmin
+            .from('students').insert(payload)
+            .select('id, nome_completo, telefone, email, cpf')
+            .single();
+          if (!error && data) { target = data as StudentRef; break; }
+          if (error && /null value|not-null|NOT NULL/i.test(error.message || '')) {
+            payload = { ...placeholders, ...base }; // retry preenchendo NOT NULLs legados
+            continue;
+          }
+          return NextResponse.json({ error: error?.message || 'Erro ao criar seu cadastro.' }, { status: 500 });
+        }
+        if (!target) {
+          return NextResponse.json({ error: 'Erro ao criar seu cadastro. Tente novamente.' }, { status: 500 });
+        }
       }
 
       const authMap = await loadAuthMap();
-      if (authMap[found.id]) {
-        const existingByName = authMap[found.id];
+      if (authMap[target.id]) {
+        const existingByName = authMap[target.id];
         // Allow re-registration only if account is inactive (pending OTP) — phone may have been corrected
         if (existingByName.active) {
           return NextResponse.json({ error: 'Este aluno já possui uma conta. Use recuperar senha.' }, { status: 409 });
@@ -395,7 +425,7 @@ export async function POST(req: NextRequest) {
       const salt = generateSalt();
       const password_hash = hashPassword(password, salt);
       const account: AlunoAccount = {
-        student_id: found.id,
+        student_id: target.id,
         username: emailNorm,
         email: emailNorm,
         password_hash,
@@ -403,22 +433,22 @@ export async function POST(req: NextRequest) {
         active: true, // auto-activate — no WhatsApp required
         created_at: new Date().toISOString(),
       };
-      authMap[found.id] = account;
+      authMap[target.id] = account;
       await saveAuthMap(authMap);
 
       // Sync email to students table
-      try { await supabaseAdmin.from('students').update({ email: emailNorm }).eq('id', found.id); } catch { /* silent */ }
+      try { await supabaseAdmin.from('students').update({ email: emailNorm }).eq('id', target.id); } catch { /* silent */ }
 
       const { data: student } = await supabaseAdmin
         .from('students').select('id, nome_completo, nucleo, graduacao, tipo_graduacao, foto_url, apelido, nome_social')
-        .eq('id', found.id).maybeSingle();
+        .eq('id', target.id).maybeSingle();
 
       // Já nasce logado: cookie de sessão
       const store = await cookies();
-      const sess = createAlunoSession(found.id, emailNorm);
+      const sess = createAlunoSession(target.id, emailNorm);
       store.set(SESSION_COOKIE, serializeAlunoSession(sess), sessionCookieOptions());
 
-      return NextResponse.json({ success: true, logged_in: true, student_id: found.id, username: emailNorm, student, student_name: found.nome_completo.split(' ')[0] });
+      return NextResponse.json({ success: true, logged_in: true, student_id: target.id, username: emailNorm, student, student_name: (target.nome_completo || nome_completo).split(' ')[0] });
     }
 
     if (action === 'verify-otp') {
