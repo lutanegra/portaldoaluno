@@ -197,9 +197,12 @@ export default function NucleoLoginPage({ nucleoKey }: Props) {
       const data = await res.json();
 
       if (res.ok && data.ok) {
-        // API já valida que o CPF pertence ao nucleoKey (nucleo_target).
-        // data.nucleo é o núcleo confirmado — pode ser nucleoKey ou diferente só se o CPF
-        // não pertence a este núcleo de forma alguma (a API retorna erro 403 nesse caso).
+        // A conta precisa pertencer exatamente a este núcleo
+        if (data.nucleo !== nucleoKey) {
+          setErro('Esta conta não pertence a este núcleo. Use a página do seu núcleo ou o painel geral.');
+          setLoading(false);
+          return;
+        }
         setLockState(0, 0);
 
         // Primeiro acesso — forçar troca de senha
@@ -413,14 +416,7 @@ export default function NucleoLoginPage({ nucleoKey }: Props) {
             {/* Links secundários */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingTop: 4 }}>
               <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.22)' }}>
-                Primeiro acesso? Use a senha padrão: <strong style={{ color: 'rgba(255,255,255,0.45)' }}>{
-                  nucleoKey === 'edson-alves' ? 'edsonalves12345' :
-                  nucleoKey === 'ipiranga' ? 'ipiranga12345' :
-                  nucleoKey === 'saracuruna' ? 'saracuruna12345' :
-                  nucleoKey === 'vila-urussai' ? 'urussai12345' :
-                  nucleoKey === 'jayme-fichman' ? 'jaymefichman12345' :
-                  nucleoKey === 'academia-mais-saude' ? 'academiasaude12345' : '123456'
-                }</strong>
+                Primeiro acesso? A senha inicial foi definida pelo Owner/Admin Geral — sem acesso, fale com a organização
               </div>
               <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                 <button type="button" onClick={() => { setTela('alterar'); setAltMsg(''); }}

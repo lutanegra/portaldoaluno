@@ -128,25 +128,7 @@ function getNucleoColorDynamic(nucleoName: string | null | undefined, dynamicNuc
 // ─── Auth helpers ────────────────────────────────────────────────────────────
 // Nucleos agora sao carregados dinamicamente do banco de dados
 type NucleoKey = string; // Agora aceita qualquer slug de nucleo
-interface Profile { user: string; pass: string; nucleo: NucleoKey; label: string; color: string; email?: string; }
-
-const PROFILES_KEY = 'gestao_demo_admin_profiles';
-// Profiles padroes minimos - nucleos vem do banco de dados
-const DEFAULT_PROFILES: Profile[] = [
-  { nucleo: 'geral',  label: 'Admin Geral',           color: '#1d4ed8', user: 'admin', pass: 'admin123' },
-  { nucleo: 'geral',  label: 'Owner (Desenvolvedor)', color: '#7c3aed', user: 'owner', pass: 'owner2025' },
-];
-
-function getProfiles(): Profile[] {
-  try {
-    const raw = localStorage.getItem(PROFILES_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return DEFAULT_PROFILES;
-}
-function saveProfiles(profiles: Profile[]) {
-  localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
-}
+// Contas de acesso agora vivem no servidor (config/panel-credentials.json no Supabase).
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── GPS Map component (Leaflet, loaded dynamically) ──────────────────────────
@@ -684,7 +666,7 @@ export default function AdminPage() {
   // Change-credentials modal
   const [showChangeCreds, setShowChangeCreds] = useState(false);
   const [editingProfile, setEditingProfile] = useState<NucleoKey>('edson-alves');
-  const [newUser, setNewUser] = useState('');
+  const [newPassConfirmPass, setNewPassConfirmPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [newPassConfirm, setNewPassConfirm] = useState('');
   const [showNewPass, setShowNewPass] = useState(false);
@@ -700,8 +682,6 @@ export default function AdminPage() {
   const [adminForgotLoading, setAdminForgotLoading] = useState(false);
   const [adminForgotDone, setAdminForgotDone] = useState(false);
   const [adminResetUrl, setAdminResetUrl] = useState('');
-
-  const SUPER_ADMIN_CPF = '09856925703';
 
   // ── Funções Histórico de Graduações ───────────────────────────────────────
   async function loadHistGrad(studentId: string) {
@@ -846,19 +826,7 @@ export default function AdminPage() {
       return;
     }
 
-    // Try user/pass profiles first
-    const profiles = getProfiles();
-    const match = profiles.find(p => p.user === loginUser.trim() && p.pass === loginPass);
-    if (match) {
-      sessionStorage.setItem('admin_auth', match.nucleo);
-      setAuthed(true);
-      setActiveNucleo(match.nucleo);
-      setAdminLoginState(0, 0);
-      setLoginError('');
-      fetch('/api/admin/logs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'login', user: loginUser.trim(), nucleo: match.nucleo }) }).catch(() => {});
-      return;
-    }
-    // Try panel-auth API (username ou CPF + senha)
+    // Autentica via API (owner, admin geral ou admin de núcleo — login + senha)
     try {
       const loginKey = loginUser.trim();
       const res = await fetch('/api/admin/panel-auth', {
@@ -886,17 +854,6 @@ export default function AdminPage() {
         return;
       }
     } catch {}
-    // Legacy CPF-based via responsáveis (backward compat)
-    const cpfFromUser = loginUser.replace(/\D/g, '');
-    const cpfDigits = cpfFromUser.length >= 11 ? cpfFromUser : '';
-    if (cpfDigits.length >= 11 && cpfDigits === SUPER_ADMIN_CPF) {
-      sessionStorage.setItem('admin_auth', 'geral');
-      setAuthed(true);
-      setActiveNucleo('geral');
-      setAdminLoginState(0, 0);
-      setLoginError('');
-      return;
-    }
     // Increment failed login attempt
     const als2 = getAdminLoginState();
     const newCount = als2.count + 1;
@@ -911,41 +868,45 @@ export default function AdminPage() {
 
   const handleChangeCreds = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUser.trim()) { setChangeError('Informe o novo usuário.'); return; }
     if (newPass.length < 6) { setChangeError('Senha deve ter ao menos 6 caracteres.'); return; }
     if (newPass !== newPassConfirm) { setChangeError('As senhas não coincidem.'); return; }
     setChangeSending(true); setChangeEmailMsg('');
-    const profiles = getProfiles();
-    const targetProfile = profiles.find(p => p.nucleo === editingProfile);
-    const emailAddr = profileEmail.trim() || targetProfile?.email || '';
-    const updated = profiles.map(p => p.nucleo === editingProfile ? { ...p, user: newUser.trim(), pass: newPass, email: emailAddr || p.email } : p);
-    saveProfiles(updated);
-    // Send email notification if email is set
-    if (emailAddr) {
-      try {
-        const res = await fetch('/api/admin/send-creds-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: emailAddr,
-            label: targetProfile?.label || editingProfile,
-            username: newUser.trim(),
-            password: newPass,
-          }),
-        });
-        const d = await res.json();
-        setChangeEmailMsg(d.sent ? '✉️ Credenciais enviadas por e-mail!' : '⚠️ Salvo, mas e-mail não enviado (verifique configuração).');
-      } catch { setChangeEmailMsg('⚠️ Salvo, mas falha ao enviar e-mail.'); }
-    }
+    try {
+      const res = await fetch('/api/admin/panel-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'change-password', username: editingProfile, current_password: newPassConfirmPass || '', new_password: newPass }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        setChangeError(d.error || 'Não foi possível alterar a senha.');
+        setChangeSending(false);
+        return;
+      }
+      if (profileEmail.trim()) {
+        try {
+          await fetch('/api/admin/send-creds-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: profileEmail.trim(), label: editingProfile, username: editingProfile, password: newPass }),
+          });
+          setChangeEmailMsg('✉️ Nova senha enviada por e-mail!');
+        } catch { setChangeEmailMsg('⚠️ Senha alterada, mas e-mail não enviado.'); }
+      }
+    } catch { setChangeError('Erro de conexão.'); setChangeSending(false); return; }
     setChangeSending(false);
     setChangeDone(true);
     setTimeout(() => {
       setChangeDone(false); setShowChangeCreds(false);
-      setNewUser(''); setNewPass(''); setNewPassConfirm(''); setChangeError(''); setChangeEmailMsg(''); setProfileEmail('');
+      setNewPass(''); setNewPassConfirm(''); setNewPassConfirmPass(''); setChangeError(''); setChangeEmailMsg(''); setProfileEmail('');
     }, 2500);
   };
 
-  const currentProfile = getProfiles().find(p => p.nucleo === activeNucleo);
+  const currentProfile: { label: string; color: string } | undefined = activeNucleo === 'geral'
+    ? (isOwner ? { label: 'Owner', color: '#7c3aed' } : { label: 'Admin Geral', color: '#1d4ed8' })
+    : dynamicNucleos.find(n => n.slug === activeNucleo)
+      ? { label: dynamicNucleos.find(n => n.slug === activeNucleo)!.nome, color: '#0ea5e9' }
+      : undefined;
 
   // Safe date formatter — guards against null/undefined/epoch-zero that would show 31/12/1969
   const fmtDate = (val: string | null | undefined | number, opts?: Intl.DateTimeFormatOptions): string => {
@@ -1029,11 +990,19 @@ export default function AdminPage() {
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [auditSearch, setAuditSearch] = useState('');
   // ── Gerenciamento de Núcleos (tenants) ────────────────────────────────────
-  type NucleoTenant = { id: string; nome: string; slug: string; endereco?: string; cidade?: string; estado?: string; telefone?: string; email?: string; logo_url?: string; ativo: boolean; created_at: string };
+  type NucleoTenant = { id: string; nome: string; slug: string; endereco?: string; cidade?: string; estado?: string; telefone?: string; email?: string; logo_url?: string; ativo: boolean; created_at: string; dias_treino?: string[]; admin_login?: string; lat?: number; lng?: number };
   const [nucleosList, setNucleosList] = useState<NucleoTenant[]>([]);
   const [loadingNucleos, setLoadingNucleos] = useState(false);
   const [showCreateNucleoModal, setShowCreateNucleoModal] = useState(false);
-  const [nucleoForm, setNucleoForm] = useState({ nome: '', endereco: '', cidade: '', estado: '', telefone: '', email: '' });
+  const [nucleoForm, setNucleoForm] = useState<{ nome: string; endereco: string; cidade: string; estado: string; telefone: string; email: string; lat: string; lng: string; dias_treino: string[]; admin_login: string; admin_senha: string; admin_nome: string }>({ nome: '', endereco: '', cidade: '', estado: '', telefone: '', email: '', lat: '', lng: '', dias_treino: [], admin_login: '', admin_senha: '', admin_nome: '' });
+  const [nucleoEditForm, setNucleoEditForm] = useState<Record<string, any> | null>(null);
+  const [nucleoEditSaving, setNucleoEditSaving] = useState(false);
+  const [nucleoEditMsg, setNucleoEditMsg] = useState('');
+  const [nucleoEditAuth, setNucleoEditAuth] = useState<{ user: string; pass: string }>({ user: '', pass: '' });
+  const DIAS_TREINO_LABELS: Array<{ k: string; l: string }> = [
+    { k: 'segunda', l: 'Seg' }, { k: 'terca', l: 'Ter' }, { k: 'quarta', l: 'Qua' },
+    { k: 'quinta', l: 'Qui' }, { k: 'sexta', l: 'Sex' }, { k: 'sabado', l: 'Sáb' }, { k: 'domingo', l: 'Dom' },
+  ];
   const [nucleoFormMsg, setNucleoFormMsg] = useState('');
   const [nucleoFormSaving, setNucleoFormSaving] = useState(false);
   const [nucleoDeleteConfirm, setNucleoDeleteConfirm] = useState<NucleoTenant | null>(null);
@@ -1850,8 +1819,6 @@ export default function AdminPage() {
 
   // ── Change-creds modal (shared between login screen and panel) ──────────────
   const ChangeCrendsModal = () => {
-    const allProfiles = getProfiles();
-    const currentEditProfile = allProfiles.find(p => p.nucleo === editingProfile);
     const generateTempPass = () => {
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
       let pass = '';
@@ -1870,30 +1837,14 @@ export default function AdminPage() {
             </div>
           ) : (
             <form onSubmit={handleChangeCreds} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {/* Profile selector */}
-              <div>
-                <label style={{ display: 'block', color: '#374151', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6 }}>Perfil a alterar</label>
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  {allProfiles.map(p => (
-                    <button key={p.nucleo} type="button"
-                      onClick={() => { setEditingProfile(p.nucleo); setProfileEmail(p.email || ''); setNewUser(p.user); }}
-                      style={{ padding: '6px 10px', borderRadius: 8, border: `2px solid ${editingProfile === p.nucleo ? p.color : '#e2e8f0'}`, background: editingProfile === p.nucleo ? p.color : '#f8fafc', color: editingProfile === p.nucleo ? '#fff' : '#64748b', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap' }}>
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
+              {/* Conta sendo alterada */}
+              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#374151' }}>
+                <span style={{ fontWeight: 700 }}>Conta:</span> <code style={{ background: '#f3f4f6', borderRadius: 4, padding: '1px 5px' }}>{editingProfile}</code>
               </div>
-
-              {/* Current profile info */}
-              {currentEditProfile && (
-                <div style={{ background: `${currentEditProfile.color}10`, border: `1px solid ${currentEditProfile.color}30`, borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#374151' }}>
-                  <span style={{ fontWeight: 700 }}>Perfil selecionado:</span> {currentEditProfile.label} •  usuário atual: <code style={{ background: '#f3f4f6', borderRadius: 4, padding: '1px 5px' }}>{currentEditProfile.user}</code>
-                </div>
-              )}
-
               <div>
-                <label style={{ display: 'block', color: '#374151', fontSize: '0.8rem', fontWeight: 600, marginBottom: 4 }}>Novo usuário</label>
-                <input value={newUser} onChange={e => setNewUser(e.target.value)} placeholder={`ex: ${editingProfile}`}
+                <label style={{ display: 'block', color: '#374151', fontSize: '0.8rem', fontWeight: 600, marginBottom: 4 }}>Senha atual</label>
+                <input type="password" value={newPassConfirmPass} onChange={e => setNewPassConfirmPass(e.target.value)}
+                  placeholder="Confirme sua senha atual"
                   style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
               </div>
               <div>
@@ -1944,7 +1895,6 @@ export default function AdminPage() {
   };
 
   if (!authed) {
-    const profiles = getProfiles();
     return (
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#0f172a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Inter, sans-serif' }}>
         {/* Logo + title */}
@@ -1954,14 +1904,16 @@ export default function AdminPage() {
           <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.78rem', marginTop: 4 }}>Associação Cultural de Capoeira Barão de Mauá</div>
         </div>
 
-        {/* Profile cards */}
+        {/* Dica de acesso */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {profiles.map(p => (
-            <div key={p.nucleo} style={{ background: 'rgba(255,255,255,0.07)', border: `2px solid ${p.color}44`, borderRadius: 12, padding: '14px 20px', textAlign: 'center', minWidth: 110 }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: p.color, margin: '0 auto 6px' }} />
-              <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.82rem' }}>{p.label}</div>
-            </div>
-          ))}
+          <div style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.35)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
+            <div style={{ color: '#c4b5fd', fontWeight: 700, fontSize: '0.8rem' }}>Owner / Admin Geral</div>
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', marginTop: 2 }}>Entre com seu login e senha</div>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
+            <div style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 700, fontSize: '0.8rem' }}>Admin de Núcleo</div>
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', marginTop: 2 }}>Acesse pela página do seu núcleo</div>
+          </div>
         </div>
 
         {/* Login form */}
@@ -1990,14 +1942,9 @@ export default function AdminPage() {
               style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', cursor: 'pointer' }}>
               🔑 Esqueceu a senha?
             </button>
-            <button type="button" onClick={() => {
-                const prof = getProfiles().find(p => p.nucleo === 'edson-alves');
-                setShowChangeCreds(true); setChangeError(''); setChangeDone(false);
-                setEditingProfile('edson-alves'); setNewUser(prof?.user || ''); setNewPass(''); setNewPassConfirm('');
-                setProfileEmail(prof?.email || ''); setChangeEmailMsg('');
-              }}
+            <button type="button" onClick={() => { setShowAdminForgot(v => !v); setAdminForgotMsg(''); setAdminForgotDone(false); setAdminForgotCpf(''); setAdminResetUrl(''); }}
               style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>
-              Criar / Redefinir Senha
+              Primeiro acesso / Redefinir
             </button>
           </div>
 
@@ -2313,11 +2260,9 @@ export default function AdminPage() {
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Botoes de troca de nucleo — visivel quando responsavel gerencia mais de um */}
             {availableNucleos.length > 1 && availableNucleos.map(nk => {
-              const prof = getProfiles().find(p => p.nucleo === nk);
-              if (!prof) return null;
               const isActive = activeNucleo === nk;
-              // Mostra Owner se for owner, senao usa o label normal
-              const displayLabel = isOwner && nk === 'geral' ? 'Owner' : prof.label;
+              const displayLabel = nk === 'geral' ? (isOwner ? 'Owner' : 'Admin Geral') : (dynamicNucleos.find(n => n.slug === nk)?.nome || nk);
+              const prof = { color: nk === 'geral' ? (isOwner ? '#7c3aed' : '#1d4ed8') : '#0ea5e9' };
               return (
                 <button
                   key={nk}
@@ -2347,10 +2292,9 @@ export default function AdminPage() {
             <button
               onClick={() => {
                 const nk = activeNucleo || 'edson-alves';
-                const prof = getProfiles().find(p => p.nucleo === nk);
                 setShowChangeCreds(true); setChangeError(''); setChangeDone(false);
-                setEditingProfile(nk); setNewUser(prof?.user || ''); setNewPass(''); setNewPassConfirm('');
-                setProfileEmail(prof?.email || ''); setChangeEmailMsg('');
+                setEditingProfile(nk); setNewPass(''); setNewPassConfirm(''); setNewPassConfirmPass('');
+                setProfileEmail(''); setChangeEmailMsg('');
               }}
               style={{ background: 'rgba(29,78,216,0.1)', border: '1px solid rgba(29,78,216,0.3)', color: '#1d4ed8', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}
             >
@@ -2495,7 +2439,7 @@ export default function AdminPage() {
                 { key: 'aluno-view',    icon: '🔭', label: 'Área do Aluno' },
                 { key: 'contas',        icon: '👤', label: 'Contas Alunos', badge: undefined },
                 { key: 'alunos',        icon: '🎓', label: 'Alunos' },
-                { key: 'responsaveis',  icon: '👥', label: 'Responsaveis de Nucleos', ownerOnly: true },
+                { key: 'responsaveis',  icon: '🔐', label: 'Contas de Acesso', geralOnly: true },
                 { key: 'rascunhos',     icon: '📝', label: 'Cadastro dos Responsáveis', badge: rascunhosCount > 0 ? rascunhosCount : undefined },
                 { key: 'justificativas',icon: '📋', label: 'Justificativas', badge: justPendCount > 0 ? justPendCount : undefined },
               ],
@@ -2516,7 +2460,7 @@ export default function AdminPage() {
                 { key: 'patrimonio',  icon: '🏛️', label: 'Patrimonio' },
                 { key: 'materiais',   icon: '📦', label: 'Materiais' },
                 { key: 'doacoes',     icon: '💝', label: 'Doacoes', geralOnly: true },
-                { key: 'nucleos',     icon: '🏢', label: 'Gerenciar Nucleos', ownerOnly: true },
+                { key: 'nucleos',     icon: '🏢', label: 'Gerenciar Nucleos' },
                 { key: 'system-config', icon: '*', label: 'Config. Sistema', ownerOnly: true },
               ],
             },
@@ -3530,8 +3474,6 @@ _Associação Cultural de Capoeira Barão de Mauá_`
 
       {/* ===== ABA CERTIFICADO ===== */}
       {activeTab === 'certificado' && (() => {
-        const profiles = getProfiles();
-        const currentProf = profiles.find(p => p.nucleo === activeNucleo);
         const sig = certStudent
           ? (certStudent.nucleo === 'Mauá'
             ? { nome: 'Mestre Márcio da Silva Frazão', cargo: 'Administrador - Sistema DEMO', img: '/assinatura-frazao.png' }
@@ -6213,35 +6155,35 @@ _Associação Cultural de Capoeira Barão de Mauá_`
       )}
 
       {/* ===== ABA GERENCIAR NÚCLEOS ===== */}
-      {activeTab === 'nucleos' && activeNucleo === 'geral' && (
+      {activeTab === 'nucleos' && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
             <div>
               <div style={{ fontWeight: 800, fontSize: '1.05rem', background: 'linear-gradient(90deg,#0ea5e9,#0284c7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Gerenciar Nucleos</div>
               <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: 2 }}>
-                {isOwner ? 'Cadastre e gerencie os nucleos (tenants) do sistema' : 'Visualize os nucleos cadastrados no sistema'}
+                {isOwner ? 'Cadastre e gerencie os nucleos (tenants) do sistema' : 'Edite os dados do seu núcleo'}
               </div>
             </div>
-            {isOwner ? (
+            {(isOwner || activeNucleo === 'geral') ? (
               <button
-                onClick={() => { setNucleoForm({ nome: '', endereco: '', cidade: '', estado: '', telefone: '', email: '' }); setNucleoFormMsg(''); setShowCreateNucleoModal(true); }}
+                onClick={() => { setNucleoForm({ nome: '', endereco: '', cidade: '', estado: '', telefone: '', email: '', lat: '', lng: '', dias_treino: [], admin_login: '', admin_senha: '', admin_nome: '' }); setNucleoFormMsg(''); setShowCreateNucleoModal(true); }}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: 'linear-gradient(135deg,#0ea5e9,#0284c7)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(14,165,233,0.3)' }}
               >
                 <span style={{ fontSize: '1rem' }}>+</span> Criar Novo Nucleo
               </button>
             ) : (
-              <div style={{ padding: '10px 18px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, color: '#ef4444', fontWeight: 600, fontSize: '0.82rem' }}>
-                Acesso restrito ao Owner (desenvolvedor)
+              <div style={{ padding: '10px 18px', background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.3)', borderRadius: 10, color: '#0284c7', fontWeight: 600, fontSize: '0.82rem' }}>
+                Você pode editar os dados do seu núcleo no botão ✏️ Editar
               </div>
             )}
           </div>
           
-          {/* Aviso de acesso restrito para admin geral */}
-          {!isOwner && (
+          {/* Aviso de permissão */}
+          {!isOwner && activeNucleo === 'geral' && (
             <div style={{ marginBottom: 20, padding: 16, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12 }}>
-              <div style={{ fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>Acesso Somente Leitura</div>
+              <div style={{ fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>Acesso de Admin Geral</div>
               <div style={{ fontSize: '0.82rem', color: '#d97706' }}>
-                Apenas o Owner (desenvolvedor) pode criar, editar ou excluir nucleos. Como Admin Geral, voce pode apenas visualizar os nucleos cadastrados.
+                Você pode criar, editar e excluir núcleos, definir o login e a senha de cada admin de núcleo.
               </div>
             </div>
           )}
@@ -6252,7 +6194,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
             <div style={{ textAlign: 'center', padding: 60, background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 14 }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>🏢</div>
               <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>Nenhum núcleo cadastrado</div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Clique em &quot;Criar Novo Núcleo&quot; para começar</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Nenhum núcleo cadastrado ainda. Use &quot;Criar Novo Núcleo&quot; para começar</div>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
@@ -6268,15 +6210,36 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 10 }}>
                       <strong>Slug:</strong> {nucleo.slug}
                     </div>
+                    {(nucleo as any).dias_treino?.length > 0 && (
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 4 }}>
+                        📅 {(nucleo as any).dias_treino.map((d: string) => ({ segunda: 'Seg', terca: 'Ter', quarta: 'Qua', quinta: 'Qui', sexta: 'Sex', sabado: 'Sáb', domingo: 'Dom' } as Record<string, string>)[d] || d).join(', ')}
+                      </div>
+                    )}
                     {nucleo.endereco && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 4 }}>📍 {nucleo.endereco}</div>}
                     {(nucleo.cidade || nucleo.estado) && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 4 }}>🏙️ {[nucleo.cidade, nucleo.estado].filter(Boolean).join(' - ')}</div>}
                     {nucleo.telefone && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 4 }}>📞 {nucleo.telefone}</div>}
                     {nucleo.email && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 4 }}>✉️ {nucleo.email}</div>}
+                    {nucleo.admin_login && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>
+                        🔑 Admin: <strong style={{ fontFamily: 'monospace' }}>{String(nucleo.admin_login)}</strong>
+                      </div>
+                    )}
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: 10 }}>
                       Criado em {new Date(nucleo.created_at).toLocaleDateString('pt-BR')}
                     </div>
-                    {isOwner && (
                     <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                      <button
+                        onClick={() => {
+                          setNucleoEditForm({
+                            id: nucleo.id, nome: nucleo.nome, endereco: nucleo.endereco || '', cidade: nucleo.cidade || '', estado: nucleo.estado || '', telefone: nucleo.telefone || '', email: nucleo.email || '', lat: nucleo.lat != null ? String(nucleo.lat) : '', lng: nucleo.lng != null ? String(nucleo.lng) : '', dias_treino: ((nucleo as any).dias_treino || []) as string[],
+                          });
+                          setNucleoEditMsg(''); setNucleoEditAuth({ user: loginUser.trim(), pass: '' });
+                        }}
+                        style={{ flex: 1, padding: '8px 12px', background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.3)', color: '#0284c7', borderRadius: 8, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}
+                      >
+                        ✏️ Editar
+                      </button>
+                      {isOwner && (
                       <button
                         onClick={async () => {
                           const newAtivo = !nucleo.ativo;
@@ -6293,6 +6256,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                       >
                         {nucleo.ativo ? 'Desativar' : 'Ativar'}
                       </button>
+                      )}
                       <button
                         onClick={() => setNucleoDeleteConfirm(nucleo)}
                         style={{ padding: '8px 12px', background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#f87171', borderRadius: 8, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}
@@ -6300,15 +6264,14 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                         Excluir
                       </button>
                     </div>
-                    )}
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Modal Criar Nucleo - Apenas Owner */}
-          {showCreateNucleoModal && isOwner && (
+          {/* Modal Criar Nucleo - Owner ou Admin Geral */}
+          {showCreateNucleoModal && (isOwner || activeNucleo === 'geral') && (
             <div onClick={e => { if (e.target === e.currentTarget) setShowCreateNucleoModal(false); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20 }}>
               <div style={{ background: '#fff', borderRadius: 16, padding: '24px', width: '100%', maxWidth: 480, boxShadow: '0 8px 40px rgba(0,0,0,0.3)', maxHeight: '90vh', overflowY: 'auto' }}>
                 <h3 style={{ margin: '0 0 4px', color: '#0284c7', fontWeight: 800, fontSize: '1.05rem' }}>Criar Novo Nucleo</h3>
@@ -6408,6 +6371,71 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                       Dica: Use o Google Maps para obter as coordenadas do local de treino.
                     </div>
                   </div>
+                  {/* Dados de acesso do admin do núcleo */}
+                  <div style={{ padding: 12, background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)', borderRadius: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#16a34a', marginBottom: 8 }}>Acesso do Admin deste Núcleo</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Login do Admin *</label>
+                        <input
+                          type="text"
+                          value={nucleoForm.admin_login}
+                          onChange={e => setNucleoForm(f => ({ ...f, admin_login: e.target.value.toLowerCase().replace(/\s+/g, '_') }))}
+                          placeholder="ex: ciep229"
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.82rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Nome do Admin (opcional)</label>
+                        <input
+                          type="text"
+                          value={nucleoForm.admin_nome}
+                          onChange={e => setNucleoForm(f => ({ ...f, admin_nome: e.target.value }))}
+                          placeholder="Nome do responsável"
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.82rem' }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 10 }}>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Senha do Admin (opcional)</label>
+                      <input
+                        type="text"
+                        value={nucleoForm.admin_senha}
+                        onChange={e => setNucleoForm(f => ({ ...f, admin_senha: e.target.value }))}
+                        placeholder="Deixe vazio = senha padrão (nome do núcleo)"
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.82rem', fontFamily: 'monospace' }}
+                      />
+                      {nucleoForm.nome.trim() && (
+                        <div style={{ fontSize: '0.7rem', color: '#16a34a', marginTop: 5 }}>
+                          Sem senha definida, o acesso será o nome do núcleo: <strong style={{ fontFamily: 'monospace' }}>{nucleoForm.nome.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '')}</strong>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Dias de treino do núcleo */}
+                  <div style={{ padding: 12, background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#7c3aed', marginBottom: 8 }}>Dias de Treino *</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {DIAS_TREINO_LABELS.map(d => {
+                        const on = nucleoForm.dias_treino.includes(d.k);
+                        return (
+                          <button
+                            key={d.k}
+                            type="button"
+                            onClick={() => setNucleoForm(f => ({ ...f, dias_treino: on ? f.dias_treino.filter(x => x !== d.k) : [...f.dias_treino, d.k] }))}
+                            style={{ padding: '7px 12px', borderRadius: 20, cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', border: `1.5px solid ${on ? '#7c3aed' : '#d1d5db'}`, background: on ? '#7c3aed' : '#fff', color: on ? '#fff' : '#6b7280' }}
+                          >
+                            {d.l}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 6 }}>
+                      O admin do núcleo também pode ajustar os dias depois, editando o núcleo.
+                    </div>
+                  </div>
+
                   {nucleoFormMsg && (
                     <div style={{ padding: '10px 14px', borderRadius: 8, background: nucleoFormMsg.startsWith('✓') ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${nucleoFormMsg.startsWith('✓') ? 'rgba(34,197,94,0.3)' : 'rgba(220,38,38,0.3)'}`, color: nucleoFormMsg.startsWith('✓') ? '#22c55e' : '#ef4444', fontSize: '0.82rem', fontWeight: 600 }}>
                       {nucleoFormMsg}
@@ -6421,32 +6449,186 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                       Cancelar
                     </button>
                     <button
-                      disabled={nucleoFormSaving || !nucleoForm.nome.trim()}
+                      disabled={nucleoFormSaving || !nucleoForm.nome.trim() || !nucleoForm.endereco.trim() || !nucleoForm.admin_login.trim() || nucleoForm.dias_treino.length === 0}
                       onClick={async () => {
                         setNucleoFormSaving(true);
                         setNucleoFormMsg('');
                         try {
                           const res = await fetch('/api/admin/nucleos', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'x-admin-auth': 'owner' },
-                            body: JSON.stringify({ admin_auth: 'owner', ...nucleoForm }),
+                            headers: { 'Content-Type': 'application/json', 'x-admin-auth': isOwner ? 'owner' : 'geral' },
+                            body: JSON.stringify({ ...nucleoForm }),
                           });
                           const data = await res.json();
                           if (!res.ok) {
                             setNucleoFormMsg(data.error || 'Erro ao criar núcleo');
                           } else {
-                            setNucleoFormMsg('✓ Núcleo criado com sucesso!');
+                            setNucleoFormMsg(`✓ Núcleo criado! Login do admin: "${data.admin_login}" · Senha: ${data.senha_padrao_usada ? 'nome do núcleo (padrão)' : 'a definida no formulário'}`);
                             setNucleosList(prev => [...prev, data.nucleo]);
-                            setTimeout(() => setShowCreateNucleoModal(false), 1500);
+                            setTimeout(() => setShowCreateNucleoModal(false), 2500);
                           }
                         } catch (err) {
                           setNucleoFormMsg('Erro de conexão');
                         }
                         setNucleoFormSaving(false);
                       }}
-                      style={{ flex: 1, padding: '12px', background: nucleoFormSaving || !nucleoForm.nome.trim() ? '#9ca3af' : 'linear-gradient(135deg,#0ea5e9,#0284c7)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: nucleoFormSaving || !nucleoForm.nome.trim() ? 'not-allowed' : 'pointer' }}
+                      style={{ flex: 1, padding: '12px', background: nucleoFormSaving || !nucleoForm.nome.trim() || !nucleoForm.endereco.trim() || !nucleoForm.admin_login.trim() || nucleoForm.dias_treino.length === 0 ? '#9ca3af' : 'linear-gradient(135deg,#0ea5e9,#0284c7)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: nucleoFormSaving || !nucleoForm.nome.trim() || !nucleoForm.endereco.trim() || !nucleoForm.admin_login.trim() || nucleoForm.dias_treino.length === 0 ? 'not-allowed' : 'pointer' }}
                     >
                       {nucleoFormSaving ? 'Salvando...' : 'Criar Núcleo'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal Editar Nucleo — owner/admin ou o próprio admin do núcleo */}
+          {nucleoEditForm && (
+            <div onClick={e => { if (e.target === e.currentTarget) setNucleoEditForm(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20 }}>
+              <div style={{ background: '#fff', borderRadius: 16, padding: '24px', width: '100%', maxWidth: 480, boxShadow: '0 8px 40px rgba(0,0,0,0.3)', maxHeight: '90vh', overflowY: 'auto' }}>
+                <h3 style={{ margin: '0 0 4px', color: '#0284c7', fontWeight: 800, fontSize: '1.05rem' }}>Editar Núcleo</h3>
+                <p style={{ margin: '0 0 20px', fontSize: '0.78rem', color: '#6b7280' }}>
+                  {isOwner || activeNucleo === 'geral' ? 'Atualize nome, endereço e dias de treino' : 'Atualize os dados do seu núcleo'}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Nome do Núcleo *</label>
+                    <input
+                      type="text"
+                      value={nucleoEditForm.nome}
+                      onChange={e => setNucleoEditForm(f => ({ ...f, nome: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Endereço *</label>
+                    <input
+                      type="text"
+                      value={nucleoEditForm.endereco}
+                      onChange={e => setNucleoEditForm(f => ({ ...f, endereco: e.target.value }))}
+                      placeholder="Rua, número, bairro..."
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                    />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Cidade</label>
+                      <input
+                        type="text"
+                        value={nucleoEditForm.cidade}
+                        onChange={e => setNucleoEditForm(f => ({ ...f, cidade: e.target.value }))}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Estado (UF)</label>
+                      <input
+                        type="text"
+                        value={nucleoEditForm.estado}
+                        onChange={e => setNucleoEditForm(f => ({ ...f, estado: e.target.value }))}
+                        maxLength={2}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Telefone</label>
+                      <input
+                        type="tel"
+                        value={nucleoEditForm.telefone}
+                        onChange={e => setNucleoEditForm(f => ({ ...f, telefone: e.target.value }))}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>E-mail</label>
+                      <input
+                        type="email"
+                        value={nucleoEditForm.email}
+                        onChange={e => setNucleoEditForm(f => ({ ...f, email: e.target.value }))}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                      />
+                    </div>
+                  </div>
+                  {/* Dias de treino */}
+                  <div style={{ padding: 12, background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#7c3aed', marginBottom: 8 }}>Dias de Treino *</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {DIAS_TREINO_LABELS.map(d => {
+                        const on = (nucleoEditForm.dias_treino as string[]).includes(d.k);
+                        return (
+                          <button
+                            key={d.k}
+                            type="button"
+                            onClick={() => setNucleoEditForm(f => f && ({ ...f, dias_treino: on ? (f.dias_treino as string[]).filter(x => x !== d.k) : [...(f.dias_treino as string[]), d.k] }))}
+                            style={{ padding: '7px 12px', borderRadius: 20, cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', border: `1.5px solid ${on ? '#7c3aed' : '#d1d5db'}`, background: on ? '#7c3aed' : '#fff', color: on ? '#fff' : '#6b7280' }}
+                          >
+                            {d.l}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {/* Confirmação de identidade */}
+                  <div style={{ padding: 12, background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.2)', borderRadius: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#0284c7', marginBottom: 6 }}>Confirmar alteração</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isOwner || activeNucleo === 'geral' ? '1fr' : '1fr', gap: 8 }}>
+                      <input
+                        type="password"
+                        value={nucleoEditAuth.pass}
+                        onChange={e => setNucleoEditAuth(a => ({ ...a, pass: e.target.value }))}
+                        placeholder={isOwner || activeNucleo === 'geral' ? 'Sua senha de Owner/Admin Geral' : 'Sua senha de admin do núcleo'}
+                        style={{ width: '100%', padding: '9px 11px', borderRadius: 7, border: '1px solid #d1d5db', fontSize: '0.85rem' }}
+                      />
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 5 }}>
+                      Login: <strong style={{ fontFamily: 'monospace' }}>{nucleoEditAuth.user}</strong>
+                    </div>
+                  </div>
+                  {nucleoEditMsg && (
+                    <div style={{ padding: '10px 14px', borderRadius: 8, background: nucleoEditMsg.startsWith('✓') ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${nucleoEditMsg.startsWith('✓') ? 'rgba(34,197,94,0.3)' : 'rgba(220,38,38,0.3)'}`, color: nucleoEditMsg.startsWith('✓') ? '#22c55e' : '#ef4444', fontSize: '0.82rem', fontWeight: 600 }}>
+                      {nucleoEditMsg}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                    <button
+                      onClick={() => setNucleoEditForm(null)}
+                      style={{ flex: 1, padding: '12px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 10, color: '#374151', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      disabled={nucleoEditSaving || !nucleoEditForm.nome.trim() || !nucleoEditForm.endereco.trim() || (nucleoEditForm.dias_treino as string[]).length === 0 || !nucleoEditAuth.pass}
+                      onClick={async () => {
+                        setNucleoEditSaving(true);
+                        setNucleoEditMsg('');
+                        try {
+                          const ehGestor = isOwner || activeNucleo === 'geral';
+                          const res = await fetch('/api/admin/nucleos', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(ehGestor
+                              ? { id: nucleoEditForm.id, nome: nucleoEditForm.nome, endereco: nucleoEditForm.endereco, cidade: nucleoEditForm.cidade, estado: nucleoEditForm.estado, telefone: nucleoEditForm.telefone, email: nucleoEditForm.email, lat: nucleoEditForm.lat, lng: nucleoEditForm.lng, dias_treino: nucleoEditForm.dias_treino, admin_username: nucleoEditAuth.user, admin_password: nucleoEditAuth.pass }
+                              : { id: nucleoEditForm.id, nome: nucleoEditForm.nome, endereco: nucleoEditForm.endereco, cidade: nucleoEditForm.cidade, estado: nucleoEditForm.estado, telefone: nucleoEditForm.telefone, email: nucleoEditForm.email, lat: nucleoEditForm.lat, lng: nucleoEditForm.lng, dias_treino: nucleoEditForm.dias_treino, nucleo_login: nucleoEditAuth.user, nucleo_password: nucleoEditAuth.pass }
+                            ),
+                          });
+                          const data = await res.json();
+                          if (!res.ok) {
+                            setNucleoEditMsg(data.error || 'Erro ao salvar');
+                          } else {
+                            setNucleoEditMsg('✓ Núcleo atualizado!');
+                            setNucleosList(prev => prev.map(n => n.id === nucleoEditForm.id ? data.nucleo : n));
+                            setTimeout(() => setNucleoEditForm(null), 1500);
+                          }
+                        } catch (err) {
+                          setNucleoEditMsg('Erro de conexão');
+                        }
+                        setNucleoEditSaving(false);
+                      }}
+                      style={{ flex: 1, padding: '12px', background: nucleoEditSaving || !nucleoEditForm.nome.trim() || !nucleoEditForm.endereco.trim() || (nucleoEditForm.dias_treino as string[]).length === 0 || !nucleoEditAuth.pass ? '#9ca3af' : 'linear-gradient(135deg,#0ea5e9,#0284c7)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
+                    >
+                      {nucleoEditSaving ? 'Salvando...' : 'Salvar Alterações'}
                     </button>
                   </div>
                 </div>
@@ -6479,8 +6661,8 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                       try {
                         const res = await fetch('/api/admin/nucleos', {
                           method: 'DELETE',
-                          headers: { 'Content-Type': 'application/json', 'x-admin-auth': 'owner' },
-                          body: JSON.stringify({ admin_auth: 'owner', id: nucleoDeleteConfirm.id }),
+                          headers: { 'Content-Type': 'application/json', 'x-admin-auth': isOwner ? 'owner' : 'geral' },
+                          body: JSON.stringify({ id: nucleoDeleteConfirm.id }),
                         });
                         const data = await res.json();
                         if (!res.ok) {
@@ -12620,35 +12802,34 @@ Suporte Ginga Gestão.`
         </div>
       )}
 
-      {/* ===== ABA RESPONSAVEIS / ADMINISTRADORES (geral only) ===== */}
-      {activeTab === 'responsaveis' && activeNucleo === 'geral' && isOwner && (
+      {/* ===== ABA CONTAS DE ACESSO (owner/admin geral) ===== */}
+      {activeTab === 'responsaveis' && activeNucleo === 'geral' && (
         <div style={{ paddingTop: 24 }}>
           <div style={{ marginBottom: 20 }}>
-            <h2 style={{ margin: '0 0 4px', fontSize: '1.15rem', color: 'var(--text-primary)' }}>👥 Responsáveis e Administradores</h2>
+            <h2 style={{ margin: '0 0 4px', fontSize: '1.15rem', color: 'var(--text-primary)' }}>🔐 Contas de Acesso do Painel</h2>
             <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              Gerencie os responsáveis de núcleo (acessam via CPF) e os administradores gerais (máx. 3).
+              Cada núcleo tem uma conta de admin criada junto com o núcleo. Aqui você reseta senhas, remove contas e cria admins gerais (máx. 3, além do Owner).
             </p>
           </div>
 
-          {/* Auth gate */}
           {!respAdminAuthed ? (
             <div style={{ maxWidth: 420, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 32, marginBottom: 6 }}>🔐</div>
                 <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)', marginBottom: 4 }}>Confirme sua identidade</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Digite sua senha de Admin Geral para gerenciar acessos</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Digite sua senha de Owner ou Admin Geral para gerenciar acessos</div>
               </div>
               <input
                 type="password"
-                placeholder="Sua senha atual de Admin Geral"
+                placeholder="Sua senha de Owner ou Admin Geral"
                 value={respAdminPass}
                 onChange={e => { setRespAdminPass(e.target.value); setRespAuthMsg(''); }}
                 onKeyDown={async e => {
                   if (e.key !== 'Enter' || !respAdminPass) return;
                   setRespLoading(true);
-                  const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: loginUser.trim() || 'admin', admin_password: respAdminPass }) });
+                  const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: loginUser.trim(), admin_password: respAdminPass }) });
                   const d = await res.json();
-                  if (res.ok) { setRespUsers(d.filter((u: any) => u.nucleo !== 'geral')); setRespGeralUsers(d.filter((u: any) => u.nucleo === 'geral')); setRespAdminAuthed(true); setRespAuthMsg(''); }
+                  if (Array.isArray(d)) { setRespUsers(d.filter((u: any) => u.nucleo !== 'geral')); setRespGeralUsers(d.filter((u: any) => u.nucleo === 'geral')); setRespAdminAuthed(true); setRespAuthMsg(''); }
                   else setRespAuthMsg(d.error || 'Senha incorreta.');
                   setRespLoading(false);
                 }}
@@ -12658,9 +12839,9 @@ Suporte Ginga Gestão.`
               <button disabled={respLoading} onClick={async () => {
                 if (!respAdminPass) { setRespAuthMsg('Digite sua senha.'); return; }
                 setRespLoading(true);
-                const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: loginUser.trim() || 'admin', admin_password: respAdminPass }) });
+                const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: loginUser.trim(), admin_password: respAdminPass }) });
                 const d = await res.json();
-                if (res.ok) { setRespUsers(d.filter((u: any) => u.nucleo !== 'geral')); setRespGeralUsers(d.filter((u: any) => u.nucleo === 'geral')); setRespAdminAuthed(true); setRespAuthMsg(''); }
+                if (Array.isArray(d)) { setRespUsers(d.filter((u: any) => u.nucleo !== 'geral')); setRespGeralUsers(d.filter((u: any) => u.nucleo === 'geral')); setRespAdminAuthed(true); setRespAuthMsg(''); }
                 else setRespAuthMsg(d.error || 'Senha incorreta.');
                 setRespLoading(false);
               }} style={{ padding: '10px', borderRadius: 9, background: 'linear-gradient(135deg,#1d4ed8,#1e40af)', border: 'none', color: '#fff', fontWeight: 700, cursor: respLoading ? 'wait' : 'pointer', opacity: respLoading ? 0.7 : 1, fontSize: '0.95rem' }}>
@@ -12670,126 +12851,19 @@ Suporte Ginga Gestão.`
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
 
-              {/* ───── SECAO 0: VISAO GERAL — R1 e R2 por nucleo ───── */}
-              {(() => {
-                // Nucleos carregados dinamicamente do banco de dados
-                const NUCLEOS_RESP = dynamicNucleos.map(n => ({ key: n.slug, label: n.nome }));
-                const updateRespField = (nucleo_key: string, nucleo_label: string, field: string, val: string) => {
-                  setResponsaveis(prev => {
-                    const idx = prev.findIndex(r => r.nucleo_key === nucleo_key);
-                    const existing = (prev[idx] || { nucleo_key, nucleo_label, nome: '', cpf: '' }) as any;
-                    const item = { ...existing, [field]: val };
-                    if (idx >= 0) { const c = [...prev]; c[idx] = item; return c; }
-                    return [...prev, item];
-                  });
-                };
-                const iSt: React.CSSProperties = { padding: '7px 10px', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-primary)', fontSize: '0.82rem', outline: 'none', width: '100%', boxSizing: 'border-box' };
-                return (
-                  <div style={{ background: 'var(--bg-card)', border: '2px solid rgba(251,191,36,0.25)', borderRadius: 16, padding: '20px 22px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fbbf24' }}>📋 Responsáveis por Núcleo</div>
-                        <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', marginTop: 2 }}>Visão geral e edição — até 2 responsáveis por núcleo</div>
-                      </div>
-                      <button onClick={async () => { setLoadingResponsaveis(true); const cfg = await fetch('/api/admin/responsaveis').then(r => r.json()).catch(() => ({ responsaveis: [] })); setResponsaveis(cfg.responsaveis || []); setLoadingResponsaveis(false); }}
-                        style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>↻ Recarregar</button>
-                    </div>
-                    {loadingResponsaveis ? (
-                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', textAlign: 'center', padding: '12px 0' }}>Carregando...</div>
-                    ) : (<>
-                      {/* Tabela-resumo */}
-                      <div style={{ overflowX: 'auto', marginBottom: 20 }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                          <thead>
-                            <tr style={{ background: 'rgba(251,191,36,0.1)', borderBottom: '2px solid rgba(251,191,36,0.3)' }}>
-                              <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 800, color: '#fbbf24', whiteSpace: 'nowrap' }}>Núcleo</th>
-                              <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 800, color: '#fbbf24', whiteSpace: 'nowrap' }}>Responsável 1</th>
-                              <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 800, color: '#93c5fd', whiteSpace: 'nowrap' }}>CPF 1</th>
-                              <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 800, color: '#fbbf24', whiteSpace: 'nowrap' }}>Responsável 2</th>
-                              <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 800, color: '#93c5fd', whiteSpace: 'nowrap' }}>CPF 2</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {NUCLEOS_RESP.map(n => {
-                              const r = responsaveis.find(x => x.nucleo_key === n.key) as any;
-                              const c1 = r?.cpf ? r.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—';
-                              const c2 = r?.cpf2 ? r.cpf2.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—';
-                              return (
-                                <tr key={n.key} style={{ borderBottom: '1px solid var(--border)', background: r?.nome ? 'rgba(74,222,128,0.03)' : 'transparent' }}>
-                                  <td style={{ padding: '7px 10px', fontWeight: 700, color: r?.nome ? '#4ade80' : 'var(--text-secondary)', fontSize: '0.78rem' }}>{n.label}</td>
-                                  <td style={{ padding: '7px 10px', color: r?.nome ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{r?.nome || '—'}</td>
-                                  <td style={{ padding: '7px 10px', fontFamily: 'monospace', fontSize: '0.72rem', color: r?.cpf ? '#93c5fd' : 'var(--text-secondary)' }}>{c1}</td>
-                                  <td style={{ padding: '7px 10px', color: r?.nome2 ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{r?.nome2 || '—'}</td>
-                                  <td style={{ padding: '7px 10px', fontFamily: 'monospace', fontSize: '0.72rem', color: r?.cpf2 ? '#93c5fd' : 'var(--text-secondary)' }}>{c2}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                      {/* Edição por núcleo */}
-                      <div style={{ display: 'grid', gap: 10 }}>
-                        {NUCLEOS_RESP.map(n => {
-                          const resp = responsaveis.find(r => r.nucleo_key === n.key) as any;
-                          const has1 = !!(resp?.nome?.trim() || resp?.cpf?.trim());
-                          const has2 = !!(resp?.nome2?.trim() || resp?.cpf2?.trim());
-                          const savedMsg = responsaveisSavedMsg[n.key];
-                          return (
-                            <div key={n.key} style={{ background: (has1||has2) ? 'rgba(22,163,74,0.05)' : 'var(--bg-input)', border: `1px solid ${(has1||has2) ? 'rgba(22,163,74,0.2)' : 'var(--border)'}`, borderRadius: 10, padding: '12px 14px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                                <span style={{ fontWeight: 800, fontSize: '0.88rem', color: (has1||has2) ? '#4ade80' : 'var(--text-secondary)' }}>{n.label}</span>
-                                {(has1||has2) && <span style={{ fontSize: '0.68rem', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: 99, padding: '2px 8px', color: '#4ade80', fontWeight: 600 }}>✓ {[has1&&'R1',has2&&'R2'].filter(Boolean).join(' + ')}</span>}
-                              </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                                <div style={{ border: '1.5px solid rgba(251,191,36,0.3)', borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                  <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#fbbf24', marginBottom: 2 }}>👤 Responsável 1</div>
-                                  <input placeholder="Nome completo" value={resp?.nome||''} onChange={e => updateRespField(n.key,n.label,'nome',e.target.value)} style={iSt} />
-                                  <input placeholder="CPF (só números)" value={resp?.cpf||''} onChange={e => updateRespField(n.key,n.label,'cpf',e.target.value.replace(/\D/g,''))} style={iSt} inputMode="numeric" maxLength={11} />
-                                  <input placeholder="E-mail" type="email" value={resp?.email||''} onChange={e => updateRespField(n.key,n.label,'email',e.target.value)} style={iSt} />
-                                </div>
-                                <div style={{ border: '1.5px solid rgba(59,130,246,0.3)', borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                  <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#93c5fd', marginBottom: 2 }}>👤 Responsável 2 <span style={{ opacity: 0.6, fontWeight: 400 }}>(opcional)</span></div>
-                                  <input placeholder="Nome completo" value={resp?.nome2||''} onChange={e => updateRespField(n.key,n.label,'nome2',e.target.value)} style={iSt} />
-                                  <input placeholder="CPF (só números)" value={resp?.cpf2||''} onChange={e => updateRespField(n.key,n.label,'cpf2',e.target.value.replace(/\D/g,''))} style={iSt} inputMode="numeric" maxLength={11} />
-                                  <input placeholder="E-mail" type="email" value={resp?.email2||''} onChange={e => updateRespField(n.key,n.label,'email2',e.target.value)} style={iSt} />
-                                </div>
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
-                                <button onClick={async () => {
-                                  const entry = responsaveis.find(r => r.nucleo_key === n.key) as any || { nucleo_key: n.key, nucleo_label: n.label, nome: '', cpf: '' };
-                                  const res = await fetch('/api/admin/responsaveis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nucleo_key: n.key, nucleo_label: n.label, nome: entry.nome||'', cpf: entry.cpf||'', email: entry.email||'', nome2: entry.nome2||'', cpf2: entry.cpf2||'', email2: entry.email2||'' }) });
-                                  const msg = res.ok ? `✅ ${n.label} salvo!` : 'Erro ao salvar.';
-                                  setResponsaveisSavedMsg(prev => ({ ...prev, [n.key]: msg }));
-                                  if (res.ok) { const cfg = await fetch('/api/admin/responsaveis').then(r => r.json()).catch(() => ({ responsaveis: [] })); setResponsaveis(cfg.responsaveis || []); }
-                                  setTimeout(() => setResponsaveisSavedMsg(prev => ({ ...prev, [n.key]: '' })), 3000);
-                                }} style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 18px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
-                                  💾 Salvar
-                                </button>
-                                {savedMsg && <span style={{ fontSize: '0.78rem', color: savedMsg.startsWith('✅') ? '#4ade80' : '#f87171', fontWeight: 600 }}>{savedMsg}</span>}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>)}
-                  </div>
-                );
-              })()}
-
-              {/* ───── SEÇÃO 1: RESPONSÁVEIS DE NÚCLEO — Credenciais de Acesso ───── */}
+              {/* ───── CONTAS DOS NÚCLEOS ───── */}
               <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: '22px 22px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
                   <div style={{ fontSize: '1.3rem' }}>🏫</div>
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>Responsáveis de Núcleo — Credenciais de Acesso</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Cada responsável acessa o painel usando seu CPF como login</div>
+                    <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>Contas de Admin dos Núcleos</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Cada núcleo tem um login próprio — criado na tela Gerenciar Núcleos</div>
                   </div>
                 </div>
 
-                {/* Lista */}
                 {respUsers.length === 0 ? (
                   <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '16px 0', borderBottom: '1px solid var(--border)', marginBottom: 18 }}>
-                    Nenhum responsável cadastrado ainda.
+                    Nenhum núcleo com conta ainda. Crie um núcleo em <strong>Gerenciar Núcleos</strong> — a conta do admin é criada junto.
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
@@ -12798,12 +12872,11 @@ Suporte Ginga Gestão.`
                         <div style={{ width: 10, height: 10, borderRadius: '50%', background: u.color, flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 140 }}>
                           <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
-                            {(u as any).nome || u.label}
+                            {(u as any).nucleo_nome || u.label}
                           </div>
                           <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)' }}>
-                            {u.label} · CPF: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>
-                              {u.username.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
-                            </strong>
+                            Login: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{u.username}</strong>
+                            {(u as any).nome ? <> · {(u as any).nome}</> : null}
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
@@ -12821,223 +12894,168 @@ Suporte Ginga Gestão.`
                   </div>
                 )}
 
-                {/* Reset senha inline */}
-                {respResetTarget && /^\d{11}$/.test(respResetTarget) && (
-                  <div style={{ background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: 10 }}>
-                      🔑 Resetar senha — CPF: <span style={{ color: '#ca8a04', fontFamily: 'monospace' }}>{respResetTarget.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <input type="password" placeholder="Nova senha (mín. 6 caracteres)" value={respResetPass} onChange={e => { setRespResetPass(e.target.value); setRespResetMsg(''); }}
-                        style={{ flex: 1, minWidth: 180, padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }} />
-                      <button disabled={respResetting} onClick={async () => {
-                        if (!respResetPass || respResetPass.length < 6) { setRespResetMsg('Mínimo 6 caracteres.'); return; }
-                        setRespResetting(true);
-                        const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reset-password', admin_username: loginUser.trim() || 'admin', admin_password: respAdminPass, target_username: respResetTarget, new_password: respResetPass }) });
-                        const d = await res.json();
-                        setRespResetMsg(res.ok ? '✓ Senha redefinida!' : (d.error || 'Erro.'));
-                        if (res.ok) { setRespResetPass(''); setTimeout(() => { setRespResetTarget(''); setRespResetMsg(''); }, 2000); }
-                        setRespResetting(false);
-                      }} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#b45309,#d97706)', border: 'none', color: '#fff', fontWeight: 700, cursor: respResetting ? 'wait' : 'pointer', fontSize: '0.85rem' }}>
-                        {respResetting ? '⏳' : 'Salvar'}
-                      </button>
-                      <button onClick={() => { setRespResetTarget(''); setRespResetMsg(''); }} style={{ padding: '8px 12px', borderRadius: 8, background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.82rem' }}>✕</button>
-                    </div>
-                    {respResetMsg && <div style={{ marginTop: 6, fontSize: '0.76rem', fontWeight: 600, color: respResetMsg.startsWith('✓') ? '#22c55e' : '#ef4444' }}>{respResetMsg}</div>}
-                  </div>
-                )}
-
-                {/* Confirmar remoção */}
-                {respDeleteTarget && /^\d{11}$/.test(respDeleteTarget) && (
-                  <div style={{ background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.28)', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: 6 }}>
-                      🗑 Remover CPF <span style={{ color: '#ef4444', fontFamily: 'monospace' }}>{respDeleteTarget.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</span>?
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 12 }}>O responsável perderá o acesso ao painel imediatamente.</div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button disabled={respDeleting} onClick={async () => {
-                        setRespDeleting(true);
-                        const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete-user', admin_username: loginUser.trim() || 'admin', admin_password: respAdminPass, target_username: respDeleteTarget }) });
-                        const d = await res.json();
-                        if (res.ok) { setRespUsers(prev => prev.filter(u => u.username !== respDeleteTarget)); setRespDeleteTarget(''); setRespDeleteMsg(''); }
-                        else setRespDeleteMsg(d.error || 'Erro ao remover.');
-                        setRespDeleting(false);
-                      }} style={{ padding: '7px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#dc2626,#b91c1c)', border: 'none', color: '#fff', fontWeight: 700, cursor: respDeleting ? 'wait' : 'pointer', fontSize: '0.85rem' }}>
-                        {respDeleting ? '⏳' : '🗑 Confirmar'}
-                      </button>
-                      <button onClick={() => { setRespDeleteTarget(''); setRespDeleteMsg(''); }} style={{ padding: '7px 12px', borderRadius: 8, background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.82rem' }}>{t('admin_cancel')}</button>
-                    </div>
-                    {respDeleteMsg && <div style={{ marginTop: 6, fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>{respDeleteMsg}</div>}
-                  </div>
-                )}
-
-                {/* Formulário cadastro novo responsável */}
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 18 }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', marginBottom: 12 }}>➕ Cadastrar Novo Responsável</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
-                    <div>
-                      <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Nucleo</div>
-                      <select value={respNewNucleo} onChange={e => {
-                        const nk = e.target.value;
-                        setRespNewNucleo(nk); setRespCreateMsg('');
-                        // Preenche com senha padrao do nucleo
-                        setRespNewPass(nk ? 'acesso12345' : '');
-                        setRespShowPass(true);
-                      }}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }}>
-                        <option value="">Selecione o nucleo</option>
-                        {dynamicNucleos.map(n => (
-                          <option key={n.slug} value={n.slug}>{n.nome}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>CPF do Responsável</div>
-                      <input type="text" placeholder="000.000.000-00" value={respNewCpf} onChange={e => { setRespNewCpf(e.target.value); setRespCreateMsg(''); }}
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }} />
-                      <div style={{ fontSize: '0.66rem', color: 'var(--text-secondary)', marginTop: 3 }}>Será usado como login de acesso</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Nome do Responsável</div>
-                      <input type="text" placeholder="Nome completo" value={respNewNome} onChange={e => { setRespNewNome(e.target.value); setRespCreateMsg(''); }}
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Senha Inicial</div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <input type="text" placeholder="Selecione o núcleo para gerar" value={respNewPass} onChange={e => { setRespNewPass(e.target.value); setRespCreateMsg(''); }}
-                          style={{ flex: 1, boxSizing: 'border-box', padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${respNewPass ? 'rgba(22,163,74,0.5)' : 'var(--border)'}`, background: respNewPass ? 'rgba(22,163,74,0.07)' : 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none', fontFamily: 'monospace', letterSpacing: '0.04em', fontWeight: 700 }} />
-                        <button type="button" onClick={() => { if (respNewPass) { navigator.clipboard.writeText(respNewPass); setRespCreateMsg('📋 Senha copiada!'); setTimeout(() => setRespCreateMsg(''), 2000); } }} style={{ padding: '8px 10px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.8rem', whiteSpace: 'nowrap', fontWeight: 700 }} title="Copiar senha">
-                          📋
-                        </button>
-                        <button type="button" onClick={() => {
-                          setRespNewPass('acesso12345'); setRespCreateMsg('');
-                        }} style={{ padding: '8px 10px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.78rem', whiteSpace: 'nowrap', fontWeight: 700 }} title="Restaurar senha padrão">
-                          🔄
-                        </button>
+                {/* Criar conta avulsa para um núcleo sem conta */}
+                {(() => {
+                  const contasNucleos = new Set(respUsers.map((u: any) => u.nucleo));
+                  const nucleosSemConta = dynamicNucleos.filter(n => !contasNucleos.has(n.slug));
+                  return (
+                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 18 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', marginBottom: 12 }}>➕ Criar Conta para um Núcleo</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
+                        <div>
+                          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Núcleo</div>
+                          <select value={respNewNucleo} onChange={e => { setRespNewNucleo(e.target.value); setRespCreateMsg(''); }}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }}>
+                            <option value="">{nucleosSemConta.length === 0 ? 'Todos os núcleos já têm conta' : 'Selecione o núcleo'}</option>
+                            {nucleosSemConta.map(n => (
+                              <option key={n.slug} value={n.slug}>{n.nome}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Login de Acesso</div>
+                          <input type="text" placeholder="ex: ciep229" value={respNewCpf} onChange={e => { setRespNewCpf(e.target.value.toLowerCase().replace(/\s+/g, '_')); setRespCreateMsg(''); }}
+                            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }} />
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-secondary)', marginTop: 3 }}>Login que o admin do núcleo usará para entrar</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Nome do Responsável (opcional)</div>
+                          <input type="text" placeholder="Nome completo" value={respNewNome} onChange={e => { setRespNewNome(e.target.value); setRespCreateMsg(''); }}
+                            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Senha (opcional)</div>
+                          <input type="text" placeholder="vazio = padrão (nome do núcleo)" value={respNewPass} onChange={e => { setRespNewPass(e.target.value); setRespCreateMsg(''); }}
+                            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${respNewPass ? 'rgba(22,163,74,0.5)' : 'var(--border)'}`, background: respNewPass ? 'rgba(22,163,74,0.07)' : 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none', fontFamily: 'monospace', letterSpacing: '0.04em', fontWeight: 700 }} />
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-secondary)', marginTop: 3 }}>Ex.: núcleo "CIEP 229" → senha padrão "ciep229"</div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.66rem', color: 'var(--text-secondary)', marginTop: 3 }}>Senha padrão preenchida ao selecionar o núcleo. Repasse ao responsável — ele deve alterar após o primeiro acesso.</div>
+                      {respCreateMsg && (
+                        <div style={{ marginTop: 10, borderRadius: 8, padding: '7px 12px', background: respCreateMsg.startsWith('✓') ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${respCreateMsg.startsWith('✓') ? 'rgba(22,163,74,0.3)' : 'rgba(220,38,38,0.25)'}`, color: respCreateMsg.startsWith('✓') ? '#22c55e' : '#ef4444', fontSize: '0.78rem', fontWeight: 600 }}>
+                          {respCreateMsg}
+                        </div>
+                      )}
+                      <button disabled={respCreating || !respNewNucleo || !respNewCpf} onClick={async () => {
+                        if (!respNewNucleo || !respNewCpf) { setRespCreateMsg('Preencha núcleo e login.'); return; }
+                        if (respNewCpf.length < 3) { setRespCreateMsg('Login deve ter pelo menos 3 caracteres.'); return; }
+                        if (respNewPass && respNewPass.length < 6) { setRespCreateMsg('Senha deve ter pelo menos 6 caracteres.'); return; }
+                        setRespCreating(true);
+                        const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create-user', admin_username: loginUser.trim(), admin_password: respAdminPass, login: respNewCpf, nome: respNewNome, new_password: respNewPass, nucleo_key: respNewNucleo }) });
+                        const d = await res.json();
+                        if (res.ok) {
+                          setRespCreateMsg(`✅ Conta criada! Login "${respNewCpf}" vinculado ao núcleo. Senha: ${respNewPass || '(padrão = nome do núcleo)'}`);
+                          setRespNewCpf(''); setRespNewNome(''); setRespNewPass(''); setRespNewNucleo('');
+                          const lr = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: loginUser.trim(), admin_password: respAdminPass }) });
+                          const ld = await lr.json();
+                          if (Array.isArray(ld)) { setRespUsers(ld.filter((u: any) => u.nucleo !== 'geral')); setRespGeralUsers(ld.filter((u: any) => u.nucleo === 'geral')); }
+                        } else setRespCreateMsg(d.error || 'Erro ao cadastrar.');
+                        setRespCreating(false);
+                      }} style={{ marginTop: 14, padding: '9px 24px', borderRadius: 9, background: 'linear-gradient(135deg,#059669,#047857)', border: 'none', color: '#fff', fontWeight: 700, cursor: respCreating ? 'wait' : 'pointer', opacity: respCreating || !respNewNucleo || !respNewCpf ? 0.6 : 1, fontSize: '0.9rem' }}>
+                        {respCreating ? '⏳ Criando...' : '✅ Criar Conta do Núcleo'}
+                      </button>
                     </div>
-                  </div>
-                  {respCreateMsg && (
-                    <div style={{ marginTop: 10, borderRadius: 8, padding: '7px 12px', background: respCreateMsg.startsWith('✓') ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${respCreateMsg.startsWith('✓') ? 'rgba(22,163,74,0.3)' : 'rgba(220,38,38,0.25)'}`, color: respCreateMsg.startsWith('✓') ? '#22c55e' : '#ef4444', fontSize: '0.78rem', fontWeight: 600 }}>
-                      {respCreateMsg}
-                    </div>
-                  )}
-                  <button disabled={respCreating} onClick={async () => {
-                    if (!respNewNucleo || !respNewCpf || !respNewPass) { setRespCreateMsg('Preencha núcleo, CPF e senha.'); return; }
-                    const cpfDigits = respNewCpf.replace(/\D/g, '');
-                    if (cpfDigits.length !== 11) { setRespCreateMsg('CPF inválido. Digite os 11 dígitos.'); return; }
-                    if (respNewPass.length < 6) { setRespCreateMsg('Senha deve ter pelo menos 6 caracteres.'); return; }
-                    setRespCreating(true);
-                    const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create-user', admin_username: loginUser.trim() || 'admin', admin_password: respAdminPass, cpf: respNewCpf, nome: respNewNome, new_password: respNewPass, nucleo_key: respNewNucleo }) });
-                    const d = await res.json();
-                    if (res.ok) {
-                      const savedPass = respNewPass;
-                      setRespCreateMsg(`✅ Cadastro realizado com sucesso! CPF ${cpfDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')} habilitado para ${respNewNucleo}. Senha inicial: ${savedPass}`);
-                      setRespNewCpf(''); setRespNewNome(''); setRespNewPass(''); setRespNewNucleo(''); setRespShowPass(false);
-                      const lr = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: loginUser.trim() || 'admin', admin_password: respAdminPass }) });
-                      const ld = await lr.json();
-                      if (lr.ok) setRespUsers(ld.filter((u: any) => u.nucleo !== 'geral'));
-                    } else setRespCreateMsg(d.error || 'Erro ao cadastrar.');
-                    setRespCreating(false);
-                  }} style={{ marginTop: 14, padding: '9px 24px', borderRadius: 9, background: 'linear-gradient(135deg,#059669,#047857)', border: 'none', color: '#fff', fontWeight: 700, cursor: respCreating ? 'wait' : 'pointer', opacity: respCreating ? 0.7 : 1, fontSize: '0.9rem' }}>
-                    {respCreating ? '⏳ Cadastrando...' : '✅ Cadastrar Responsável'}
-                  </button>
-                </div>
+                  );
+                })()}
               </div>
 
-              {/* ───── SEÇÃO 2: ADMINISTRADORES GERAIS ───── */}
+              {/* Reset / remover — vale para qualquer conta listada */}
+              {respResetTarget && (
+                <div style={{ background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 10, padding: '14px 16px', marginTop: -16 }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: 10 }}>🔑 Resetar senha — <span style={{ color: '#ca8a04', fontFamily: 'monospace' }}>{respResetTarget}</span></div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <input type="text" placeholder="Nova senha (mín. 6 caracteres)" value={respResetPass} onChange={e => { setRespResetPass(e.target.value); setRespResetMsg(''); }}
+                      style={{ flex: 1, minWidth: 180, padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none', fontFamily: 'monospace' }} />
+                    <button disabled={respResetting} onClick={async () => {
+                      if (!respResetPass || respResetPass.length < 6) { setRespResetMsg('Mínimo 6 caracteres.'); return; }
+                      setRespResetting(true);
+                      const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reset-password', admin_username: loginUser.trim(), admin_password: respAdminPass, target_username: respResetTarget, new_password: respResetPass }) });
+                      const d = await res.json();
+                      setRespResetMsg(res.ok ? '✓ Senha redefinida!' : (d.error || 'Erro.'));
+                      if (res.ok) { setRespResetPass(''); setTimeout(() => { setRespResetTarget(''); setRespResetMsg(''); }, 2000); }
+                      setRespResetting(false);
+                    }} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#b45309,#d97706)', border: 'none', color: '#fff', fontWeight: 700, cursor: respResetting ? 'wait' : 'pointer', fontSize: '0.85rem' }}>
+                      {respResetting ? '⏳' : 'Salvar'}
+                    </button>
+                    <button onClick={() => { setRespResetTarget(''); setRespResetMsg(''); }} style={{ padding: '8px 12px', borderRadius: 8, background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.82rem' }}>✕</button>
+                  </div>
+                  {respResetMsg && <div style={{ marginTop: 6, fontSize: '0.76rem', fontWeight: 600, color: respResetMsg.startsWith('✓') ? '#22c55e' : '#ef4444' }}>{respResetMsg}</div>}
+                </div>
+              )}
+
+              {respDeleteTarget && (
+                <div style={{ background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.28)', borderRadius: 10, padding: '14px 16px', marginTop: -16 }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: 6 }}>🗑 Remover conta <span style={{ color: '#ef4444', fontFamily: 'monospace' }}>{respDeleteTarget}</span>?</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 12 }}>A conta perderá o acesso ao painel imediatamente. Owner e Admin Geral principal não podem ser removidos.</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button disabled={respDeleting} onClick={async () => {
+                      setRespDeleting(true);
+                      const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete-user', admin_username: loginUser.trim(), admin_password: respAdminPass, target_username: respDeleteTarget }) });
+                      const d = await res.json();
+                      if (res.ok) {
+                        setRespUsers(prev => prev.filter(u => u.username !== respDeleteTarget));
+                        setRespGeralUsers(prev => prev.filter(u => u.username !== respDeleteTarget));
+                        setRespDeleteTarget(''); setRespDeleteMsg('');
+                      } else setRespDeleteMsg(d.error || 'Erro ao remover.');
+                      setRespDeleting(false);
+                    }} style={{ padding: '7px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#dc2626,#b91c1c)', border: 'none', color: '#fff', fontWeight: 700, cursor: respDeleting ? 'wait' : 'pointer', fontSize: '0.85rem' }}>
+                      {respDeleting ? '⏳' : '🗑 Confirmar'}
+                    </button>
+                    <button onClick={() => { setRespDeleteTarget(''); setRespDeleteMsg(''); }} style={{ padding: '7px 12px', borderRadius: 8, background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.82rem' }}>Cancelar</button>
+                  </div>
+                  {respDeleteMsg && <div style={{ marginTop: 6, fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>{respDeleteMsg}</div>}
+                </div>
+              )}
+
+              {/* ───── ADMINISTRADORES GERAIS ───── */}
               <div style={{ background: 'var(--bg-card)', border: '1px solid rgba(29,78,216,0.35)', borderRadius: 16, padding: '22px 22px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
                   <div style={{ fontSize: '1.3rem' }}>🛡️</div>
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>Administradores Gerais</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      {respGeralUsers.length}/3 contas �� Máximo de 3 administradores gerais
+                      Máximo de 3 admins gerais, além do Owner
                     </div>
                   </div>
                 </div>
 
-                {/* Lista admins gerais */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
-                  {respGeralUsers.map(u => (
-                    <div key={u.username} style={{ background: 'rgba(29,78,216,0.07)', border: '1px solid rgba(29,78,216,0.2)', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#1d4ed8', flexShrink: 0 }} />
-                      <div style={{ flex: 1, minWidth: 140 }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
-                          {(u as any).nome || 'Admin Geral'} {u.username === 'admin' ? <span style={{ fontSize: '0.68rem', background: 'rgba(29,78,216,0.15)', color: '#60a5fa', borderRadius: 6, padding: '1px 7px', marginLeft: 4 }}>principal</span> : ''}
+                  {respGeralUsers.map(u => {
+                    const isFixa = (u as any).is_owner || u.username === 'admin';
+                    return (
+                      <div key={u.username} style={{ background: 'rgba(29,78,216,0.07)', border: '1px solid rgba(29,78,216,0.2)', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: (u as any).is_owner ? '#7c3aed' : '#1d4ed8', flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 140 }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                            {(u as any).nome || u.label}
+                            {(u as any).is_owner ? <span style={{ fontSize: '0.68rem', background: 'rgba(124,58,237,0.15)', color: '#a78bfa', borderRadius: 6, padding: '1px 7px', marginLeft: 4 }}>Owner</span> : null}
+                            {u.username === 'admin' ? <span style={{ fontSize: '0.68rem', background: 'rgba(29,78,216,0.15)', color: '#60a5fa', borderRadius: 6, padding: '1px 7px', marginLeft: 4 }}>principal</span> : ''}
+                          </div>
+                          <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)' }}>Login: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{u.username}</strong></div>
                         </div>
-                        <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)' }}>Login: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{u.username}</strong></div>
+                        {!isFixa && (
+                          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                            <button onClick={() => { setRespResetTarget(u.username); setRespResetPass(''); setRespResetMsg(''); }}
+                              style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', color: '#ca8a04', borderRadius: 7, padding: '4px 10px', fontSize: '0.73rem', cursor: 'pointer', fontWeight: 600 }}>
+                              🔑 Resetar
+                            </button>
+                            <button onClick={() => { setRespDeleteTarget(u.username); setRespDeleteMsg(''); }}
+                              style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: '#ef4444', borderRadius: 7, padding: '4px 10px', fontSize: '0.73rem', cursor: 'pointer', fontWeight: 600 }}>
+                              🗑
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      {u.username !== 'admin' && (
-                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                          <button onClick={() => { setRespResetTarget(u.username); setRespResetPass(''); setRespResetMsg(''); }}
-                            style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', color: '#ca8a04', borderRadius: 7, padding: '4px 10px', fontSize: '0.73rem', cursor: 'pointer', fontWeight: 600 }}>
-                            🔑 Resetar
-                          </button>
-                          <button onClick={() => { setRespDeleteTarget(u.username); setRespDeleteMsg(''); }}
-                            style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: '#ef4444', borderRadius: 7, padding: '4px 10px', fontSize: '0.73rem', cursor: 'pointer', fontWeight: 600 }}>
-                            🗑
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
-                {/* Reset/Delete para admin geral */}
-                {respResetTarget && !/^\d{11}$/.test(respResetTarget) && (
-                  <div style={{ background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: 10 }}>🔑 Resetar senha de <span style={{ color: '#ca8a04' }}>{respResetTarget}</span></div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <input type="password" placeholder="Nova senha (mín. 6 caracteres)" value={respResetPass} onChange={e => { setRespResetPass(e.target.value); setRespResetMsg(''); }}
-                        style={{ flex: 1, minWidth: 180, padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }} />
-                      <button disabled={respResetting} onClick={async () => {
-                        if (!respResetPass || respResetPass.length < 6) { setRespResetMsg('Mínimo 6 caracteres.'); return; }
-                        setRespResetting(true);
-                        const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reset-password', admin_username: loginUser.trim() || 'admin', admin_password: respAdminPass, target_username: respResetTarget, new_password: respResetPass }) });
-                        const d = await res.json();
-                        setRespResetMsg(res.ok ? '✓ Senha redefinida!' : (d.error || 'Erro.'));
-                        if (res.ok) { setRespResetPass(''); setTimeout(() => { setRespResetTarget(''); setRespResetMsg(''); }, 2000); }
-                        setRespResetting(false);
-                      }} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#b45309,#d97706)', border: 'none', color: '#fff', fontWeight: 700, cursor: respResetting ? 'wait' : 'pointer', fontSize: '0.85rem' }}>
-                        {respResetting ? '⏳' : 'Salvar'}
-                      </button>
-                      <button onClick={() => { setRespResetTarget(''); setRespResetMsg(''); }} style={{ padding: '8px 12px', borderRadius: 8, background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.82rem' }}>✕</button>
-                    </div>
-                    {respResetMsg && <div style={{ marginTop: 6, fontSize: '0.76rem', fontWeight: 600, color: respResetMsg.startsWith('✓') ? '#22c55e' : '#ef4444' }}>{respResetMsg}</div>}
-                  </div>
-                )}
-
-                {respDeleteTarget && !/^\d{11}$/.test(respDeleteTarget) && respDeleteTarget !== 'admin' && (
-                  <div style={{ background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.28)', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: 6 }}>🗑 Remover admin <span style={{ color: '#ef4444' }}>{respDeleteTarget}</span>?</div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button disabled={respDeleting} onClick={async () => {
-                        setRespDeleting(true);
-                        const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete-user', admin_username: loginUser.trim() || 'admin', admin_password: respAdminPass, target_username: respDeleteTarget }) });
-                        const d = await res.json();
-                        if (res.ok) { setRespGeralUsers(prev => prev.filter(u => u.username !== respDeleteTarget)); setRespDeleteTarget(''); setRespDeleteMsg(''); }
-                        else setRespDeleteMsg(d.error || 'Erro.');
-                        setRespDeleting(false);
-                      }} style={{ padding: '7px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#dc2626,#b91c1c)', border: 'none', color: '#fff', fontWeight: 700, cursor: respDeleting ? 'wait' : 'pointer', fontSize: '0.85rem' }}>
-                        {respDeleting ? '⏳' : '🗑 Confirmar'}
-                      </button>
-                      <button onClick={() => { setRespDeleteTarget(''); setRespDeleteMsg(''); }} style={{ padding: '7px 12px', borderRadius: 8, background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.82rem' }}>{t('admin_cancel')}</button>
-                    </div>
-                    {respDeleteMsg && <div style={{ marginTop: 6, fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>{respDeleteMsg}</div>}
-                  </div>
-                )}
-
-                {/* Formulário novo Admin Geral */}
                 {respGeralUsers.length < 3 ? (
                   <div style={{ borderTop: '1px solid rgba(29,78,216,0.18)', paddingTop: 18 }}>
                     <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', marginBottom: 12 }}>➕ Adicionar Admin Geral ({respGeralUsers.length}/3)</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
                       <div>
                         <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Login</div>
-                        <input type="text" placeholder="ex: admin2" value={respNewGeralLogin} onChange={e => { setRespNewGeralLogin(e.target.value.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_-]/g,'')); setRespGeralCreateMsg(''); }}
+                        <input type="text" placeholder="ex: admin2" value={respNewGeralLogin} onChange={e => { setRespNewGeralLogin(e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '')); setRespGeralCreateMsg(''); }}
                           style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }} />
                       </div>
                       <div>
@@ -13047,8 +13065,8 @@ Suporte Ginga Gestão.`
                       </div>
                       <div>
                         <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Senha Inicial</div>
-                        <input type="password" placeholder="mínimo 6 caracteres" value={respNewGeralPass} onChange={e => { setRespNewGeralPass(e.target.value); setRespGeralCreateMsg(''); }}
-                          style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }} />
+                        <input type="text" placeholder="mínimo 6 caracteres" value={respNewGeralPass} onChange={e => { setRespNewGeralPass(e.target.value); setRespGeralCreateMsg(''); }}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none', fontFamily: 'monospace' }} />
                       </div>
                     </div>
                     {respGeralCreateMsg && (
@@ -13061,14 +13079,14 @@ Suporte Ginga Gestão.`
                       if (respNewGeralLogin.length < 3) { setRespGeralCreateMsg('Login deve ter pelo menos 3 caracteres.'); return; }
                       if (respNewGeralPass.length < 6) { setRespGeralCreateMsg('Senha deve ter pelo menos 6 caracteres.'); return; }
                       setRespGeralCreating(true);
-                      const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create-geral', admin_username: loginUser.trim() || 'admin', admin_password: respAdminPass, new_username: respNewGeralLogin, new_password: respNewGeralPass, nome: respNewGeralNome }) });
+                      const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create-geral', admin_username: loginUser.trim(), admin_password: respAdminPass, new_username: respNewGeralLogin, new_password: respNewGeralPass, nome: respNewGeralNome }) });
                       const d = await res.json();
                       if (res.ok) {
                         setRespGeralCreateMsg(`✓ Admin "${d.username}" criado com sucesso!`);
                         setRespNewGeralLogin(''); setRespNewGeralNome(''); setRespNewGeralPass('');
-                        const lr = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: loginUser.trim() || 'admin', admin_password: respAdminPass }) });
+                        const lr = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: loginUser.trim(), admin_password: respAdminPass }) });
                         const ld = await lr.json();
-                        if (lr.ok) setRespGeralUsers(ld.filter((u: any) => u.nucleo === 'geral'));
+                        if (Array.isArray(ld)) setRespGeralUsers(ld.filter((u: any) => u.nucleo === 'geral'));
                       } else setRespGeralCreateMsg(d.error || 'Erro ao criar admin.');
                       setRespGeralCreating(false);
                     }} style={{ marginTop: 14, padding: '9px 24px', borderRadius: 9, background: 'linear-gradient(135deg,#1d4ed8,#1e40af)', border: 'none', color: '#fff', fontWeight: 700, cursor: respGeralCreating ? 'wait' : 'pointer', opacity: respGeralCreating ? 0.7 : 1, fontSize: '0.9rem' }}>
@@ -13085,7 +13103,7 @@ Suporte Ginga Gestão.`
               {/* Rodapé */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  💡 Responsáveis usam o CPF como login · Admins gerais usam o login configurado
+                  💡 Cada núcleo tem um login de admin próprio · Owner e Admin Geral acessam com suas contas fixas
                 </div>
                 <button onClick={() => { setRespAdminAuthed(false); setRespAdminPass(''); setRespUsers([]); setRespGeralUsers([]); }}
                   style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 14px', fontSize: '0.78rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
