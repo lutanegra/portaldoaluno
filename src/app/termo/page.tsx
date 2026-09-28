@@ -136,7 +136,7 @@ function TermoContent() {
 
         {/* Cabeçalho */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <img src="/logo-portal-aluno.svg" alt="Logo Barão de Mauá" style={{ width: 110, height: 110, objectFit: 'contain', marginBottom: 14, display: 'block', margin: '0 auto 14px' }} />
+          <img src="/logo-portal-aluno.png" alt="Logo Barão de Mauá" style={{ width: 110, height: 110, objectFit: 'contain', marginBottom: 14, display: 'block', margin: '0 auto 14px' }} />
           <h1 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: 4 }}>Termo de Autorização</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
             Associação Cultural de Capoeira Barão de Mauá

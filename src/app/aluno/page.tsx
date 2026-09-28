@@ -641,7 +641,7 @@ export default function AlunoPage() {
           {/* Logo */}
           <div className="pa-auth-logo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-portal-aluno.svg" alt="Portal Aluno" />
+            <img src="/logo-portal-aluno.png" alt="Portal Aluno" />
             <h1>Portal <span>Aluno</span></h1>
             <p>Sua vida na capoeira em um só lugar</p>
           </div>
@@ -693,7 +693,7 @@ export default function AlunoPage() {
         <div className="pa-auth-inner" style={{ padding: '32px 0' }}>
           <div className="pa-auth-logo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-portal-aluno.svg" alt="Portal Aluno" />
+            <img src="/logo-portal-aluno.png" alt="Portal Aluno" />
             <h1>Criar <span>Conta</span></h1>
             <p>Um cadastro, acesso a tudo: carteirinha, presenças e graduações</p>
           </div>

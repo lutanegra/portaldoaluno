@@ -50,7 +50,7 @@ export default function Carteirinha({ data }: Props) {
   const nomenclatura = nomenclaturaGraduacao[data.graduacao] || '';
   // Assinatura dinamica do sistema
   const sig = { 
-    imgSrc: sysConfig.signature_image_url || '/logo-portal-aluno.svg', 
+    imgSrc: sysConfig.signature_image_url || '/logo-portal-aluno.png', 
     nome: sysConfig.signature_name || 'Administrador do Sistema', 
     cargo: sysConfig.signature_role || sysConfig.organization_name 
   };
@@ -113,7 +113,7 @@ export default function Carteirinha({ data }: Props) {
       }}>
         {/* Logo + org name centered */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src={sysConfig.logo_url || '/logo-portal-aluno.svg'} alt={sysConfig.organization_short} style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
+          <img src={sysConfig.logo_url || '/logo-portal-aluno.png'} alt={sysConfig.organization_short} style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
           <div style={{ textAlign: 'center' }}>
             <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.52rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
               {sysConfig.card_title || 'Carteira de Identificacao'}

@@ -23,7 +23,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Portal Aluno",
   description: "Portal do Aluno — gestao de alunos, carteirinha, presencas e graduacoes",
-  icons: { icon: "/logo-portal-aluno.svg", apple: "/logo-portal-aluno.svg" },
+  icons: { icon: "/logo-portal-aluno.png", apple: "/logo-portal-aluno.png" },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

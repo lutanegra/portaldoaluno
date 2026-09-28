@@ -149,7 +149,7 @@ function CarteirinhaContent() {
 
       {/* Logo + título */}
       <div style={{ textAlign: 'center', marginBottom: 28 }}>
-        <img src="/logo-portal-aluno.svg" alt="Portal Aluno" style={{ width: 72, height: 72, objectFit: 'contain', marginBottom: 10 }} />
+        <img src="/logo-portal-aluno.png" alt="Portal Aluno" style={{ width: 72, height: 72, objectFit: 'contain', marginBottom: 10 }} />
         <div style={{ color: '#f87171', fontSize: '1.1rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           Portal Aluno
         </div>

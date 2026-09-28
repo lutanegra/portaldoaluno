@@ -79,7 +79,7 @@ export default function Home() {
           <div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/logo-portal-aluno.svg"
+              src="/logo-portal-aluno.png"
               alt="Portal Aluno"
               style={{ width: 108, height: 108, objectFit: 'contain', margin: '0 auto 18px', display: 'block', filter: 'drop-shadow(0 8px 24px rgba(255,146,0,0.35))' }}
             />

@@ -40,7 +40,7 @@ export default function SplashGate() {
     <div className={`pa-splash${leaving ? ' leaving' : ''}`} aria-hidden="true">
       <div className="pa-splash-ring">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-portal-aluno.svg" alt="" />
+        <img src="/logo-portal-aluno.png" alt="" />
       </div>
       <div className="pa-splash-name">Portal <span>Aluno</span></div>
       <div className="pa-splash-bar"><i /></div>

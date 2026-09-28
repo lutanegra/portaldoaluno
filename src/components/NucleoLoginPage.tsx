@@ -355,7 +355,7 @@ export default function NucleoLoginPage({ nucleoKey }: Props) {
       }}>
         {/* Cabeçalho */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <img src="/logo-portal-aluno.svg" alt="Portal Aluno"
+          <img src="/logo-portal-aluno.png" alt="Portal Aluno"
             style={{ width: 88, height: 'auto', marginBottom: 14, filter: 'drop-shadow(0 4px 18px rgba(0,0,0,0.6))' }} />
           <div style={{ fontSize: '1.12rem', fontWeight: 800, color: '#fff', marginBottom: 4 }}>
             {nucleo.label}

@@ -446,7 +446,7 @@ Axé!`
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           {t('common_back')}
         </button>
-        <img src="/logo-portal-aluno.svg" alt="Logo Barão de Mauá" style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 10, display: 'block', margin: '0 auto 10px' }} />
+        <img src="/logo-portal-aluno.png" alt="Logo Barão de Mauá" style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 10, display: 'block', margin: '0 auto 10px' }} />
         <h1 style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{t('attendance_title')}</h1>
         <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', marginTop: 6 }}>{hoje}</p>
       </div>
@@ -501,7 +501,7 @@ Axé!`
         {/* Locais disponíveis */}
         <div className="form-section" style={{ marginBottom: 16 }}>
           <div style={{ textAlign: 'center', marginBottom: 14 }}>
-            <img src="/logo-portal-aluno.svg" alt="Logo Barão de Mauá" style={{ width: 72, height: 72, objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+            <img src="/logo-portal-aluno.png" alt="Logo Barão de Mauá" style={{ width: 72, height: 72, objectFit: 'contain', display: 'block', margin: '0 auto' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <h2 className="form-section-title" style={{ margin: 0 }}>Locais de Treino</h2>

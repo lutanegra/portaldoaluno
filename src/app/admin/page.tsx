@@ -1899,7 +1899,7 @@ export default function AdminPage() {
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#0f172a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Inter, sans-serif' }}>
         {/* Logo + title */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <img src="/logo-portal-aluno.svg" alt="ACCBM" style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 10, borderRadius: '50%' }} />
+          <img src="/logo-portal-aluno.png" alt="ACCBM" style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 10, borderRadius: '50%' }} />
           <div style={{ background: 'linear-gradient(90deg,#dc2626,#2563eb,#16a34a)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontSize: '1.15rem', fontWeight: 900, letterSpacing: '0.03em' }}>Portal Aluno — Gestao de Treinos</div>
           <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.78rem', marginTop: 4 }}>Associação Cultural de Capoeira Barão de Mauá</div>
         </div>
@@ -2185,7 +2185,7 @@ export default function AdminPage() {
 <body>
 <div class="header">
   <div class="header-left">
-    <img class="header-logo" src="${origin}/logo-portal-aluno.svg" alt="ACCBM" onerror="this.src='${origin}/logo-portal-aluno.svg'"/>
+    <img class="header-logo" src="${origin}/logo-portal-aluno.png" alt="ACCBM" onerror="this.src='${origin}/logo-portal-aluno.png'"/>
     <div class="header-text">
       <div class="org">Associação Cultural de Capoeira Barão de Mauá</div>
       <div class="title">${tipoIcon} Relatório — ${tipoLabel}</div>
@@ -2234,7 +2234,7 @@ export default function AdminPage() {
 
 <div class="footer">
   <div style="display:flex;align-items:center;gap:8px;">
-    <img class="footer-logo" src="${origin}/logo-portal-aluno.svg" alt="" onerror="this.src='${origin}/logo-portal-aluno.svg'"/>
+    <img class="footer-logo" src="${origin}/logo-portal-aluno.png" alt="" onerror="this.src='${origin}/logo-portal-aluno.png'"/>
     <span>ACCBM — Associação Cultural de Capoeira Barão de Mauá</span>
   </div>
   <span>Emitido em ${now}</span>
@@ -3476,7 +3476,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
       {activeTab === 'certificado' && (() => {
         const sig = certStudent
           ? (certStudent.nucleo === 'Mauá'
-            ? { nome: 'Mestre Márcio da Silva Frazão', cargo: 'Administrador - Portal Aluno', img: '/logo-portal-aluno.svg' }
+            ? { nome: 'Mestre Márcio da Silva Frazão', cargo: 'Administrador - Portal Aluno', img: '/logo-portal-aluno.png' }
             : { nome: 'Mestre Elionaldo Pontes de Lima', cargo: 'Vice-Administrador - Portal Aluno', img: '/assinatura-naldo.png' })
           : null;
 
@@ -3757,7 +3757,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     {/* Logo + org name */}
-                    <img src="/logo-portal-aluno.svg" alt="ACCBM" style={{ width: 52, height: 52, objectFit: 'contain', marginBottom: 4 }} />
+                    <img src="/logo-portal-aluno.png" alt="ACCBM" style={{ width: 52, height: 52, objectFit: 'contain', marginBottom: 4 }} />
                     <div style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#92400e' }}>
                       Associação Cultural de Capoeira Barão de Mauá
                     </div>
@@ -7882,7 +7882,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                   @media print{body{padding:14px};@page{size:A4 landscape;margin:1cm}}</style></head>
                   <body>
                   <div class="header">
-                    <img src="${origin}/logo-portal-aluno.svg" alt="ACCBM" onerror="this.src='${origin}/logo-portal-aluno.svg'"/>
+                    <img src="${origin}/logo-portal-aluno.png" alt="ACCBM" onerror="this.src='${origin}/logo-portal-aluno.png'"/>
                     <div><div class="assoc">Associação Cultural de Capoeira Barão de Mauá</div>
                     <div class="title">📋 Relatório de Alunos</div>
                     <div class="sub">Núcleo: <strong>${nucleoLabel}</strong> &nbsp;|&nbsp; Mês: <strong>${mesLabel}</strong> &nbsp;|&nbsp; Total: <strong>${relAlunosList.length} alunos</strong></div></div>
@@ -10730,7 +10730,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                           </style></head>
                           <body>
                           <div class="header">
-                            <img src="${origin}/logo-portal-aluno.svg" alt="ACCBM" onerror="this.src='${origin}/logo-portal-aluno.svg'"/>
+                            <img src="${origin}/logo-portal-aluno.png" alt="ACCBM" onerror="this.src='${origin}/logo-portal-aluno.png'"/>
                             <div class="header-text">
                               <div class="assoc-name">Associação Cultural de Capoeira Barão de Mauá</div>
                               <div class="badge">${ev.tipo === 'batizado' ? 'Batizado' : 'Troca de Graduação'}</div>
@@ -10839,7 +10839,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                   @media print{body{padding:12px 14px};@page{size:landscape;margin:1cm}}
                 </style></head><body>
                 <div class="header">
-                  <img src="${glOrigin}/logo-portal-aluno.svg" alt="ACCBM" onerror="this.src='${glOrigin}/logo-portal-aluno.svg'"/>
+                  <img src="${glOrigin}/logo-portal-aluno.png" alt="ACCBM" onerror="this.src='${glOrigin}/logo-portal-aluno.png'"/>
                   <div>
                     <div class="assoc-name">Associação Cultural de Capoeira Barão de Mauá</div>
                     <h1>📋 Lista Geral de Participantes${filtroLabel}</h1>
@@ -11181,7 +11181,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                       @media print{body{padding:14px};@page{size:landscape;margin:1cm}}</style></head>
                       <body>
                       <div class="header">
-                        <img src="${origin}/logo-portal-aluno.svg" alt="ACCBM" onerror="this.src='${origin}/logo-portal-aluno.svg'"/>
+                        <img src="${origin}/logo-portal-aluno.png" alt="ACCBM" onerror="this.src='${origin}/logo-portal-aluno.png'"/>
                         <div><div class="assoc">Associação Cultural de Capoeira Barão de Mauá</div>
                         <div class="title">${eventoForm.tipo==='batizado'?'Batizado':'Troca de Graduação'}: ${eventoForm.nome||'—'}</div>
                         <div style="font-size:0.82rem;color:#64748b">Data: <strong>${dataFmt}</strong>${eventoForm.hora?` &nbsp;|&nbsp; Horário: <strong>${eventoForm.hora}</strong>`:''}${eventoForm.local?` &nbsp;|&nbsp; Local: <strong>${eventoForm.local}</strong>`:''} &nbsp;|&nbsp; Participantes: <strong>${(eventoForm.participantes||[]).length}</strong></div></div>

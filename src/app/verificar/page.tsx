@@ -84,7 +84,7 @@ function VerificarContent() {
 
       {/* Logo + titulo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-        <img src="/logo-portal-aluno.svg" alt="Portal Aluno" style={{ width: 44, height: 44, objectFit: 'contain' }} />
+        <img src="/logo-portal-aluno.png" alt="Portal Aluno" style={{ width: 44, height: 44, objectFit: 'contain' }} />
         <div>
           <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
             Sistema de Gestao
@@ -168,7 +168,7 @@ function VerificarContent() {
               justifyContent: 'space-between',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <img src="/logo-portal-aluno.svg" alt="Portal Aluno" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                <img src="/logo-portal-aluno.png" alt="Portal Aluno" style={{ width: 36, height: 36, objectFit: 'contain' }} />
                 <div>
                   <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.5rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                     Assoc. Cultural de Capoeira

@@ -182,7 +182,7 @@ export default function HierarquiaPage() {
 
         <div style={{ textAlign: 'center', marginTop: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-            <img src="/logo-portal-aluno.svg" alt="Portal Aluno" onError={(e) => { (e.target as HTMLImageElement).src = '/logo-portal-aluno.svg'; }} style={{ width: 100, height: 100, objectFit: 'contain', filter: 'drop-shadow(0 4px 16px rgba(255,146,0,0.4))' }} />
+            <img src="/logo-portal-aluno.png" alt="Portal Aluno" onError={(e) => { (e.target as HTMLImageElement).src = '/logo-portal-aluno.png'; }} style={{ width: 100, height: 100, objectFit: 'contain', filter: 'drop-shadow(0 4px 16px rgba(255,146,0,0.4))' }} />
           </div>
           <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>CCLN</div>
           <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 900, background: 'linear-gradient(90deg,#fbbf24,#f87171,#a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>

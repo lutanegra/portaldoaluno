@@ -56,8 +56,8 @@ const DEFAULT_CONFIG: SystemConfig = {
   system_name: 'Portal Aluno',
   organization_name: 'Portal Aluno',
   organization_short: 'CCLN',
-  logo_url: '/logo-portal-aluno.svg',
-  favicon_url: '/logo-portal-aluno.svg',
+  logo_url: '/logo-portal-aluno.png',
+  favicon_url: '/logo-portal-aluno.png',
 
   primary_color: '#FF9200',
   secondary_color: '#0a0a0a',
