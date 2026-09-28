@@ -13,15 +13,9 @@ const TABELAS = [
   'presencas',
   'system_config',
   'tenants',
-  'events',
-  'event_registrations',
-  'financeiro_lancamentos',
-  'justificativas',
-  'inscricoes_rascunhos',
-  'password_recovery',
 ];
 
-const BUCKETS = ['photos', 'student-photos', 'organograma', 'hierarquia', 'rascunhos'];
+const BUCKETS = ['photos'];
 
 export async function GET() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

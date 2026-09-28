@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 const SUPER_ADMIN_CPF = '09856925703';
@@ -63,11 +62,13 @@ export default function HierarquiaPage() {
   };
 
   const uploadFoto = async (file: File, nivel: string, idx: number): Promise<string | null> => {
-    const ext = file.name.split('.').pop();
-    const path = `hierarquia/${nivel}_${idx}_${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
-    if (error) return null;
-    return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+    const form = new FormData();
+    form.append('foto', file);
+    form.append('folder', 'hierarquia');
+    const res = await fetch('/api/upload-imagem', { method: 'POST', body: form });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.url) return null;
+    return json.url as string;
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
