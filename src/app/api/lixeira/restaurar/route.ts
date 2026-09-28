@@ -51,6 +51,18 @@ export async function POST(req: NextRequest) {
   delete p.ultimo_checkin;
   delete p.checkin_nucleo;
 
+  // Reatribui numeração sequencial (ordem de chegada) na restauração
+  try {
+    const { data: maxRow } = await supabaseAdmin
+      .from('students')
+      .select('ordem_inscricao')
+      .not('ordem_inscricao', 'is', null)
+      .order('ordem_inscricao', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    p.ordem_inscricao = (maxRow?.ordem_inscricao ?? 0) + 1;
+  } catch { /* sem numeração — o app lida com isso */ }
+
   const { error } = await supabaseAdmin.from('students').insert(insertPayload);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

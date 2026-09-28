@@ -226,18 +226,20 @@ export async function PATCH(req: NextRequest) {
       payload.menor_de_idade = age < 18;
     }
 
-    // Auto-compute tenant_id from nucleo if provided
-    const NUCLEO_TENANTS: Record<string, string> = {
-      'Poliesportivo Edson Alves': 'a1000001-0000-4000-8000-000000000001',
-      'Poliesportivo do Ipiranga':  'a1000001-0000-4000-8000-000000000002',
-      'Saracuruna':                 'a1000001-0000-4000-8000-000000000003',
-      'Vila Urussaí':               'a1000001-0000-4000-8000-000000000004',
-      'Jayme Fichman':              'a1000001-0000-4000-8000-000000000005',
-      'Academia Mais Saúde':        'a1000001-0000-4000-8000-000000000006',
-    };
+    // Vincula ao núcleo pelo nome — tenants é a fonte da verdade e o nome vem do
+    // dropdown alimentado pela tabela tenants, então só grava quando existe.
     if (payload.nucleo && typeof payload.nucleo === 'string') {
-      const tid = NUCLEO_TENANTS[payload.nucleo];
-      if (tid) payload.tenant_id = tid;
+      const nome = payload.nucleo.trim();
+      if (nome) {
+        const { data: tenant } = await supabaseAdmin
+          .from('tenants')
+          .select('id')
+          .ilike('nome', nome)
+          .maybeSingle();
+        payload.tenant_id = tenant?.id ?? null;
+      } else {
+        payload.tenant_id = null;
+      }
     }
 
     const { error: updateError } = await supabaseAdmin

@@ -298,8 +298,24 @@ export async function POST(req: NextRequest) {
       } catch {}
     }
 
-    // Se não tem ordem_inscricao: busca o mapa de matrículas no Storage e atribui próximo número
-    if (!inscricao_numero) {
+    // Se não tem ordem_inscricao: atribui o próximo número sequencial no banco
+    // (fonte da verdade) e mantém o mapa antigo do Storage por compatibilidade
+    if (!inscricao_numero && studentId) {
+      try {
+        const { data: maxRow } = await supabaseAdmin
+          .from('students')
+          .select('ordem_inscricao')
+          .not('ordem_inscricao', 'is', null)
+          .order('ordem_inscricao', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        inscricao_numero = (maxRow?.ordem_inscricao ?? 0) + 1;
+        await supabaseAdmin.from('students')
+          .update({ ordem_inscricao: inscricao_numero })
+          .eq('id', studentId);
+      } catch {
+        inscricao_numero = null;
+      }
       try {
         const BUCKET = 'photos';
         const KEY = 'config/matriculas.json';
@@ -309,20 +325,14 @@ export async function POST(req: NextRequest) {
           const mRes = await fetch(urlData.signedUrl, { cache: 'no-store' });
           if (mRes.ok) matMap = await mRes.json();
         }
-        // Próximo número = max atual + 1
-        const maxNum = Object.values(matMap).reduce((a, b) => Math.max(a, b), 0);
-        inscricao_numero = maxNum + 1;
-        // Salva no mapa
-        if (studentId) matMap[studentId] = inscricao_numero;
-        const cpfDigits = (safePayload.cpf as string || '').replace(/\D/g, '');
-        if (cpfDigits) matMap[`cpf_${cpfDigits}`] = inscricao_numero;
-        const blob = new Blob([JSON.stringify(matMap)], { type: 'application/json' });
-        await supabaseAdmin.storage.from(BUCKET).upload(KEY, blob, { upsert: true });
-      } catch {
-        // fallback: conta total de alunos
-        const { count } = await supabaseAdmin.from('students').select('*', { count: 'exact', head: true });
-        inscricao_numero = count ?? null;
-      }
+        if (inscricao_numero) {
+          if (studentId) matMap[studentId] = inscricao_numero;
+          const cpfDigits = (safePayload.cpf as string || '').replace(/\D/g, '');
+          if (cpfDigits) matMap[`cpf_${cpfDigits}`] = inscricao_numero;
+          const blob = new Blob([JSON.stringify(matMap)], { type: 'application/json' });
+          await supabaseAdmin.storage.from(BUCKET).upload(KEY, blob, { upsert: true });
+        }
+      } catch { /* mapa antigo é opcional */ }
     }
 
     // Garante foto_url no banco e move arquivo temp para pasta definitiva do aluno

@@ -21,12 +21,13 @@ async function loadIdMap(): Promise<Record<string, string>> {
   } catch { return {}; }
 }
 
-// GET /api/carteirinha?cpf=XXX or ?id=UUID or ?identidade=XXX
+// GET /api/carteirinha?cpf=XXX or ?id=UUID or ?identidade=XXX or ?mat=CCLN-001
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const cpf = searchParams.get('cpf');
   const studentId = searchParams.get('id');
   const identidade = searchParams.get('identidade');
+  const mat = searchParams.get('mat');
 
   let student: Record<string, unknown> | null = null;
 
@@ -37,6 +38,17 @@ export async function GET(req: NextRequest) {
       .eq('id', studentId)
       .maybeSingle();
     student = data;
+  } else if (mat) {
+    // Matrícula no formato CCLN-001 → procura pela numeração de chegada
+    const match = mat.match(/(\d+)$/);
+    if (match) {
+      const { data } = await supabaseAdmin
+        .from('students')
+        .select('*')
+        .eq('ordem_inscricao', parseInt(match[1], 10))
+        .maybeSingle();
+      student = data;
+    }
   } else if (cpf) {
     const cpfClean = cpf.replace(/\D/g, '');
     // Try formatted then raw digits

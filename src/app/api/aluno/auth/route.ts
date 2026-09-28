@@ -328,6 +328,24 @@ export async function POST(req: NextRequest) {
         .select('id, nome_completo, nucleo, graduacao, tipo_graduacao, foto_url, apelido, nome_social')
         .eq('id', student_id)
         .maybeSingle();
+
+      // ID sequencial de chegada (CCLN-000) — garante que toda conta tenha um
+      const { data: idData } = await supabaseAdmin
+        .from('students').select('ordem_inscricao').eq('id', student_id).maybeSingle();
+      let inscricao_numero: number | null = idData?.ordem_inscricao ?? null;
+      if (inscricao_numero == null) {
+        const { data: maxRow } = await supabaseAdmin
+          .from('students')
+          .select('ordem_inscricao')
+          .not('ordem_inscricao', 'is', null)
+          .order('ordem_inscricao', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        inscricao_numero = (maxRow?.ordem_inscricao ?? 0) + 1;
+        await supabaseAdmin.from('students')
+          .update({ ordem_inscricao: inscricao_numero })
+          .eq('id', student_id);
+      }
       const store = await cookies();
       const sess = createAlunoSession(student_id, account.username);
       store.set(SESSION_COOKIE, serializeAlunoSession(sess), sessionCookieOptions());
@@ -338,6 +356,7 @@ export async function POST(req: NextRequest) {
         student_id,
         student_name: student.nome_completo.split(' ')[0],
         student: studentData,
+        inscricao_numero,
       });
     }
 
@@ -439,6 +458,24 @@ export async function POST(req: NextRequest) {
       // Sync email to students table
       try { await supabaseAdmin.from('students').update({ email: emailNorm }).eq('id', target.id); } catch { /* silent */ }
 
+      // ID sequencial de chegada (CCLN-000) — garante que toda conta tenha um
+      const { data: idRow } = await supabaseAdmin
+        .from('students').select('ordem_inscricao').eq('id', target.id).maybeSingle();
+      let inscricao_numero: number | null = idRow?.ordem_inscricao ?? null;
+      if (inscricao_numero == null) {
+        const { data: maxRow } = await supabaseAdmin
+          .from('students')
+          .select('ordem_inscricao')
+          .not('ordem_inscricao', 'is', null)
+          .order('ordem_inscricao', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        inscricao_numero = (maxRow?.ordem_inscricao ?? 0) + 1;
+        await supabaseAdmin.from('students')
+          .update({ ordem_inscricao: inscricao_numero })
+          .eq('id', target.id);
+      }
+
       const { data: student } = await supabaseAdmin
         .from('students').select('id, nome_completo, nucleo, graduacao, tipo_graduacao, foto_url, apelido, nome_social')
         .eq('id', target.id).maybeSingle();
@@ -448,7 +485,7 @@ export async function POST(req: NextRequest) {
       const sess = createAlunoSession(target.id, emailNorm);
       store.set(SESSION_COOKIE, serializeAlunoSession(sess), sessionCookieOptions());
 
-      return NextResponse.json({ success: true, logged_in: true, student_id: target.id, username: emailNorm, student, student_name: (target.nome_completo || nome_completo).split(' ')[0] });
+      return NextResponse.json({ success: true, logged_in: true, student_id: target.id, username: emailNorm, student, student_name: (target.nome_completo || nome_completo).split(' ')[0], inscricao_numero });
     }
 
     if (action === 'verify-otp') {

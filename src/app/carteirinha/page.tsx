@@ -21,12 +21,16 @@ function CarteirinhaContent() {
   };
 
   const buscar = async (cpfValue?: string) => {
-    const target = cpfValue ?? cpf;
+    const target = (cpfValue ?? cpf).trim();
     const cpfClean = target.replace(/\D/g, '');
-    if (cpfClean.length < 11) { setError('CPF inválido.'); return; }
+    const isMatricula = /^[Cc][Cc][Ll][Nn]-?\d{1,6}$/.test(target.replace(/\s/g, ''));
+    if (!isMatricula && cpfClean.length < 11) { setError('CPF inválido.'); return; }
     setLoading(true); setError(''); setData(null);
     try {
-      const res = await fetch(`/api/carteirinha?cpf=${encodeURIComponent(target)}`);
+      const url = isMatricula
+        ? `/api/carteirinha?mat=${encodeURIComponent(target.toUpperCase().replace(/\s/g, ''))}`
+        : `/api/carteirinha?cpf=${encodeURIComponent(target)}`;
+      const res = await fetch(url);
       if (!res.ok) {
         setError('Aluno não encontrado. Verifique o CPF informado.');
       } else {
@@ -55,13 +59,14 @@ function CarteirinhaContent() {
     setLoading(false);
   };
 
-  // Auto-load if CPF comes in the URL (?cpf=XXX.XXX.XXX-XX)
+  // Auto-load if CPF or matricula comes in the URL (?cpf=XXX.XXX.XXX-XX or ?cpf=CCLN-001)
   useEffect(() => {
     const cpfParam = searchParams.get('cpf');
     if (cpfParam) {
-      const formatted = formatCPF(cpfParam);
-      setCpf(formatted);
-      buscar(formatted);
+      const isMat = /^[Cc][Cc][Ll][Nn]-?\d{1,6}$/.test(cpfParam.replace(/\s/g, ''));
+      const value = isMat ? cpfParam.toUpperCase().replace(/\s/g, '') : formatCPF(cpfParam);
+      setCpf(value);
+      buscar(value);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -162,14 +167,14 @@ function CarteirinhaContent() {
       {!data && (
         <div style={{ width: '100%', maxWidth: 420, background: 'rgba(255,255,255,0.06)', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', padding: '24px 20px', marginBottom: 24 }}>
           <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 8 }}>
-            CPF do Aluno
+            CPF ou Matrícula do Aluno
           </label>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               value={cpf}
-              onChange={e => setCpf(formatCPF(e.target.value))}
+              onChange={e => setCpf(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && buscar()}
-              placeholder="000.000.000-00"
+              placeholder="000.000.000-00 ou CCLN-001"
               style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 10, padding: '11px 14px', color: '#fff', fontSize: '0.95rem', outline: 'none', fontFamily: 'Inter, sans-serif' }}
             />
             <button

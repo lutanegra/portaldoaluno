@@ -64,7 +64,7 @@ export default function Carteirinha({ data }: Props) {
 
   // QR code — URL de verificacao publica da carteirinha
   const idPrefix = sysConfig.id_prefix || 'CCLN';
-  const matriculaStr = data.inscricao_numero != null ? `${idPrefix}-${String(data.inscricao_numero).padStart(6, '0')}` : '';
+  const matriculaStr = data.inscricao_numero != null ? `${idPrefix}-${String(data.inscricao_numero).padStart(3, '0')}` : '';
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   // Prefer UUID (always works), fallback to matricula number
   const qrValue = data.student_id
@@ -132,7 +132,7 @@ export default function Carteirinha({ data }: Props) {
           <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', textAlign: 'right', background: 'rgba(0,0,0,0.25)', borderRadius: 6, padding: '3px 8px' }}>
             <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.42rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Matrícula</div>
             <div style={{ color: '#fbbf24', fontSize: '0.68rem', fontWeight: 900, letterSpacing: '0.04em' }}>
-              {matriculaStr}
+              {idPrefix}-{String(data.inscricao_numero).padStart(3, '0')}
             </div>
           </div>
         )}
