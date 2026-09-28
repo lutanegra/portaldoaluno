@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 <body style="font-family:Inter,system-ui,sans-serif;background:#f8fafc;margin:0;padding:20px">
   <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08)">
     <div style="background:linear-gradient(135deg,#dc2626,#1d4ed8);padding:28px 28px 24px;text-align:center">
-      <div style="color:#fff;font-size:1.3rem;font-weight:900;letter-spacing:0.03em">DEMO</div>
+      <div style="color:#fff;font-size:1.3rem;font-weight:900;letter-spacing:0.03em">CCLN</div>
       <div style="color:rgba(255,255,255,0.8);font-size:0.8rem;margin-top:4px">Sistema de Gestao de Alunos - Demonstrativo</div>
     </div>
     <div style="padding:28px">
@@ -39,13 +39,13 @@ export async function POST(req: NextRequest) {
         ⚠️ <strong>Mantenha estas credenciais em local seguro.</strong> Não compartilhe sua senha com ninguém. Recomendamos alterar a senha após o primeiro acesso.
       </div>
 
-      <p style="margin:0;font-size:0.75rem;color:#9ca3af;text-align:center">Sistema de Gestao de Alunos — Sistema de Gestão DEMO</p>
+      <p style="margin:0;font-size:0.75rem;color:#9ca3af;text-align:center">Portal Aluno</p>
     </div>
   </div>
 </body>
 </html>`;
 
-    const result = await sendEmail(to, `🔐 Suas Credenciais DEMO — ${label}`, html);
+    const result = await sendEmail(to, `🔐 Suas Credenciais de Acesso — ${label}`, html);
 
     return NextResponse.json({ sent: result.sent, skipped: result.skipped, error: result.error });
   } catch (err: unknown) {

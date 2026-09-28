@@ -24,10 +24,10 @@ export interface SystemConfig {
 }
 
 const DEFAULT_CONFIG: SystemConfig = {
-  system_name: 'Sistema de Gestao de Alunos DEMO',
-  organization_name: 'Organizacao Demo',
-  organization_short: 'DEMO',
-  id_prefix: 'DEMO',
+  system_name: 'Portal Aluno',
+  organization_name: 'Portal Aluno',
+  organization_short: 'CCLN',
+  id_prefix: 'CCLN',
   card_title: 'Carteira de Identificacao',
   card_subtitle: 'Membro Ativo',
   signature_name: 'Administrador',

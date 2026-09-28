@@ -254,14 +254,19 @@ export default function AlunoPage() {
         return;
       }
 
-      const raw = sessionStorage.getItem('aluno_session');
-      if (raw) {
-        const sess = JSON.parse(raw);
-        setSession(sess);
-        loadStudentData(sess.student_id, true);
-      } else {
-        setLoading(false);
-      }
+      // Sessão persistente: cookie HttpOnly assinado (server valida e devolve o aluno)
+      fetch('/api/aluno/auth', { cache: 'no-store' })
+        .then(r => r.json())
+        .then(d => {
+          if (d.authenticated && d.session?.student_id) {
+            setSession({ student_id: d.session.student_id, username: d.session.username });
+            if (d.student) setStudent(d.student);
+            loadStudentData(d.session.student_id, true);
+          } else {
+            setLoading(false);
+          }
+        })
+        .catch(() => setLoading(false));
     } catch { setLoading(false); }
   }, []);
 
@@ -402,7 +407,8 @@ export default function AlunoPage() {
       }
       setLoginAttempts(0);
       const sess = { student_id: data.student_id, username: data.username };
-      sessionStorage.setItem('aluno_session', JSON.stringify(sess));
+      // O cookie de sessão foi gravado pelo servidor; guarda espelho leve para render imediato
+      try { sessionStorage.setItem('aluno_session', JSON.stringify(sess)); } catch {}
       // Pre-populate with login response so dashboard renders immediately
       if (data.student) setStudent(data.student);
       setSession(sess);
@@ -413,8 +419,9 @@ export default function AlunoPage() {
     finally { setLoginLoading(false); }
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('aluno_session');
+  const handleLogout = async () => {
+    try { await fetch('/api/aluno/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) }); } catch {}
+    try { sessionStorage.removeItem('aluno_session'); } catch {}
     setSession(null);
     setStudent(null);
     setActiveTab('dashboard');
@@ -447,8 +454,19 @@ export default function AlunoPage() {
         });
         const data = await res.json();
         if (res.ok) {
-          setRegisterSuccess('Conta criada com sucesso! Acesse agora sua área do aluno.');
-          setTimeout(() => { setShowRegister(false); }, 2000);
+          // Conta criada e já logada (cookie gravado pelo servidor)
+          setRegisterSuccess('Conta criada! Entrando no portal...');
+          if (data.student_id) {
+            try { sessionStorage.setItem('aluno_session', JSON.stringify({ student_id: data.student_id, username: data.username || registerForm.email.trim().toLowerCase() })); } catch {}
+            setTimeout(() => {
+              setSession({ student_id: data.student_id, username: data.username || registerForm.email.trim().toLowerCase() });
+              if (data.student) setStudent(data.student);
+              setShowRegister(false);
+              loadStudentData(data.student_id, true);
+            }, 900);
+          } else {
+            setTimeout(() => { setShowRegister(false); }, 2000);
+          }
           return;
         }
         // If CPF not found, fall through to name-based
@@ -474,8 +492,15 @@ export default function AlunoPage() {
         if (data2.candidates?.length) msg += `\n\nNomes similares encontrados:\n• ${data2.candidates.join('\n• ')}`;
         setRegisterError(msg); return;
       }
-      setRegisterSuccess('Conta criada com sucesso! Acesse agora sua área do aluno.');
-      setTimeout(() => { setShowRegister(false); }, 2000);
+      // Conta criada e já logada (cookie gravado pelo servidor)
+      setRegisterSuccess('Conta criada! Entrando no portal...');
+      try { sessionStorage.setItem('aluno_session', JSON.stringify({ student_id: data2.student_id, username: data2.username || registerForm.email.trim().toLowerCase() })); } catch {}
+      setTimeout(() => {
+        setSession({ student_id: data2.student_id, username: data2.username || registerForm.email.trim().toLowerCase() });
+        if (data2.student) setStudent(data2.student);
+        setShowRegister(false);
+        loadStudentData(data2.student_id, true);
+      }, 900);
     } catch { setRegisterError('Erro de conexão. Tente novamente.'); }
     finally { setRegisterLoading(false); }
   };
@@ -610,93 +635,47 @@ export default function AlunoPage() {
   // ── LOGIN ─────────────────────────────────────────────────────────────────
   if (!session && !showRegister && !showForgot) {
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-        <div style={{ width: '100%', maxWidth: 420 }}>
+      <div className="pa-auth">
+        <div className="pa-auth-inner">
           {/* Logo */}
-          <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-              <div style={{ width: 110, height: 110, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '2px solid rgba(255,255,255,0.15)', padding: 6, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
-                <img src="/logo-accbm.png" alt="Sistema DEMO Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
-              </div>
-            </div>
-            <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>Área do Aluno</h1>
-            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.78rem', margin: '5px 0 0' }}>Sistema de Gestao de Alunos - DEMO</p>
+          <div className="pa-auth-logo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-portal-aluno.svg" alt="Portal Aluno" />
+            <h1>Portal <span>Aluno</span></h1>
+            <p>Sua vida na capoeira em um só lugar</p>
           </div>
 
-          <div style={{ background: '#fff', borderRadius: 20, padding: '32px 28px', boxShadow: '0 25px 60px rgba(0,0,0,0.4)' }}>
-            <h2 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 700, color: '#111827' }}>Entrar na minha conta</h2>
-            <p style={{ margin: '0 0 24px', fontSize: '0.82rem', color: '#6b7280' }}>Acesse sua carteirinha, presenças e histórico de graduação.</p>
+          <div className="pa-card">
+            <h2>Entrar na minha conta</h2>
+            <p className="pa-sub">Acesse sua carteirinha, presenças e histórico de graduação.</p>
 
             {loginError && (
-              <div style={{ background: loginError.startsWith('✅') ? '#f0fdf4' : '#fef2f2', border: `1px solid ${loginError.startsWith('✅') ? '#bbf7d0' : '#fecaca'}`, color: loginError.startsWith('✅') ? '#166534' : '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: '0.83rem', fontWeight: 500 }}>
-                {loginError}
-              </div>
+              <div className="pa-alert pa-alert-error">{loginError}</div>
             )}
 
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: 5 }}>Usuário ou E-mail</label>
-                <input type="text" value={loginForm.username} onChange={e => setLoginForm(p => ({ ...p, username: e.target.value }))}
-                  style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '11px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s' }}
+              <div className="pa-field" style={{ marginBottom: 0 }}>
+                <label htmlFor="login-user">Usuário ou E-mail</label>
+                <input id="login-user" type="text" value={loginForm.username} onChange={e => setLoginForm(p => ({ ...p, username: e.target.value }))}
                   placeholder="Seu usuário ou e-mail" required autoComplete="username" />
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: 5 }}>Senha</label>
-                <input type="password" value={loginForm.password} onChange={e => setLoginForm(p => ({ ...p, password: e.target.value }))}
-                  style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '11px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+              <div className="pa-field" style={{ marginBottom: 0 }}>
+                <label htmlFor="login-pass">Senha</label>
+                <input id="login-pass" type="password" value={loginForm.password} onChange={e => setLoginForm(p => ({ ...p, password: e.target.value }))}
                   placeholder="Sua senha" required autoComplete="current-password" />
               </div>
-              <button type="submit" disabled={loginLoading || Date.now() < lockedUntil}
-                style={{ background: loginLoading ? '#9ca3af' : 'linear-gradient(135deg,#1d4ed8,#1e40af)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontWeight: 700, fontSize: '0.95rem', cursor: loginLoading ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
+              <button type="submit" className="pa-btn" disabled={loginLoading || Date.now() < lockedUntil}>
                 {loginLoading ? 'Entrando...' : 'Entrar'}
               </button>
             </form>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, fontSize: '0.82rem' }}>
-              <button onClick={() => setShowForgot(true)} style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, fontWeight: 500 }}>Esqueci minha senha</button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <style>{`
-                  @keyframes pointRight {
-                    0%, 100% { transform: translateX(0); }
-                    50% { transform: translateX(5px); }
-                  }
-                  .hand-pointer {
-                    display: inline-block;
-                    animation: pointRight 0.9s ease-in-out infinite;
-                    font-size: 1.1rem;
-                    line-height: 1;
-                    filter: drop-shadow(0 0 4px rgba(22,163,74,0.5));
-                  }
-                  .criar-conta-btn {
-                    background: none;
-                    border: none;
-                    color: #16a34a;
-                    cursor: pointer;
-                    padding: 0;
-                    font-weight: 700;
-                    font-size: 0.82rem;
-                    position: relative;
-                  }
-                  .criar-conta-btn::after {
-                    content: '';
-                    position: absolute;
-                    bottom: -2px;
-                    left: 0;
-                    width: 100%;
-                    height: 2px;
-                    background: #16a34a;
-                    border-radius: 2px;
-                    animation: pointRight 0.9s ease-in-out infinite;
-                  }
-                `}</style>
-                <span className="hand-pointer">👉</span>
-                <button onClick={() => setShowRegister(true)} className="criar-conta-btn">Criar conta</button>
-              </div>
+            <div className="pa-row">
+              <button onClick={() => setShowForgot(true)} className="pa-btn-ghost">Esqueci minha senha</button>
+              <button onClick={() => setShowRegister(true)} className="pa-btn-ghost">Criar conta →</button>
             </div>
 
-            <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #f3f4f6', textAlign: 'center' }}>
-              <a href="/" style={{ color: '#9ca3af', fontSize: '0.82rem', textDecoration: 'none' }}>← Voltar à página inicial</a>
-            </div>
+            <div className="pa-divider" />
+            <a href="/" className="pa-btn-ghost" style={{ display: 'block', textAlign: 'center', fontSize: '0.8rem' }}>← Voltar à página inicial</a>
           </div>
         </div>
       </div>
@@ -709,129 +688,114 @@ export default function AlunoPage() {
     const passwordsMatch = !registerForm.confirmPassword || registerForm.confirmPassword === registerForm.password;
 
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#0f172a,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', overflowY: 'auto' }}>
-        <div style={{ background: '#fff', borderRadius: 20, padding: '28px 24px', width: '100%', maxWidth: 440, boxShadow: '0 25px 60px rgba(0,0,0,0.4)' }}>
-          <div style={{ textAlign: 'center', marginBottom: 18 }}>
-            <div style={{ fontSize: 36, marginBottom: 4, lineHeight: 1 }}>🤸</div>
-            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#111827' }}>Criar Minha Conta</h2>
-            <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#6b7280', lineHeight: 1.5 }}>
-              Informe seu nome completo (como cadastrado na associação), e-mail e crie uma senha.
-            </p>
+      <div className="pa-auth" style={{ alignItems: 'flex-start', overflowY: 'auto' }}>
+        <div className="pa-auth-inner" style={{ padding: '32px 0' }}>
+          <div className="pa-auth-logo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-portal-aluno.svg" alt="Portal Aluno" />
+            <h1>Criar <span>Conta</span></h1>
+            <p>Um cadastro, acesso a tudo: carteirinha, presenças e graduações</p>
           </div>
 
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '9px 13px', marginBottom: 14, fontSize: '0.75rem', color: '#1e40af', lineHeight: 1.6 }}>
-            ℹ️ Após criar sua conta, você poderá completar seus dados (núcleo, graduação, CPF, endereço) diretamente na área do aluno.<br/>
-            Opcionalmente, informe seu <strong>CPF</strong> para localizar seu cadastro mais rapidamente.
-          </div>
+          <div className="pa-card">
+            <div className="pa-steps" aria-hidden="true"><i className="on" /><i className="on" /><i /></div>
+            <div className="pa-steps-label">Passo 2 de 3 — seus dados de acesso</div>
 
-          {registerError && (
-            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 10, padding: '10px 13px', marginBottom: 12, fontSize: '0.82rem', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
-              ⚠️ {registerError}
+            {registerError && (
+              <div className="pa-alert pa-alert-error">⚠️ {registerError}</div>
+            )}
+            {registerSuccess && (
+              <div className="pa-alert pa-alert-success">✅ {registerSuccess}</div>
+            )}
+
+            <div className="pa-alert pa-alert-info">
+              📋 Este é o mesmo cadastro da ficha de inscrição. Depois de criar sua conta, complete o que faltar (núcleo, endereço, documentos) na aba <strong>Meus Dados</strong>.
             </div>
-          )}
-          {registerSuccess && (
-            <div style={{ background: 'linear-gradient(135deg,#052e16,#064e3b)', border: '2px solid #34d399', borderRadius: 16, padding: '22px 20px', marginBottom: 12, textAlign: 'center' }}>
-              <div style={{ fontSize: '2.4rem', marginBottom: 10 }}>✅</div>
-              <div style={{ color: '#34d399', fontWeight: 800, fontSize: '1rem', marginBottom: 6 }}>Cadastro realizado com sucesso!</div>
-              <div style={{ color: '#6ee7b7', fontSize: '0.85rem', lineHeight: 1.5 }}>Acesse agora sua conta para completar seus dados.</div>
-              <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#a7f3d0', fontSize: '0.78rem' }}>
-                <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⏳</span>
-                Redirecionando para o login...
+
+            <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Nome completo (used as username for name-based lookup) */}
+              <div className="pa-field">
+                <label htmlFor="reg-nome">Nome completo *</label>
+                <input
+                  id="reg-nome"
+                  type="text"
+                  value={registerForm.username}
+                  onChange={e => setRegisterForm(p => ({ ...p, username: e.target.value }))}
+                  placeholder="Ex: João da Silva Santos"
+                  required autoFocus
+                />
+                <p className="pa-hint">Exatamente como consta no seu cadastro na associação</p>
               </div>
-            </div>
-          )}
 
-          <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-            {/* Nome completo (used as username for name-based lookup) */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#374151', marginBottom: 3 }}>
-                Nome completo <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <input
-                type="text"
-                value={registerForm.username}
-                onChange={e => setRegisterForm(p => ({ ...p, username: e.target.value }))}
-                placeholder="Ex: João da Silva Santos"
-                required autoFocus
-                style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '9px 11px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
-              />
-              <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#9ca3af' }}>Exatamente como consta no seu cadastro na associação</p>
-            </div>
+              {/* CPF (optional — faster lookup) */}
+              <div className="pa-field">
+                <label htmlFor="reg-cpf">CPF <span style={{ opacity: 0.6, textTransform: 'none', fontWeight: 400 }}>(opcional — localiza seu cadastro na hora)</span></label>
+                <input
+                  id="reg-cpf"
+                  type="text" inputMode="numeric"
+                  value={registerForm.cpf_or_doc}
+                  onChange={e => setRegisterForm(p => ({ ...p, cpf_or_doc: e.target.value }))}
+                  placeholder="000.000.000-00"
+                />
+              </div>
 
-            {/* CPF (optional — faster lookup) */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#374151', marginBottom: 3 }}>
-                CPF <span style={{ color: '#9ca3af', fontWeight: 400 }}>(opcional — para localização mais rápida)</span>
-              </label>
-              <input
-                type="text" inputMode="numeric"
-                value={registerForm.cpf_or_doc}
-                onChange={e => setRegisterForm(p => ({ ...p, cpf_or_doc: e.target.value }))}
-                placeholder="000.000.000-00"
-                style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '9px 11px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
-              />
-            </div>
+              {/* Email */}
+              <div className="pa-field">
+                <label htmlFor="reg-email">E-mail *</label>
+                <input
+                  id="reg-email"
+                  type="email"
+                  value={registerForm.email}
+                  onChange={e => setRegisterForm(p => ({ ...p, email: e.target.value }))}
+                  placeholder="seu@email.com"
+                  required
+                />
+                {registerForm.email && !emailValid && <p className="pa-hint" style={{ color: '#f87171' }}>E-mail inválido</p>}
+              </div>
 
-            {/* Email */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#374151', marginBottom: 3 }}>
-                E-mail <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <input
-                type="email"
-                value={registerForm.email}
-                onChange={e => setRegisterForm(p => ({ ...p, email: e.target.value }))}
-                placeholder="seu@email.com"
-                required
-                style={{ width: '100%', border: `1.5px solid ${registerForm.email && !emailValid ? '#fca5a5' : '#e5e7eb'}`, borderRadius: 8, padding: '9px 11px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
-              />
-              {registerForm.email && !emailValid && <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#ef4444' }}>E-mail inválido</p>}
-            </div>
+              {/* Password */}
+              <div className="pa-field">
+                <label htmlFor="reg-pass">Senha *</label>
+                <input
+                  id="reg-pass"
+                  type="password"
+                  value={registerForm.password}
+                  onChange={e => setRegisterForm(p => ({ ...p, password: e.target.value }))}
+                  placeholder="Mínimo 6 caracteres"
+                  required minLength={6}
+                />
+                {registerForm.password && registerForm.password.length < 6 && <p className="pa-hint" style={{ color: '#f87171' }}>Mínimo 6 caracteres</p>}
+              </div>
 
-            {/* Password */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#374151', marginBottom: 3 }}>
-                Senha <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <input
-                type="password"
-                value={registerForm.password}
-                onChange={e => setRegisterForm(p => ({ ...p, password: e.target.value }))}
-                placeholder="Mínimo 6 caracteres"
-                required minLength={6}
-                style={{ width: '100%', border: `1.5px solid ${registerForm.password && registerForm.password.length < 6 ? '#fca5a5' : '#e5e7eb'}`, borderRadius: 8, padding: '9px 11px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
-              />
-              {registerForm.password && registerForm.password.length < 6 && <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#ef4444' }}>Mínimo 6 caracteres</p>}
-            </div>
+              {/* Confirm Password */}
+              <div className="pa-field">
+                <label htmlFor="reg-pass2">Confirmar Senha *</label>
+                <input
+                  id="reg-pass2"
+                  type="password"
+                  value={registerForm.confirmPassword}
+                  onChange={e => setRegisterForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                  placeholder="Repita a senha"
+                  required minLength={6}
+                />
+                {!passwordsMatch && <p className="pa-hint" style={{ color: '#f87171' }}>As senhas não coincidem</p>}
+                {passwordsMatch && registerForm.confirmPassword && <p className="pa-hint" style={{ color: '#4ade80' }}>✓ Senhas coincidem</p>}
+              </div>
 
-            {/* Confirm Password */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#374151', marginBottom: 3 }}>
-                Confirmar Senha <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <input
-                type="password"
-                value={registerForm.confirmPassword}
-                onChange={e => setRegisterForm(p => ({ ...p, confirmPassword: e.target.value }))}
-                placeholder="Repita a senha"
-                required minLength={6}
-                style={{ width: '100%', border: `1.5px solid ${!passwordsMatch ? '#fca5a5' : '#e5e7eb'}`, borderRadius: 8, padding: '9px 11px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
-              />
-              {!passwordsMatch && <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#ef4444' }}>As senhas não coincidem</p>}
-              {passwordsMatch && registerForm.confirmPassword && <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#16a34a' }}>✓ Senhas coincidem</p>}
-            </div>
+              <button
+                type="submit"
+                className="pa-btn"
+                disabled={registerLoading || !!registerSuccess}
+                style={{ marginTop: 8 }}>
+                {registerLoading ? '⏳ Criando conta...' : registerSuccess ? '✅ Preparando seu acesso...' : 'Criar minha conta'}
+              </button>
+            </form>
 
-            <button
-              type="submit"
-              disabled={registerLoading || !!registerSuccess}
-              style={{ background: registerLoading ? '#9ca3af' : registerSuccess ? '#16a34a' : 'linear-gradient(135deg,#1d4ed8,#1e40af)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontWeight: 700, fontSize: '0.9rem', cursor: registerLoading || registerSuccess ? 'not-allowed' : 'pointer', marginTop: 4 }}>
-              {registerLoading ? '⏳ Criando conta...' : registerSuccess ? '✅ Redirecionando...' : '✅ Criar Conta'}
+            <div className="pa-divider" />
+            <button onClick={() => { setShowRegister(false); setRegisterError(''); setRegisterSuccess(''); }} className="pa-btn-ghost" style={{ display: 'block', width: '100%', fontSize: '0.85rem' }}>
+              ← Voltar ao login
             </button>
-          </form>
-
-          <button onClick={() => { setShowRegister(false); setRegisterError(''); setRegisterSuccess(''); }} style={{ width: '100%', marginTop: 12, background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.82rem', padding: '6px 0' }}>
-            ← Voltar ao login
-          </button>
+          </div>
         </div>
       </div>
     );
@@ -1011,7 +975,7 @@ export default function AlunoPage() {
               {student?.apelido && student.apelido !== student.nome_completo?.split(' ')[0] && (
                 <div style={{ fontSize: '0.68rem', opacity: 0.7, lineHeight: 1.2 }}>{student.nome_completo}</div>
               )}
-              <div style={{ fontSize: '0.75rem', opacity: 0.8, marginTop: 1 }}>{student?.nucleo || 'DEMO'} • {student?.graduacao || 'Aluno'}</div>
+              <div style={{ fontSize: '0.75rem', opacity: 0.8, marginTop: 1 }}>{student?.nucleo || 'CCLN'} • {student?.graduacao || 'Aluno'}</div>
             </div>
           </div>
           {isAdminPreview ? (
@@ -1076,7 +1040,7 @@ export default function AlunoPage() {
                   </div>
                 )}
                 <div>
-                  <div style={{ fontSize: '0.72rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Area do Aluno - Sistema DEMO</div>
+                  <div style={{ fontSize: '0.72rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Area do Aluno - Portal Aluno</div>
                   <div style={{ fontSize: '1.2rem', fontWeight: 800, lineHeight: 1.3 }}>{welcomeGreeting}</div>
                   {student?.apelido && student.nome_completo && student.apelido !== student.nome_completo.split(' ')[0] && (
                     <div style={{ fontSize: '0.78rem', opacity: 0.75, marginTop: 2 }}>{student.nome_completo}</div>
@@ -1095,7 +1059,7 @@ export default function AlunoPage() {
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 12px', gridColumn: '1 / -1' }}>
                   <div style={{ fontSize: '0.62rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Núcleo</div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 700 }}>{student?.nucleo || 'DEMO'}</div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700 }}>{student?.nucleo || 'CCLN'}</div>
                 </div>
               </div>
               {/* ── Banner cadastro incompleto DENTRO do card verde ── */}
@@ -1183,10 +1147,10 @@ export default function AlunoPage() {
 
             {/* Links institucionais */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>DEMO</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>CCLN</div>
               {([
-                { href: '/hierarquia', icon: '🥋', label: 'Hierarquia DEMO', color: '#fef2f2', iconBg: '#fecaca', textColor: '#991b1b' },
-                { href: '/organograma', icon: '🏛️', label: 'Organograma DEMO', color: '#eff6ff', iconBg: '#bfdbfe', textColor: '#1e40af' },
+                { href: '/hierarquia', icon: '🥋', label: 'Hierarquia', color: '#fef2f2', iconBg: '#fecaca', textColor: '#991b1b' },
+                { href: '/organograma', icon: '🏛️', label: 'Organograma', color: '#eff6ff', iconBg: '#bfdbfe', textColor: '#1e40af' },
                 { href: '/documentos', icon: '📚', label: 'Documentos Históricos da Capoeira', color: '#f0fdf4', iconBg: '#bbf7d0', textColor: '#166534' },
               ]).map(item => (
                 <a key={item.href} href={item.href}
@@ -1241,7 +1205,7 @@ export default function AlunoPage() {
                 if (!printArea) return;
                 const w = window.open('', '_blank', 'width=600,height=450');
                 if (!w) return;
-                w.document.write(`<html><head><title>Carteirinha DEMO - ${cartData.nome}</title><style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f1f5f9;font-family:Inter,sans-serif}@media print{body{background:#fff}}</style></head><body>${printArea.innerHTML}</body></html>`);
+                w.document.write(`<html><head><title>Carteirinha - ${cartData.nome}</title><style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f1f5f9;font-family:Inter,sans-serif}@media print{body{background:#fff}}</style></head><body>${printArea.innerHTML}</body></html>`);
                 w.document.close();
                 w.focus();
                 setTimeout(() => { w.print(); }, 400);
@@ -1258,7 +1222,7 @@ export default function AlunoPage() {
                 const base = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin;
                 const cpfEnc = encodeURIComponent(cartData.cpf || '');
                 const url = `${base}/carteirinha${cpfEnc ? `?cpf=${cpfEnc}` : ''}`;
-                const msg = encodeURIComponent(`🎖️ *Carteirinha DEMO - Sistema de Gestao*\n\nOlá, *${cartData.nome}*! Sua carteirinha de associado está disponível:\n\n🔗 ${url}\n\n_Sistema de Gestao de Alunos - DEMO_`);
+                const msg = encodeURIComponent(`🎖️ *Carteirinha - Sistema de Gestao*\n\nOlá, *${cartData.nome}*! Sua carteirinha de associado está disponível:\n\n🔗 ${url}\n\n_Portal Aluno_`);
                 window.open(phone.length >= 10 ? `https://api.whatsapp.com/send?phone=${br}&text=${msg}` : `https://api.whatsapp.com/send?text=${msg}`, '_blank');
               }}
               style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg,rgba(37,211,102,0.15),rgba(37,211,102,0.08))', border: '1px solid rgba(37,211,102,0.4)', color: '#25d366', borderRadius: 12, cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
@@ -2651,7 +2615,7 @@ export default function AlunoPage() {
                         style={{ width: 18, height: 18, marginTop: 1, accentColor: nucleoColor, flexShrink: 0 }}
                       />
                       <span style={{ fontWeight: 600, fontSize: '0.82rem', color: '#374151', lineHeight: 1.4 }}>
-                        Autorizo o uso da minha imagem (fotos/vídeos) para fins institucionais do sistema DEMO, incluindo redes sociais, materiais de divulgação e eventos.
+                        Autorizo o uso da minha imagem (fotos/vídeos) para fins institucionais do Portal Aluno, incluindo redes sociais, materiais de divulgação e eventos.
                       </span>
                     </label>
                   </div>
@@ -2900,14 +2864,14 @@ export default function AlunoPage() {
             if (!w) return;
             w.document.write(`<!DOCTYPE html><html><head><title>Termo — ${student.nome_completo}</title><style>body{font-family:Georgia,serif;max-width:680px;margin:40px auto;padding:20px;color:#111}h1{text-align:center;font-size:1.3rem}p{line-height:1.9;text-align:justify}.box{background:#f9f9f9;border:1px solid #ccc;padding:14px 18px;border-radius:8px;margin-bottom:20px;font-family:sans-serif}.label{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.06em;color:#666}.value{font-weight:700;font-size:0.95rem}.sig{margin-top:40px;display:flex;justify-content:space-between}.line{border-top:1px solid #333;width:260px;text-align:center;padding-top:6px;font-size:0.8rem;font-family:sans-serif}</style></head><body>
               <h1>Termo de Autorização para Prática de Capoeira</h1>
-              <p style="text-align:center;font-size:0.9rem;margin-bottom:24px">Sistema de Gestao de Alunos - DEMO</p>
+              <p style="text-align:center;font-size:0.9rem;margin-bottom:24px">Portal Aluno</p>
               <div class="box">
                 <div class="label">Aluno</div><div class="value">${student.nome_completo}</div>
                 <div class="label" style="margin-top:8px">Núcleo</div><div class="value">${student.nucleo || '—'}</div>
                 <div class="label" style="margin-top:8px">Data de Nascimento</div><div class="value">${student.data_nascimento ? new Date((student.data_nascimento as string)+'T12:00:00').toLocaleDateString('pt-BR') : '—'}</div>
                 <div class="label" style="margin-top:8px">Data</div><div class="value">${hoje}</div>
               </div>
-              <p>Eu, <strong>${termoForm.nome_responsavel || '________________________'}</strong>, portador(a) do CPF <strong>${termoForm.cpf_responsavel || '___.___.___-__'}</strong>, responsável legal pelo menor <strong>${student.nome_completo}</strong>, autorizo sua participação nas atividades de capoeira realizadas pela <strong>Sistema de Gestao de Alunos - DEMO</strong>, estando ciente das atividades físicas envolvidas, e assumindo a responsabilidade integral pela participação do menor nas referidas atividades.</p>
+              <p>Eu, <strong>${termoForm.nome_responsavel || '________________________'}</strong>, portador(a) do CPF <strong>${termoForm.cpf_responsavel || '___.___.___-__'}</strong>, responsável legal pelo menor <strong>${student.nome_completo}</strong>, autorizo sua participação nas atividades de capoeira realizadas pela <strong>Portal Aluno</strong>, estando ciente das atividades físicas envolvidas, e assumindo a responsabilidade integral pela participação do menor nas referidas atividades.</p>
               <div class="sig">
                 <div class="line">Assinatura do Responsável</div>
                 <div class="line">Local e Data</div>
@@ -2979,7 +2943,7 @@ export default function AlunoPage() {
                     <div><span style={{ color: '#6b7280' }}>Data: </span><strong>{hoje}</strong></div>
                   </div>
                   <p style={{ textAlign: 'justify', lineHeight: 1.9, marginBottom: 22, fontSize: '0.9rem' }}>
-                    Eu, responsável legal pelo menor acima identificado, autorizo sua participação nas atividades de capoeira realizadas pela <strong>Sistema de Gestao de Alunos - DEMO</strong>, estando ciente das atividades físicas envolvidas, e assumindo a responsabilidade integral pela participação do menor nas referidas atividades.
+                    Eu, responsável legal pelo menor acima identificado, autorizo sua participação nas atividades de capoeira realizadas pela <strong>Portal Aluno</strong>, estando ciente das atividades físicas envolvidas, e assumindo a responsabilidade integral pela participação do menor nas referidas atividades.
                   </p>
                   <hr style={{ border: 'none', borderTop: '1px dashed rgba(0,0,0,0.15)', marginBottom: 20 }} />
                   {/* Campos do responsável */}

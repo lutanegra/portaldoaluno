@@ -24,8 +24,8 @@ export default function NucleoIndexPage() {
   }, []);
 
   const systemName = systemConfig?.organization_name || 'Sistema de Gestao';
-  const systemShort = systemConfig?.organization_short || 'DEMO';
-  const logoUrl = systemConfig?.logo_url || '/logo-barao-maua.png';
+  const systemShort = systemConfig?.organization_short || 'CCLN';
+  const logoUrl = systemConfig?.logo_url || '/logo-portal-aluno.svg';
 
   return (
     <div style={{

@@ -149,9 +149,9 @@ function CarteirinhaContent() {
 
       {/* Logo + título */}
       <div style={{ textAlign: 'center', marginBottom: 28 }}>
-        <img src="/logo-maua.png" alt="Sistema DEMO" style={{ width: 72, height: 72, objectFit: 'contain', marginBottom: 10 }} />
+        <img src="/logo-portal-aluno.svg" alt="Portal Aluno" style={{ width: 72, height: 72, objectFit: 'contain', marginBottom: 10 }} />
         <div style={{ color: '#f87171', fontSize: '1.1rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          Sistema de Gestao DEMO
+          Portal Aluno
         </div>
         <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.8rem', marginTop: 4 }}>
           {loading ? 'Carregando sua carteirinha…' : data ? `Bem-vindo(a), ${data.nome.split(' ')[0]}!` : 'Informe seu CPF para gerar sua carteirinha'}

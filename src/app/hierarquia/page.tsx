@@ -182,13 +182,13 @@ export default function HierarquiaPage() {
 
         <div style={{ textAlign: 'center', marginTop: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-            <img src="/logo-barao-maua.png" alt="Sistema DEMO" onError={(e) => { (e.target as HTMLImageElement).src = '/logo-accbm.jpeg'; }} style={{ width: 100, height: 100, objectFit: 'contain', filter: 'drop-shadow(0 4px 16px rgba(251,191,36,0.4))' }} />
+            <img src="/logo-portal-aluno.svg" alt="Portal Aluno" onError={(e) => { (e.target as HTMLImageElement).src = '/logo-portal-aluno.svg'; }} style={{ width: 100, height: 100, objectFit: 'contain', filter: 'drop-shadow(0 4px 16px rgba(255,146,0,0.4))' }} />
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>DEMO</div>
+          <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>CCLN</div>
           <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 900, background: 'linear-gradient(90deg,#fbbf24,#f87171,#a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
             Hierarquia da Capoeira
           </h1>
-          <div style={{ marginTop: 6, fontSize: '0.9rem', color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>Sistema de Gestao de Alunos DEMO</div>
+          <div style={{ marginTop: 6, fontSize: '0.9rem', color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>Portal Aluno — Gestao de Treinos</div>
           {saveMsg && <div style={{ marginTop: 10, color: saveMsg.includes('Erro') ? '#f87171' : '#4ade80', fontSize: '0.82rem', fontWeight: 700 }}>{saveMsg}</div>}
         </div>
       </div>

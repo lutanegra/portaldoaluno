@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
 import crypto from 'crypto';
 import { sendEmail, buildOtpHtml } from '@/lib/email';
+import {
+  SESSION_COOKIE,
+  createAlunoSession,
+  serializeAlunoSession,
+  verifyAlunoSession,
+  sessionCookieOptions,
+} from '@/lib/alunoSession';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
@@ -54,12 +63,47 @@ async function saveAuthMap(map: Record<string, AlunoAccount>): Promise<void> {
   await supabaseAdmin.storage.from(BUCKET).upload(AUTH_KEY, blob, { upsert: true });
 }
 
+// GET /api/aluno/auth - sessão atual via cookie HttpOnly assinado
+export async function GET(req: NextRequest) {
+  try {
+    const store = await cookies();
+    const session = verifyAlunoSession(store.get(SESSION_COOKIE)?.value);
+    if (!session) return NextResponse.json({ authenticated: false });
+    if (req.nextUrl.searchParams.get('action') === 'logout') {
+      store.set(SESSION_COOKIE, '', { ...sessionCookieOptions(), maxAge: 0 });
+      return NextResponse.json({ success: true });
+    }
+    const { data: student } = await supabaseAdmin
+      .from('students')
+      .select('id, nome_completo, nucleo, graduacao, tipo_graduacao, foto_url, apelido, nome_social')
+      .eq('id', session.sid)
+      .maybeSingle();
+    if (!student) {
+      // Aluno deletado — invalida o cookie
+      store.set(SESSION_COOKIE, '', { ...sessionCookieOptions(), maxAge: 0 });
+      return NextResponse.json({ authenticated: false });
+    }
+    return NextResponse.json({ authenticated: true, session: { student_id: session.sid, username: session.un }, student });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
 // POST /api/aluno/auth
 // Actions: login, register, verify-otp, forgot-password, reset-password, change-password
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { action } = body;
+
+    // Logout: limpa o cookie de sessão
+    if (action === 'logout') {
+      const store = await cookies();
+      store.set(SESSION_COOKIE, '', { ...sessionCookieOptions(), maxAge: 0 });
+      return NextResponse.json({ success: true });
+    }
+
 
     if (action === 'login') {
       const { username, password } = body;
@@ -102,6 +146,11 @@ export async function POST(req: NextRequest) {
         .select('id, nome_completo, nucleo, graduacao, tipo_graduacao, foto_url, apelido, nome_social')
         .eq('id', account.student_id)
         .maybeSingle();
+
+      // Sessão persistente em cookie HttpOnly (30 dias)
+      const store = await cookies();
+      const sess = createAlunoSession(account.student_id, account.username);
+      store.set(SESSION_COOKIE, serializeAlunoSession(sess), sessionCookieOptions());
 
       return NextResponse.json({
         success: true,
@@ -273,10 +322,22 @@ export async function POST(req: NextRequest) {
         } catch { /* column may not exist yet — silent fail */ }
       }
 
+      // Já nasce logado: cookie de sessão + dados do aluno
+      const { data: studentData } = await supabaseAdmin
+        .from('students')
+        .select('id, nome_completo, nucleo, graduacao, tipo_graduacao, foto_url, apelido, nome_social')
+        .eq('id', student_id)
+        .maybeSingle();
+      const store = await cookies();
+      const sess = createAlunoSession(student_id, account.username);
+      store.set(SESSION_COOKIE, serializeAlunoSession(sess), sessionCookieOptions());
+
       return NextResponse.json({
         success: true,
+        logged_in: true,
         student_id,
         student_name: student.nome_completo.split(' ')[0],
+        student: studentData,
       });
     }
 
@@ -352,7 +413,12 @@ export async function POST(req: NextRequest) {
         .from('students').select('id, nome_completo, nucleo, graduacao, tipo_graduacao, foto_url, apelido, nome_social')
         .eq('id', found.id).maybeSingle();
 
-      return NextResponse.json({ success: true, student_id: found.id, username: emailNorm, student, student_name: found.nome_completo.split(' ')[0] });
+      // Já nasce logado: cookie de sessão
+      const store = await cookies();
+      const sess = createAlunoSession(found.id, emailNorm);
+      store.set(SESSION_COOKIE, serializeAlunoSession(sess), sessionCookieOptions());
+
+      return NextResponse.json({ success: true, logged_in: true, student_id: found.id, username: emailNorm, student, student_name: found.nome_completo.split(' ')[0] });
     }
 
     if (action === 'verify-otp') {
@@ -579,7 +645,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Assign sequential display ID directly (no internal HTTP fetch)
-      let displayId = `ACCBM-${String(Date.now()).slice(-4)}`;
+      let displayId = `CCLN-${String(Date.now()).slice(-4)}`;
       try {
         const [idMap, counterRaw] = await Promise.all([
           (async () => {
@@ -600,7 +666,7 @@ export async function POST(req: NextRequest) {
           displayId = idMap[student_id];
         } else {
           const nextId = ((counterRaw as { last_id?: number }).last_id || 0) + 1;
-          displayId = `ACCBM-${String(nextId).padStart(4, '0')}`;
+          displayId = `CCLN-${String(nextId).padStart(3, '0')}`;
           idMap[student_id] = displayId;
           // Save both map and counter
           await Promise.all([
@@ -615,7 +681,7 @@ export async function POST(req: NextRequest) {
         return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
       }
       const firstName = studentName.split(' ')[0];
-      const idNum = displayId.replace('ACCBM-', '');
+      const idNum = displayId.replace('CCLN-', '');
       let username = `${slugify(firstName)}${idNum}`;
       // Ensure uniqueness
       let suffix = 0;

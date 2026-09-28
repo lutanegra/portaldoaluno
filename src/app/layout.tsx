@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import LanguageButton from "@/components/LanguageButton";
+import SplashGate from "@/components/SplashGate";
+import SessionCleanup from "@/components/SessionCleanup";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -15,28 +17,29 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#e94560",
+  themeColor: "#0a0a0a",
 };
 
 export const metadata: Metadata = {
-  title: "Sistema de Gestao de Alunos DEMO",
-  description: "Sistema de Gestao de Alunos - Ambiente Demonstrativo",
+  title: "Portal Aluno",
+  description: "Portal do Aluno — gestao de alunos, carteirinha, presencas e graduacoes",
+  icons: { icon: "/logo-portal-aluno.svg", apple: "/logo-portal-aluno.svg" },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Gestao DEMO",
+    title: "Portal Aluno",
   },
   openGraph: {
-    title: "Sistema de Gestao de Alunos DEMO",
-    description: "Sistema de Gestao de Alunos - Ambiente Demonstrativo",
-    siteName: "Sistema de Gestao de Alunos DEMO",
+    title: "Portal Aluno",
+    description: "Portal do Aluno — gestao de alunos, carteirinha, presencas e graduacoes",
+    siteName: "Portal Aluno",
     locale: "pt_BR",
     type: "website",
   },
   twitter: {
     card: "summary",
-    title: "Sistema de Gestao de Alunos DEMO",
-    description: "Sistema de Gestao de Alunos - Ambiente Demonstrativo",
+    title: "Portal Aluno",
+    description: "Portal do Aluno — gestao de alunos, carteirinha, presencas e graduacoes",
   },
 };
 
@@ -45,8 +48,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={inter.variable} suppressHydrationWarning>
         <LanguageProvider>
+          <SplashGate />
           {children}
           <LanguageButton />
+          <SessionCleanup />
         </LanguageProvider>
       </body>
     </html>

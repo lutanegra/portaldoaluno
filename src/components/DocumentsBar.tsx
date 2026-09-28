@@ -188,7 +188,7 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
 
   const waLink = (phone: string, text: string) => {
     const p = phone.replace(/\D/g,''); const br = p.startsWith('55')?p:`55${p}`;
-    return `https://api.whatsapp.com/send?phone=${br}&text=${encodeURIComponent(`ℹ️ *Informacoes — Sistema DEMO*\n\n${text}\n\n_Sistema de Gestao de Alunos DEMO_`)}`;
+    return `https://api.whatsapp.com/send?phone=${br}&text=${encodeURIComponent(`ℹ️ *Informacoes — Portal Aluno*\n\n${text}\n\n_Portal Aluno — Gestao de Treinos_`)}`;
   };
 
   // ── Shared styles ─────────────────────────────────────────────────────────

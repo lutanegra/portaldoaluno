@@ -12,9 +12,9 @@ const CONFIG_KEY = 'config/system-config.json';
 
 export interface SystemConfig {
   // Identidade do sistema
-  system_name: string;           // Nome do sistema (ex: "Sistema DEMO")
+  system_name: string;           // Nome do sistema (ex: "Portal Aluno")
   organization_name: string;     // Nome da organizacao (ex: "Associacao Cultural Demo")
-  organization_short: string;    // Sigla (ex: "DEMO")
+  organization_short: string;    // Sigla (ex: "CCLN")
   logo_url: string;              // URL do logo
   favicon_url: string;           // URL do favicon
   
@@ -38,7 +38,7 @@ export interface SystemConfig {
   footer_text: string;
   
   // Configuracoes de carteirinha/ID
-  id_prefix: string;             // Prefixo do ID (ex: "DEMO")
+  id_prefix: string;             // Prefixo do ID (ex: "CCLN")
   card_title: string;            // Titulo da carteirinha
   card_subtitle: string;         // Subtitulo da carteirinha
   
@@ -53,15 +53,15 @@ export interface SystemConfig {
 }
 
 const DEFAULT_CONFIG: SystemConfig = {
-  system_name: 'Sistema DEMO',
-  organization_name: 'Sistema de Gestao de Alunos - Demonstrativo',
-  organization_short: 'DEMO',
-  logo_url: '/logo-barao-maua.png',
-  favicon_url: '/favicon.ico',
-  
-  primary_color: '#1d4ed8',
-  secondary_color: '#7c3aed',
-  accent_color: '#fbbf24',
+  system_name: 'Portal Aluno',
+  organization_name: 'Portal Aluno',
+  organization_short: 'CCLN',
+  logo_url: '/logo-portal-aluno.svg',
+  favicon_url: '/logo-portal-aluno.svg',
+
+  primary_color: '#FF9200',
+  secondary_color: '#0a0a0a',
+  accent_color: '#FF9200',
   
   contact_email: 'contato@demo.com',
   contact_phone: '',
@@ -72,15 +72,15 @@ const DEFAULT_CONFIG: SystemConfig = {
   facebook_url: '',
   youtube_url: '',
   
-  footer_text: 'Sistema de Gestao de Alunos - Versao Demonstrativa',
-  
-  id_prefix: 'DEMO',
-  card_title: 'Sistema de Gestao',
+  footer_text: 'Portal Aluno',
+
+  id_prefix: 'CCLN',
+  card_title: 'Portal Aluno',
   card_subtitle: 'Credencial de Aluno',
-  
-  signature_name: 'Administrador do Sistema',
-  signature_role: 'Sistema DEMO',
-  signature_image_url: '/assinatura-frazao.png',
+
+  signature_name: 'Direção Portal Aluno',
+  signature_role: 'Coordenação Geral',
+  signature_image_url: '',
   
   updated_at: new Date().toISOString(),
   updated_by: 'system',

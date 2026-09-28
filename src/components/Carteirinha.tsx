@@ -50,7 +50,7 @@ export default function Carteirinha({ data }: Props) {
   const nomenclatura = nomenclaturaGraduacao[data.graduacao] || '';
   // Assinatura dinamica do sistema
   const sig = { 
-    imgSrc: sysConfig.signature_image_url || '/assinatura-frazao.png', 
+    imgSrc: sysConfig.signature_image_url || '/logo-portal-aluno.svg', 
     nome: sysConfig.signature_name || 'Administrador do Sistema', 
     cargo: sysConfig.signature_role || sysConfig.organization_name 
   };
@@ -63,7 +63,7 @@ export default function Carteirinha({ data }: Props) {
   const validadeStr = validade.toLocaleDateString('pt-BR');
 
   // QR code — URL de verificacao publica da carteirinha
-  const idPrefix = sysConfig.id_prefix || 'DEMO';
+  const idPrefix = sysConfig.id_prefix || 'CCLN';
   const matriculaStr = data.inscricao_numero != null ? `${idPrefix}-${String(data.inscricao_numero).padStart(6, '0')}` : '';
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   // Prefer UUID (always works), fallback to matricula number
@@ -113,7 +113,7 @@ export default function Carteirinha({ data }: Props) {
       }}>
         {/* Logo + org name centered */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src={sysConfig.logo_url || '/logo-barao-maua.png'} alt={sysConfig.organization_short} style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
+          <img src={sysConfig.logo_url || '/logo-portal-aluno.svg'} alt={sysConfig.organization_short} style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
           <div style={{ textAlign: 'center' }}>
             <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.52rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
               {sysConfig.card_title || 'Carteira de Identificacao'}
@@ -257,7 +257,7 @@ export default function Carteirinha({ data }: Props) {
           ✦ Válida até {validadeStr} ✦
         </span>
         <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.48rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-          DEMO
+          CCLN
         </span>
       </div>
     </div>

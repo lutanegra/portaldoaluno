@@ -41,10 +41,10 @@ export default function LanguageButton() {
               style={{
                 width: '100%',
                 padding: '9px 16px',
-                background: lang === l ? 'rgba(180,83,9,0.25)' : 'transparent',
+                background: lang === l ? 'rgba(255,146,0,0.18)' : 'transparent',
                 border: 'none',
                 borderBottom: '1px solid rgba(255,255,255,0.06)',
-                color: lang === l ? '#fbbf24' : 'rgba(255,255,255,0.85)',
+                color: lang === l ? '#FF9200' : 'rgba(255,255,255,0.85)',
                 fontSize: '13px',
                 fontWeight: lang === l ? 700 : 400,
                 cursor: 'pointer',
@@ -70,11 +70,11 @@ export default function LanguageButton() {
         onClick={() => setOpen(o => !o)}
         title={t('language_button')}
         style={{
-          background: 'linear-gradient(135deg,#1e293b,#0f172a)',
-          border: '1.5px solid rgba(180,83,9,0.5)',
+          background: 'rgba(10,10,10,0.85)',
+          border: '1.5px solid rgba(255,146,0,0.45)',
           borderRadius: '10px',
           padding: '7px 13px',
-          color: '#fbbf24',
+          color: '#FF9200',
           fontSize: '12px',
           fontWeight: 700,
           cursor: 'pointer',

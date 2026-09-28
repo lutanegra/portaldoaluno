@@ -1,5 +1,5 @@
 /**
- * Servico de envio de email centralizado - Sistema de Gestao DEMO
+ * Servico de envio de email centralizado - Portal Aluno
  * Prioridade: env vars -> config/email-config.json (Storage) -> skip
  */
 
@@ -52,18 +52,18 @@ function baseLayout(content: string, color = '#1d4ed8') {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,Arial,sans-serif">
   <div style="max-width:520px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10)">
     <div style="background:linear-gradient(135deg,${color},${color}bb);padding:28px 32px;text-align:center">
-      <div style="font-size:1.5rem;font-weight:900;color:#fff;letter-spacing:-0.5px">Gestao DEMO</div>
+      <div style="font-size:1.5rem;font-weight:900;color:#fff;letter-spacing:-0.5px">Portal Aluno</div>
       <div style="color:rgba(255,255,255,0.8);font-size:0.82rem;margin-top:4px">Sistema de Gestao de Alunos - Demonstrativo</div>
     </div>
     <div style="padding:32px">${content}</div>
     <div style="padding:16px 32px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center">
-      <p style="margin:0;color:#94a3b8;font-size:0.75rem">Sistema de Gestao de Alunos DEMO</p>
+      <p style="margin:0;color:#94a3b8;font-size:0.75rem">Portal Aluno — Gestao de Treinos</p>
     </div>
   </div></body></html>`;
 }
 
 export function buildOtpHtml(nome: string, otp: string): { subject: string; html: string } {
-  const subject = 'Codigo de recuperacao de senha - Sistema DEMO';
+  const subject = 'Codigo de recuperacao de senha - Portal Aluno';
   const html = baseLayout(`
     <p style="color:#374151;font-size:1rem">Olá, <strong>${nome}</strong>!</p>
     <p style="color:#64748b;margin:0 0 24px">Você solicitou a recuperação da sua senha de acesso à <strong>Área do Aluno</strong>. Use o código abaixo:</p>
@@ -77,10 +77,10 @@ export function buildOtpHtml(nome: string, otp: string): { subject: string; html
 }
 
 export function buildResetLinkHtml(nome: string, resetUrl: string): { subject: string; html: string } {
-  const subject = 'Redefinicao de senha - Painel DEMO';
+  const subject = 'Redefinicao de senha - Painel Portal Aluno';
   const html = baseLayout(`
     <p style="color:#374151;font-size:1rem">Ola, <strong>${nome || 'Responsavel'}</strong>!</p>
-    <p style="color:#64748b;margin:0 0 24px">Recebemos uma solicitacao para redefinir a senha do seu acesso ao <strong>Painel do Sistema DEMO</strong>.</p>
+    <p style="color:#64748b;margin:0 0 24px">Recebemos uma solicitacao para redefinir a senha do seu acesso ao <strong>Painel do Portal Aluno</strong>.</p>
     <div style="text-align:center;margin:28px 0">
       <a href="${resetUrl}" style="display:inline-block;background:linear-gradient(135deg,#1d4ed8,#1e40af);color:#fff;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:700;font-size:1rem">🔐 Redefinir minha senha</a>
     </div>
@@ -91,7 +91,7 @@ export function buildResetLinkHtml(nome: string, resetUrl: string): { subject: s
 }
 
 export function buildNewPasswordHtml(nome: string, novaSenha: string, loginUrl: string): { subject: string; html: string } {
-  const subject = 'Nova senha provisoria - Sistema DEMO';
+  const subject = 'Nova senha provisoria - Portal Aluno';
   const html = baseLayout(`
     <p style="color:#374151;font-size:1rem">Olá, <strong>${nome}</strong>!</p>
     <p style="color:#64748b;margin:0 0 20px">O administrador redefiniu sua senha de acesso à <strong>Área do Aluno</strong>. Use a senha abaixo para entrar:</p>
@@ -108,7 +108,7 @@ export function buildNewPasswordHtml(nome: string, novaSenha: string, loginUrl: 
 }
 
 export function buildInscricaoHtml(nome: string, nucleo: string, graduacao: string): { subject: string; html: string } {
-  const subject = 'Inscricao Confirmada - Sistema DEMO';
+  const subject = 'Inscricao Confirmada - Portal Aluno';
   const html = baseLayout(`
     <p style="color:#374151;font-size:1rem">Ola, <strong>${nome}</strong>!</p>
     <p style="color:#64748b;margin:0 0 20px">Sua inscricao foi recebida com sucesso. Aqui estao seus dados:</p>
@@ -166,7 +166,7 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
   // 1. Tenta via env vars (prioridade máxima — Vercel/CI)
   const envResendKey = process.env.RESEND_API_KEY;
   if (envResendKey) {
-    const from = process.env.RESEND_FROM || 'Sistema DEMO <noreply@demo.com>';
+    const from = process.env.RESEND_FROM || 'Portal Aluno <noreply@demo.com>';
     const ok = await sendViaResend(to, subject, html, envResendKey, from);
     if (ok) return { sent: true };
     return { sent: false, error: 'Resend (env) configurado mas falhou.' };
@@ -185,7 +185,7 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
   const cfg = await getStorageConfig();
 
   if (cfg.provider === 'resend' && cfg.resend_api_key) {
-    const from = cfg.resend_from || 'Sistema DEMO <noreply@demo.com>';
+    const from = cfg.resend_from || 'Portal Aluno <noreply@demo.com>';
     const ok = await sendViaResend(to, subject, html, cfg.resend_api_key, from);
     if (ok) return { sent: true };
     return { sent: false, error: 'Resend (painel) configurado mas falhou. Verifique a chave API.' };

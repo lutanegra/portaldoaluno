@@ -72,12 +72,12 @@ function ResetSenhaContent() {
       }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <img src="/logo-barao-maua.png" alt="Barão de Mauá"
+          <img src="/logo-portal-aluno.svg" alt="Barão de Mauá"
             style={{ width: 72, height: 'auto', marginBottom: 14, filter: 'drop-shadow(0 4px 18px rgba(0,0,0,0.6))' }} />
           <div style={{ fontSize: '1rem', fontWeight: 800, color: '#fff', marginBottom: 4 }}>
             Redefinição de Senha
           </div>
-          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>Painel de Nucleo - Sistema DEMO</div>
+          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>Painel de Nucleo - Portal Aluno</div>
           <div style={{
             display: 'inline-block', marginTop: 10,
             background: `${cor}20`, border: `1px solid ${cor}50`,

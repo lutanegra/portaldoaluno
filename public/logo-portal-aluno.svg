@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Portal Aluno">
+  <defs>
+    <linearGradient id="paOr" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFA933"/>
+      <stop offset="1" stop-color="#FF9200"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="58" fill="#0A0A0A"/>
+  <circle cx="128" cy="128" r="86" fill="none" stroke="url(#paOr)" stroke-width="12"/>
+  <circle cx="128" cy="128" r="104" fill="none" stroke="#FF9200" stroke-opacity="0.28" stroke-width="6" stroke-dasharray="30 26" stroke-linecap="round"/>
+  <path d="M118 96h20a30 30 0 0 1 0 60h-8v16a10 10 0 0 1-20 0V106a10 10 0 0 1 10-10z" fill="url(#paOr)"/>
+  <circle cx="160" cy="92" r="14" fill="#FFFFFF"/>
+</svg>

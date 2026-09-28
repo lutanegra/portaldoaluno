@@ -84,16 +84,6 @@ export default function Home() {
   // Dynamic nucleos from database
   const [dynamicNucleos, setDynamicNucleos] = useState<Array<{ id: string; nome: string; slug: string; ativo: boolean; logo_url?: string | null; cidade?: string | null }>>([]);
 
-  // Background changer state
-  const [bgUrl, setBgUrl] = useState<string | null>(null);
-  const [bgModalOpen, setBgModalOpen] = useState(false);
-  const [bgCpf, setBgCpf] = useState('');
-  const [bgCpfOk, setBgCpfOk] = useState(false);
-  const [bgCpfError, setBgCpfError] = useState('');
-  const [bgUploading, setBgUploading] = useState(false);
-  const [bgUploadMsg, setBgUploadMsg] = useState('');
-  const bgFileRef = useRef<HTMLInputElement>(null);
-
   // Mark as mounted (client-only) to avoid SSR/hydration mismatches
   useEffect(() => { setMounted(true); }, []);
 
@@ -105,10 +95,6 @@ export default function Home() {
         : d.super_admin_cpf ? [d.super_admin_cpf] : ['09856925703'];
       setAdminConfigCpfs(cpfs);
       setAdminConfigCpf(cpfs[0]);
-    }).catch(() => {});
-    // Load background URL
-    fetch('/api/admin/background').then(r => r.json()).then(d => {
-      if (d.url) setBgUrl(d.url);
     }).catch(() => {});
     // Load nucleos from database
     fetch('/api/admin/nucleos', { headers: { 'x-admin-auth': 'geral' } })
@@ -710,7 +696,7 @@ export default function Home() {
         student_id: student_id ?? null,
         data_nascimento: form.data_nascimento || null,
       });
-      // Auto-assign sequential DEMO display ID
+      // Atribui ID sequencial (CCLN-000) por ordem de chegada
       setCriarContaPassword('');
       setCriarContaPhone(form.telefone || '');
       setCriarContaMsg('');
@@ -874,180 +860,47 @@ _${sysConfig.organization_name}_`
 
   return (
     <>
-      {/* ── Hero Banner — imagem de fundo completa, sem corte ── */}
+      {/* ── Hero — Portal Aluno ── */}
       <div className="hero-banner" style={{
         position: 'relative',
         width: '100%',
-        borderRadius: 12,
+        borderRadius: 20,
         overflow: 'hidden',
-        lineHeight: 0,
+        background: 'radial-gradient(700px 380px at 20% 0%, rgba(255,146,0,0.16), transparent 60%), radial-gradient(600px 340px at 100% 100%, rgba(255,146,0,0.08), transparent 60%), #0a0a0a',
+        border: '1px solid var(--border)',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.55)',
+        lineHeight: 1.4,
       }}>
-        {/* Imagem de fundo — contain para não cortar nada */}
-        <img
-          src={bgUrl || '/wallpaper-capoeira.jpg'}
-          alt={sysConfig.system_name}
-          style={{
-            display: 'block',
-            width: '100%',
-            height: 'auto',
-            borderRadius: 12,
-          }}
-        />
-        {/* Overlay escuro leve */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(0,0,0,0.12)',
-          borderRadius: 12,
-        }} />
-
-        {/* Floating background changer button */}
-        <button
-          type="button"
-          onClick={() => { setBgModalOpen(true); setBgCpf(''); setBgCpfOk(false); setBgCpfError(''); setBgUploadMsg(''); }}
-          title={t('bg_change')}
-          style={{
-            position: 'absolute', bottom: 8, right: 8,
-            background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.3)',
-            borderRadius: 8, color: '#fff', fontSize: '0.72rem', fontWeight: 700,
-            padding: '5px 10px', cursor: 'pointer', zIndex: 10,
-            display: 'flex', alignItems: 'center', gap: 5,
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          {t('bg_change')}
-        </button>
-
-      </div>
-
-      {/* Background changer modal */}
-      {bgModalOpen && (
-        <div
-          onClick={(e) => { if (e.target === e.currentTarget) setBgModalOpen(false); }}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 2000,
-          }}
-        >
-          <div style={{
-            background: '#fff', borderRadius: 16, padding: '28px 28px 24px',
-            minWidth: 320, maxWidth: 420, width: '90%', boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
-            position: 'relative',
-          }}>
-            <button
-              onClick={() => setBgModalOpen(false)}
-              style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#64748b' }}
-            >×</button>
-            <div style={{ fontWeight: 800, fontSize: '1rem', color: '#1e3a8a', marginBottom: 16 }}>
-              {t('bg_title')}
-            </div>
-
-            {!bgCpfOk ? (
-              <>
-                <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: 12 }}>
-                  {t('bg_cpf_prompt')}
-                </p>
-                <input
-                  type="text"
-                  placeholder={t('bg_cpf_placeholder')}
-                  value={bgCpf}
-                  onChange={e => setBgCpf(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') {
-                    const digits = bgCpf.replace(/\D/g, '');
-                    if (adminConfigCpfs.includes(digits)) { setBgCpfOk(true); setBgCpfError(''); }
-                    else setBgCpfError('CPF não autorizado.');
-                  }}}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #cbd5e1', marginBottom: 8, fontSize: '0.9rem' }}
-                />
-                {bgCpfError && <div style={{ color: '#dc2626', fontSize: '0.8rem', marginBottom: 8 }}>{bgCpfError}</div>}
-                <button
-                  onClick={() => {
-                    const digits = bgCpf.replace(/\D/g, '');
-                    if (adminConfigCpfs.includes(digits)) { setBgCpfOk(true); setBgCpfError(''); }
-                    else setBgCpfError('CPF não autorizado.');
-                  }}
-                  style={{ background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontWeight: 700, cursor: 'pointer', width: '100%' }}
-                >
-                  {t('bg_verify_btn')}
-                </button>
-              </>
-            ) : (
-              <>
-                {bgUrl && (
-                  <div style={{ marginBottom: 14, textAlign: 'center' }}>
-                    <img src={bgUrl} alt="Fundo atual" style={{ maxWidth: '100%', maxHeight: 120, objectFit: 'contain', borderRadius: 8, border: '1px solid #e2e8f0' }} />
-                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: 4 }}>Imagem atual</div>
-                  </div>
-                )}
-                <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: 12 }}>
-                  {t('bg_select_hint')}
-                </p>
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={bgFileRef}
-                  style={{ display: 'none' }}
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    setBgUploading(true); setBgUploadMsg('');
-                    try {
-                      const fd = new FormData();
-                      fd.append('file', file);
-                      const res = await fetch('/api/admin/background', { method: 'POST', body: fd });
-                      const json = await res.json();
-                      if (!res.ok) throw new Error(json.error || 'Falha no upload');
-                      const uploadedUrl = json.url as string;
-                      // Save config
-                      await fetch('/api/admin/background', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ url: uploadedUrl }),
-                      });
-                      setBgUrl(uploadedUrl);
-                      setBgUploadMsg('✓ Imagem atualizada com sucesso!');
-                    } catch (err: any) {
-                      setBgUploadMsg('Erro: ' + err.message);
-                    }
-                    setBgUploading(false);
-                    if (bgFileRef.current) bgFileRef.current.value = '';
-                  }}
-                />
-                <button
-                  onClick={() => bgFileRef.current?.click()}
-                  disabled={bgUploading}
-                  style={{ background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontWeight: 700, cursor: bgUploading ? 'not-allowed' : 'pointer', width: '100%', marginBottom: 8, opacity: bgUploading ? 0.7 : 1 }}
-                >
-                  {bgUploading ? t('bg_uploading') : t('bg_choose_btn')}
-                </button>
-                {bgUrl && (
-                  <button
-                    onClick={async () => {
-                      setBgUploading(true); setBgUploadMsg('');
-                      try {
-                        await fetch('/api/admin/background', { method: 'DELETE' });
-                        setBgUrl(null);
-                        setBgUploadMsg('✓ Imagem removida. Fundo padrão restaurado.');
-                      } catch { setBgUploadMsg('Erro ao remover imagem.'); }
-                      setBgUploading(false);
-                    }}
-                    disabled={bgUploading}
-                    style={{ background: 'none', color: '#dc2626', border: '1.5px solid #dc2626', borderRadius: 8, padding: '7px 16px', fontWeight: 700, cursor: 'pointer', width: '100%', fontSize: '0.82rem' }}
-                  >
-                    {t('bg_remove_btn')}
-                  </button>
-                )}
-                {bgUploadMsg && (
-                  <div style={{ marginTop: 10, fontSize: '0.82rem', color: bgUploadMsg.startsWith('✓') ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
-                    {bgUploadMsg}
-                  </div>
-                )}
-              </>
-            )}
+        <div style={{ padding: '40px 24px 36px', textAlign: 'center', position: 'relative', zIndex: 2 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo-portal-aluno.svg"
+            alt="Portal Aluno"
+            style={{ width: 96, height: 96, objectFit: 'contain', margin: '0 auto 16px', display: 'block', filter: 'drop-shadow(0 8px 24px rgba(255,146,0,0.35))' }}
+          />
+          <h1 className="hero-title" style={{ marginBottom: 6 }}>PORTAL <span style={{ color: 'var(--accent)' }}>ALUNO</span></h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: '0 auto 24px', maxWidth: 420 }}>
+            {t('form_subtitle')}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 340, margin: '0 auto' }}>
+            <a
+              href="/aluno"
+              className="pa-btn"
+              style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              Entrar ou criar minha conta
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </a>
+            <a
+              href="/verificar"
+              className="pa-btn-ghost"
+              style={{ textAlign: 'center', padding: '8px 0', fontSize: '0.85rem' }}
+            >
+              Verificar carteirinha →
+            </a>
           </div>
         </div>
-      )}
+      </div>
 
       <div className="container" style={{ marginTop: 0 }}>
           {/* Action tabs */}
@@ -1803,8 +1656,8 @@ _${sysConfig.organization_name}_`
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg,#1d4ed8,#1e40af)', borderRadius: 8, padding: '6px 16px' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
                   <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Matrícula</span>
-                  <span style={{ color: '#fbbf24', fontSize: '0.95rem', fontWeight: 900, letterSpacing: '0.06em' }}>
-                    DEMO-{String(successData.inscricao_numero).padStart(6, '0')}
+                  <span style={{ color: 'var(--accent)', fontSize: '0.95rem', fontWeight: 900, letterSpacing: '0.06em' }}>
+                    CCLN-{String(successData.inscricao_numero).padStart(3, '0')}
                   </span>
                 </div>
               )}
@@ -2023,7 +1876,7 @@ _${sysConfig.organization_name}_`
                   {/* Admin Geral */}
                   <div onClick={() => { setAdminUser('admin'); setTimeout(() => document.getElementById('adminPassInput')?.focus(), 50); }}
                     style={{ background: 'linear-gradient(135deg,rgba(29,78,216,0.18),rgba(30,64,175,0.1))', border: `1.5px solid ${adminUser === 'admin' ? '#3b82f6' : 'rgba(29,78,216,0.35)'}`, borderRadius: 10, padding: '10px 8px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s', boxShadow: adminUser === 'admin' ? '0 0 0 2px rgba(59,130,246,0.3)' : 'none' }}>
-                    <img src="/logo-barao-maua.png" alt="" style={{ width: 36, height: 36, objectFit: 'contain', marginBottom: 5, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5)) brightness(1.1)' }} />
+                    <img src="/logo-portal-aluno.svg" alt="" style={{ width: 36, height: 36, objectFit: 'contain', marginBottom: 5, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5)) brightness(1.1)' }} />
                     <div style={{ color: '#93c5fd', fontWeight: 800, fontSize: '0.7rem', lineHeight: 1.2 }}>Admin Geral</div>
                     <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.58rem', marginTop: 2 }}>Todos os nucleos</div>
                   </div>
@@ -2041,7 +1894,7 @@ _${sysConfig.organization_name}_`
                     return (
                       <a key={nuc.id} href={`/nucleo/${nuc.slug}`} style={{ textDecoration: 'none' }}>
                         <div style={{ background: `linear-gradient(135deg,${c.bg},rgba(0,0,0,0.08))`, border: `1.5px solid ${c.border}`, borderRadius: 10, padding: '10px 8px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s', height: '100%', boxSizing: 'border-box' }}>
-                          <img src={nuc.logo_url || '/logo-barao-maua.png'} alt="" style={{ width: 36, height: 36, objectFit: 'contain', marginBottom: 5, filter: `drop-shadow(0 2px 6px rgba(0,0,0,0.5)) sepia(1) saturate(3) hue-rotate(${c.hue})` }} />
+                          <img src={nuc.logo_url || '/logo-portal-aluno.svg'} alt="" style={{ width: 36, height: 36, objectFit: 'contain', marginBottom: 5, filter: `drop-shadow(0 2px 6px rgba(0,0,0,0.5)) sepia(1) saturate(3) hue-rotate(${c.hue})` }} />
                           <div style={{ color: c.text, fontWeight: 800, fontSize: '0.65rem', lineHeight: 1.2 }}>{nuc.nome}</div>
                           <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.56rem', marginTop: 2 }}>{nuc.cidade || 'Demo'}</div>
                         </div>

@@ -63,7 +63,7 @@ function VerificarContent() {
 
   const nomenclatura = data ? (nomenclaturaGraduacao[data.graduacao] || '') : '';
   const matriculaStr = data?.inscricao_numero != null
-    ? `DEMO-${String(data.inscricao_numero).padStart(6, '0')}`
+    ? `CCLN-${String(data.inscricao_numero).padStart(3, '0')}`
     : null;
   const emissao = new Date().toLocaleDateString('pt-BR');
   const validade = new Date();
@@ -84,13 +84,13 @@ function VerificarContent() {
 
       {/* Logo + titulo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-        <img src="/logo-barao-maua.png" alt="Sistema DEMO" style={{ width: 44, height: 44, objectFit: 'contain' }} />
+        <img src="/logo-portal-aluno.svg" alt="Portal Aluno" style={{ width: 44, height: 44, objectFit: 'contain' }} />
         <div>
           <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
             Sistema de Gestao
           </div>
           <div style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 900, letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.2 }}>
-            DEMO
+            CCLN
           </div>
         </div>
       </div>
@@ -168,7 +168,7 @@ function VerificarContent() {
               justifyContent: 'space-between',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <img src="/logo-maua.png" alt="DEMO" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                <img src="/logo-portal-aluno.svg" alt="Portal Aluno" style={{ width: 36, height: 36, objectFit: 'contain' }} />
                 <div>
                   <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.5rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                     Assoc. Cultural de Capoeira
@@ -269,13 +269,13 @@ function VerificarContent() {
               <span style={{ color: '#fbbf24', fontSize: '0.55rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 ✦ Válida até {validadeStr} ✦
               </span>
-              <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.5rem', textTransform: 'uppercase' }}>DEMO</span>
+              <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.5rem', textTransform: 'uppercase' }}>CCLN</span>
             </div>
           </div>
 
           {/* Rodapé */}
           <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontSize: '0.62rem', letterSpacing: '0.05em' }}>
-            Sistema de Gestao de Alunos — DEMO
+            Portal Aluno
           </div>
         </div>
       )}

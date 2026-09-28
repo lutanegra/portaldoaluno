@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Termo de Autorizacao - Sistema de Gestao de Alunos DEMO",
-  description: "Assine o Termo de Autorizacao do Sistema de Gestao DEMO",
+  title: "Termo de Autorizacao - Portal Aluno — Gestao de Treinos",
+  description: "Assine o Termo de Autorizacao do Portal Aluno",
   openGraph: {
-    title: "Sistema de Gestao de Alunos DEMO",
-    description: "Termo de Autorizacao - Sistema de Gestao DEMO",
-    siteName: "Sistema de Gestao de Alunos DEMO",
+    title: "Portal Aluno — Gestao de Treinos",
+    description: "Termo de Autorizacao - Portal Aluno",
+    siteName: "Portal Aluno — Gestao de Treinos",
     locale: "pt_BR",
     type: "website",
   },
   twitter: {
     card: "summary",
-    title: "Sistema de Gestao de Alunos DEMO",
-    description: "Termo de Autorizacao - Sistema de Gestao DEMO",
+    title: "Portal Aluno — Gestao de Treinos",
+    description: "Termo de Autorizacao - Portal Aluno",
   },
 };
 

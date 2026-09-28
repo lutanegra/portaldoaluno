@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
@@ -10,6 +11,8 @@ const supabaseAdmin = createClient(
 
 const BUCKET = 'photos';
 const COUNTER_KEY = 'config/aluno-id-counter.json';
+const ID_MAP_KEY = 'config/aluno-id-map.json';
+const ID_PREFIX = 'CCLN';
 
 // Sequential ID counter — never repeats, always incrementing
 async function getNextId(): Promise<number> {
@@ -31,19 +34,7 @@ async function saveCounter(id: number): Promise<void> {
   await supabaseAdmin.storage.from(BUCKET).upload(COUNTER_KEY, blob, { upsert: true });
 }
 
-const AUTH_KEY = 'config/aluno-auth.json';
-async function loadAuthMap(): Promise<Record<string, { student_id: string; username: string; [key: string]: unknown }>> {
-  try {
-    const { data: urlData } = await supabaseAdmin.storage.from(BUCKET).createSignedUrl(AUTH_KEY, 30);
-    if (!urlData?.signedUrl) return {};
-    const res = await fetch(urlData.signedUrl, { cache: 'no-store' });
-    if (!res.ok) return {};
-    return await res.json();
-  } catch { return {}; }
-}
-
-const ID_MAP_KEY = 'config/aluno-id-map.json';
-// Maps student UUID -> sequential display ID (DEMO-0001 format)
+// Maps student UUID -> sequential display ID (CCLN-000 format)
 async function loadIdMap(): Promise<Record<string, string>> {
   try {
     const { data: urlData } = await supabaseAdmin.storage.from(BUCKET).createSignedUrl(ID_MAP_KEY, 30);
@@ -60,7 +51,7 @@ async function saveIdMap(map: Record<string, string>): Promise<void> {
 }
 
 function formatId(n: number): string {
-  return `DEMO-${String(n).padStart(4, '0')}`;
+  return `CCLN-${String(n).padStart(3, '0')}`;
 }
 
 // GET: get display ID for a student UUID, or generate if not exists
@@ -103,7 +94,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === 'bulk-assign') {
-    // Assign IDs to all students that don't have one yet
+    // Assign IDs to all students that don't have one yet, in arrival order
     const { data: students } = await supabaseAdmin
       .from('students')
       .select('id, nome_completo, nucleo, created_at')
@@ -127,17 +118,8 @@ export async function POST(req: NextRequest) {
       await Promise.all([saveIdMap(idMap), saveCounter(nextId)]);
     }
 
-    return NextResponse.json({ assigned, total: students.length, id_map: idMap });
+    return NextResponse.json({ assigned });
   }
 
-  if (action === 'get-by-display-id') {
-    // Find student UUID by display ID (e.g. "DEMO-0042")
-    const { display_id } = body;
-    const idMap = await loadIdMap();
-    const entry = Object.entries(idMap).find(([, v]) => v === display_id);
-    if (!entry) return NextResponse.json({ error: 'ID não encontrado.' }, { status: 404 });
-    return NextResponse.json({ student_id: entry[0], display_id });
-  }
-
-  return NextResponse.json({ error: 'Ação desconhecida.' }, { status: 400 });
+  return NextResponse.json({ error: 'Ação inválida.' }, { status: 400 });
 }

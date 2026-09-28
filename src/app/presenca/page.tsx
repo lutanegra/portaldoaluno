@@ -446,7 +446,7 @@ Axé!`
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           {t('common_back')}
         </button>
-        <img src="/logo-barao-maua.png" alt="Logo Barão de Mauá" style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 10, display: 'block', margin: '0 auto 10px' }} />
+        <img src="/logo-portal-aluno.svg" alt="Logo Barão de Mauá" style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 10, display: 'block', margin: '0 auto 10px' }} />
         <h1 style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{t('attendance_title')}</h1>
         <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', marginTop: 6 }}>{hoje}</p>
       </div>
@@ -482,7 +482,7 @@ Axé!`
 
         {/* Sync result toast */}
         {syncResult && (
-          <div style={{ background: syncResult.fail === 0 ? 'rgba(22,163,74,0.1)' : 'rgba(251,191,36,0.1)', border: `1px solid ${syncResult.fail === 0 ? 'rgba(22,163,74,0.4)' : 'rgba(251,191,36,0.4)'}`, borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.85rem', fontWeight: 700, color: syncResult.fail === 0 ? '#16a34a' : '#b45309' }}>
+          <div style={{ background: syncResult.fail === 0 ? 'rgba(22,163,74,0.1)' : 'rgba(251,191,36,0.1)', border: `1px solid ${syncResult.fail === 0 ? 'rgba(22,163,74,0.4)' : 'rgba(255,146,0,0.4)'}`, borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.85rem', fontWeight: 700, color: syncResult.fail === 0 ? '#16a34a' : '#b45309' }}>
             {syncResult.fail === 0 ? `✅ ${syncResult.ok} presença(s) sincronizada(s) com sucesso!` : `⚠ ${syncResult.ok} sincronizada(s), ${syncResult.fail} falhou. Tente novamente.`}
           </div>
         )}
@@ -501,7 +501,7 @@ Axé!`
         {/* Locais disponíveis */}
         <div className="form-section" style={{ marginBottom: 16 }}>
           <div style={{ textAlign: 'center', marginBottom: 14 }}>
-            <img src="/logo-barao-maua.png" alt="Logo Barão de Mauá" style={{ width: 72, height: 72, objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+            <img src="/logo-portal-aluno.svg" alt="Logo Barão de Mauá" style={{ width: 72, height: 72, objectFit: 'contain', display: 'block', margin: '0 auto' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <h2 className="form-section-title" style={{ margin: 0 }}>Locais de Treino</h2>
@@ -669,7 +669,7 @@ Axé!`
             <h2 style={{ fontSize: '1.25rem', marginBottom: 4, display: 'block', WebkitTextFillColor: 'var(--text-primary)' }}>Presença Registrada!</h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: !isOnline ? 8 : 20 }}>Comprovante de Treino</p>
             {!isOnline && (
-              <div style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.4)', borderRadius: 8, padding: '7px 12px', marginBottom: 16, fontSize: '0.78rem', color: '#b45309', fontWeight: 600 }}>
+              <div style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(255,146,0,0.4)', borderRadius: 8, padding: '7px 12px', marginBottom: 16, fontSize: '0.78rem', color: '#b45309', fontWeight: 600 }}>
                 📶 Salva offline — será sincronizada automaticamente quando a internet retornar
               </div>
             )}
