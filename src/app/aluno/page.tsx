@@ -633,8 +633,8 @@ export default function AlunoPage() {
     data_nascimento: student.data_nascimento || '',
   } : null;
 
-  // ── LOGIN ─────────────────────────────────────────────────────────────────
-  if (!session && !showRegister && !showForgot) {
+  // ── LOGIN (só aparece depois de verificar a sessão salva no cookie) ───────
+  if (!session && !loading && !showRegister && !showForgot) {
     return (
       <div className="pa-auth">
         <div className="pa-auth-inner">
@@ -921,11 +921,16 @@ export default function AlunoPage() {
     );
   }
 
-  // ── LOADING ───────────────────────────────────────────────────────────────
+  // ── LOADING / verificando sessão ──────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#fff', fontSize: '1rem' }}>Carregando...</div>
+      <div className="pa-splash" aria-hidden="true" style={{ zIndex: 50 }}>
+        <div className="pa-splash-ring">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-portal-aluno.png" alt="" />
+        </div>
+        <div className="pa-splash-name">Portal <span>Aluno</span></div>
+        <div className="pa-splash-bar"><i /></div>
       </div>
     );
   }

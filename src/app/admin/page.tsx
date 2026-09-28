@@ -650,6 +650,7 @@ export default function AdminPage() {
   const { t, lang } = useLanguage();
   const contentAreaRef = useRef<HTMLDivElement>(null);
   const [authed, setAuthed] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
   const [activeNucleo, setActiveNucleo] = useState<NucleoKey | null>(null);
   const [availableNucleos, setAvailableNucleos] = useState<NucleoKey[]>([]);
   const [isOwner, setIsOwner] = useState(false);
@@ -755,8 +756,12 @@ export default function AdminPage() {
   // Autenticar com base no sessionStorage (set pelo modal da página principal ou pelo formulário de login)
   useEffect(() => {
     const stored = sessionStorage.getItem('admin_auth') as NucleoKey | null;
-    if (!stored) return;
+    if (!stored) {
+      setAuthChecking(false);
+      return;
+    }
     setAuthed(true);
+    setAuthChecking(false);
     setActiveNucleo(stored);
     
     // Restaurar estado de owner
@@ -1893,6 +1898,19 @@ export default function AdminPage() {
       </div>
     );
   };
+
+  if (authChecking) {
+    return (
+      <div className="pa-splash" aria-hidden="true" style={{ zIndex: 50 }}>
+        <div className="pa-splash-ring">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-portal-aluno.png" alt="" />
+        </div>
+        <div className="pa-splash-name">Portal <span>Aluno</span></div>
+        <div className="pa-splash-bar"><i /></div>
+      </div>
+    );
+  }
 
   if (!authed) {
     return (
