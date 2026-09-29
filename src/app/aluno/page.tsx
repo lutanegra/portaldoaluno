@@ -111,6 +111,7 @@ export default function AlunoPage() {
   const [forgotStudentId, setForgotStudentId] = useState('');
   const [forgotStep, setForgotStep] = useState<'lookup' | 'reset' | 'done'>('lookup');
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [, setForgotCodeSent] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [resetOtp, setResetOtp] = useState('');
   const [resetPassword, setResetPassword] = useState('');
@@ -823,7 +824,7 @@ export default function AlunoPage() {
 
   // ── FORGOT PASSWORD ───────────────────────────────────────────────────────
   if (showForgot) {
-    const inpStyle = { width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '11px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' as const };
+    const inpStyle = { width: '100%', borderColor: '#e5e7eb', borderStyle: 'solid' as const, borderWidth: 1.5, borderRadius: 10, padding: '11px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' as const };
     const lblStyle = { display: 'block', fontSize: '0.8rem', fontWeight: 600 as const, color: '#374151', marginBottom: 5 };
 
     return (
@@ -835,34 +836,52 @@ export default function AlunoPage() {
               <div style={{ fontSize: '3.5rem', marginBottom: 12 }}>✅</div>
               <h2 style={{ margin: '0 0 8px', fontSize: '1.2rem', fontWeight: 800, color: '#111827' }}>Senha redefinida!</h2>
               <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: 20 }}>Sua nova senha foi salva com sucesso. Você já pode fazer login.</p>
-              <button onClick={() => { setShowForgot(false); setForgotStep('lookup'); setForgotInput(''); setForgotMsg(''); setResetMsg(''); setResetPassword(''); setResetConfirmPassword(''); }}
-                style={{ background: 'linear-gradient(135deg,#1d4ed8,#1e40af)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 32px', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
+              <button onClick={() => { setShowForgot(false); setForgotStep('lookup'); setForgotInput(''); setForgotMsg(''); setResetMsg(''); setResetPassword(''); setResetConfirmPassword(''); setResetOtp(''); }}
+                style={{ background: 'linear-gradient(135deg,#FF9200,#c86a00)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 32px', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
                 Entrar agora
               </button>
             </div>
           ) : forgotStep === 'reset' ? (
             <>
               <div style={{ textAlign: 'center', marginBottom: 22 }}>
-                <div style={{ fontSize: 38, marginBottom: 6 }}>🔒</div>
-                <h2 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 700 }}>Criar nova senha</h2>
-                <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>Conta encontrada. Defina uma nova senha abaixo.</p>
+                <div style={{ fontSize: 38, marginBottom: 6 }}>📨</div>
+                <h2 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 700 }}>Digite o código</h2>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>Enviamos um código de 6 dígitos para os canais vinculados à sua conta. Ele expira em 15 minutos.</p>
               </div>
               {resetMsg && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: '0.83rem' }}>{resetMsg}</div>}
               <form onSubmit={async (e) => {
                 e.preventDefault();
+                if (resetOtp.replace(/\D/g, '').length !== 6) { setResetMsg('Digite o código de 6 dígitos que você recebeu.'); return; }
                 if (resetPassword.length < 6) { setResetMsg('Senha deve ter pelo menos 6 caracteres.'); return; }
                 if (resetPassword !== resetConfirmPassword) { setResetMsg('As senhas não coincidem.'); return; }
                 setForgotLoading(true); setResetMsg('');
-                // Use a dummy OTP since we store it in the account — we'll use forgot-password + reset-password
-                const res = await fetch('/api/aluno/auth', {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ action: 'reset-password', student_id: forgotStudentId, otp: resetOtp, new_password: resetPassword }),
-                });
-                const data = await res.json();
-                setForgotLoading(false);
-                if (!res.ok) { setResetMsg(data.error || 'Erro ao redefinir senha.'); return; }
-                setForgotStep('done');
+                try {
+                  // 1) Verifica o código; 2) só então redefine a senha
+                  const vRes = await fetch('/api/aluno/auth', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'verify-otp-reset', student_id: forgotStudentId, otp: resetOtp }),
+                  });
+                  const vData = await vRes.json();
+                  if (!vRes.ok) { setResetMsg(vData.error || 'Código inválido.'); return; }
+                  const res = await fetch('/api/aluno/auth', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'reset-password', student_id: forgotStudentId, otp: resetOtp, new_password: resetPassword }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) { setResetMsg(data.error || 'Erro ao redefinir senha.'); return; }
+                  setForgotStep('done');
+                } catch {
+                  setResetMsg('Erro de conexão. Tente novamente.');
+                } finally {
+                  setForgotLoading(false);
+                }
               }} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <label style={lblStyle}>Código de verificação</label>
+                  <input type="text" inputMode="numeric" maxLength={6} value={resetOtp} onChange={e => setResetOtp(e.target.value.replace(/\D/g, ''))}
+                    style={{ ...inpStyle, textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5em', fontWeight: 700 }}
+                    placeholder="••••••" required autoFocus />
+                </div>
                 <div>
                   <label style={lblStyle}>Nova Senha <span style={{ color: '#ef4444' }}>*</span></label>
                   <input type="password" value={resetPassword} onChange={e => setResetPassword(e.target.value)}
@@ -878,12 +897,25 @@ export default function AlunoPage() {
                   {resetConfirmPassword && resetConfirmPassword !== resetPassword && <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#ef4444' }}>As senhas não coincidem</p>}
                   {resetConfirmPassword && resetConfirmPassword === resetPassword && <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#16a34a' }}>✓ Senhas coincidem</p>}
                 </div>
-                <button type="submit" disabled={forgotLoading || resetPassword.length < 6 || resetPassword !== resetConfirmPassword}
-                  style={{ background: (resetPassword.length >= 6 && resetPassword === resetConfirmPassword) ? 'linear-gradient(135deg,#1d4ed8,#1e40af)' : '#e5e7eb', color: (resetPassword.length >= 6 && resetPassword === resetConfirmPassword) ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: 13, fontWeight: 700, fontSize: '0.95rem', cursor: forgotLoading ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
+                <button type="submit" disabled={forgotLoading || resetPassword.length < 6 || resetPassword !== resetConfirmPassword || resetOtp.replace(/\D/g, '').length !== 6}
+                  style={{ background: (resetPassword.length >= 6 && resetPassword === resetConfirmPassword && resetOtp.replace(/\D/g, '').length === 6) ? 'linear-gradient(135deg,#FF9200,#c86a00)' : '#e5e7eb', color: (resetPassword.length >= 6 && resetPassword === resetConfirmPassword && resetOtp.replace(/\D/g, '').length === 6) ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: 13, fontWeight: 700, fontSize: '0.95rem', cursor: forgotLoading ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
                   {forgotLoading ? '⏳ Salvando...' : '✅ Salvar Nova Senha'}
                 </button>
               </form>
-              <button onClick={() => { setForgotStep('lookup'); setResetMsg(''); }} style={{ width: '100%', marginTop: 10, background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.82rem' }}>← Voltar</button>
+              <button onClick={async () => {
+                // Reenvia o código para os mesmos canais
+                if (!forgotInput.trim()) { setForgotStep('lookup'); return; }
+                setForgotLoading(true); setResetMsg('');
+                try {
+                  const res = await fetch('/api/aluno/auth', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'forgot-password', username_or_email: forgotInput }),
+                  });
+                  const data = await res.json();
+                  if (data.send_failed) { setResetMsg('Não foi possível reenviar agora. Procure o admin do seu núcleo.'); }
+                } catch { /* mantém na tela */ } finally { setForgotLoading(false); }
+              }} style={{ width: '100%', marginTop: 10, background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.82rem' }}>Reenviar código</button>
+              <button onClick={() => { setForgotStep('lookup'); setResetMsg(''); }} style={{ width: '100%', marginTop: 6, background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.82rem' }}>← Usar outro e-mail</button>
             </>
           ) : (
             <>
@@ -896,28 +928,40 @@ export default function AlunoPage() {
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 setForgotLoading(true); setForgotMsg('');
-                const res = await fetch('/api/aluno/auth', {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ action: 'forgot-password', username_or_email: forgotInput }),
-                });
-                const data = await res.json();
-                setForgotLoading(false);
-                if (data.student_id) {
-                  setForgotStudentId(data.student_id);
-                  setResetOtp(data.otp_code || ''); // dev mode only
-                  setForgotStep('reset');
-                } else {
-                  setForgotMsg('Conta não encontrada. Verifique o e-mail ou usuário informado.');
+                try {
+                  const res = await fetch('/api/aluno/auth', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'forgot-password', username_or_email: forgotInput }),
+                  });
+                  const data = await res.json();
+                  if (!data.success || !data.student_id) {
+                    setForgotMsg('Conta não encontrada. Verifique o e-mail ou usuário informado.');
+                  } else if (data.send_failed) {
+                    // Sem canal de envio — mostra mensagem de contato do núcleo
+                    setForgotMsg('Não foi possível enviar o código agora. Procure o admin do seu núcleo para redefinir sua senha.');
+                  } else {
+                    setForgotStudentId(data.student_id);
+                    setForgotCodeSent(true);
+                    setForgotMsg('');
+                    setForgotStep('reset');
+                  }
+                } catch {
+                  setForgotMsg('Erro de conexão. Tente novamente.');
+                } finally {
+                  setForgotLoading(false);
                 }
               }} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
-                  <label style={lblStyle}>Usuário ou E-mail cadastrado</label>
+                  <label style={lblStyle}>E-mail ou usuário da conta</label>
                   <input type="text" value={forgotInput} onChange={e => setForgotInput(e.target.value)}
                     style={inpStyle} placeholder="seu@email.com ou nome de usuário" required autoFocus />
+                  <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: '#6b7280' }}>
+                    Enviaremos um código de verificação para os canais vinculados à sua conta.
+                  </p>
                 </div>
                 <button type="submit" disabled={forgotLoading || !forgotInput.trim()}
-                  style={{ background: forgotInput.trim() ? 'linear-gradient(135deg,#1d4ed8,#1e40af)' : '#e5e7eb', color: forgotInput.trim() ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: 13, fontWeight: 700, fontSize: '0.95rem', cursor: forgotLoading ? 'not-allowed' : 'pointer' }}>
-                  {forgotLoading ? '⏳ Verificando...' : '🔍 Localizar Minha Conta'}
+                  style={{ background: forgotInput.trim() ? 'linear-gradient(135deg,#FF9200,#c86a00)' : '#e5e7eb', color: forgotInput.trim() ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: 13, fontWeight: 700, fontSize: '0.95rem', cursor: forgotLoading ? 'not-allowed' : 'pointer' }}>
+                  {forgotLoading ? '⏳ Enviando código...' : '📨 Enviar código de verificação'}
                 </button>
               </form>
               <button onClick={() => { setShowForgot(false); setForgotMsg(''); setForgotInput(''); }} style={{ width: '100%', marginTop: 12, background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.82rem' }}>← Voltar ao login</button>
@@ -2512,7 +2556,7 @@ export default function AlunoPage() {
           const sexo_opts = [{ v: 'M', l: 'Masculino' }, { v: 'F', l: 'Feminino' }, { v: 'O', l: 'Outro' }];
           const estados = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
           const isMissing = cadastroIncompleto;
-          const fs: React.CSSProperties = { width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '9px 11px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', background: '#fff' };
+          const fs: React.CSSProperties = { width: '100%', borderColor: '#e5e7eb', borderStyle: 'solid', borderWidth: 1.5, borderRadius: 8, padding: '9px 11px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', background: '#fff' };
           const ls: React.CSSProperties = { display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#374151', marginBottom: 4 };
           const sec: React.CSSProperties = { fontWeight: 800, fontSize: '0.78rem', color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid #f3f4f6' };
 

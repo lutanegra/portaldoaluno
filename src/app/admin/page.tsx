@@ -1365,6 +1365,9 @@ export default function AdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showGpsMap]);
 
+  // IDs de alunos presentes no banco (fonte de verdade) — filtra mapa CCLN órfão
+  const studentIdsRef = useRef<Set<string>>(new Set());
+
   const fetchStudents = async (nucleoKey?: string | null) => {
     setLoading(true);
     void nucleoKey; // tenant_id filtering done in-memory via nucleoFilter (column may not exist yet)
@@ -1420,6 +1423,10 @@ export default function AdminPage() {
         }
       } catch { /* contas são opcionais */ }
       setStudents(listWithNum);
+      // Guarda IDs presentes no banco — o mapa de exibição (CCLN-000) é filtrado
+      // por esse conjunto para nunca "ressuscitar" alunos excluídos.
+      const dbIds = new Set(list.map(s => s.id));
+      studentIdsRef.current = dbIds;
       // Refresh `selected` if still open — ensures edit modal gets fresh data
       setSelected(prev => {
         if (!prev) return null;
@@ -1428,7 +1435,13 @@ export default function AdminPage() {
       });
       // Load display IDs (CCLN-000) for all students
       fetch('/api/aluno/gerar-id').then(r => r.json()).then(d => {
-        if (d && typeof d === 'object') setStudentDisplayIds(d as Record<string, string>);
+        if (d && typeof d === 'object') {
+          const filtered: Record<string, string> = {};
+          for (const [sid, displayId] of Object.entries(d as Record<string, string>)) {
+            if (dbIds.has(sid)) filtered[sid] = displayId;
+          }
+          setStudentDisplayIds(filtered);
+        }
       }).catch(() => {});
       // Carrega registros de termos enviados para alunos menores
       const menoresIds = list.filter(s => s.menor_de_idade).map(s => s.id);

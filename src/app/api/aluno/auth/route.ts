@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
-import { sendEmail, buildOtpHtml } from '@/lib/email';
+import { sendEmail, buildOtpHtml, type EmailResult } from '@/lib/email';
 import {
   SESSION_COOKIE,
   createAlunoSession,
@@ -29,8 +29,9 @@ type AlunoAccount = {
   password_hash: string; // sha256 of password
   salt: string;
   active: boolean;
-  pending_otp?: string; // WhatsApp OTP if pending
+  pending_otp?: string; // OTP pendente (reset de senha)
   otp_expires?: string;
+  otp_purpose?: 'reset'; // finalidade do OTP pendente
   phone?: string;
   created_at: string;
   last_login?: string;
@@ -565,35 +566,75 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, message: 'Se o usuário existir, você receberá um código.' });
       }
 
-      const otp = generateOTP();
-      authMap[account.student_id] = {
-        ...account,
-        pending_otp: otp,
-        otp_expires: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      };
-      await saveAuthMap(authMap);
+      // Suporta múltiplas contas com o mesmo e-mail: cada student_id tem sua conta.
+      const accounts = Object.values(authMap).filter(
+        a => a.username.toLowerCase() === (username_or_email || '').toLowerCase() ||
+             (a.email && a.email.toLowerCase() === (username_or_email || '').toLowerCase())
+      );
 
-      const { data: student } = await supabaseAdmin
-        .from('students').select('nome_completo, email').eq('id', account.student_id).maybeSingle();
+      const otp = generateOTP();
+      const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      for (const acc of accounts) {
+        authMap[acc.student_id] = {
+          ...acc,
+          pending_otp: otp,
+          otp_expires: expires,
+          otp_purpose: 'reset',
+        };
+      }
+      await saveAuthMap(authMap);
+      const account0 = accounts[0];
+
+        const { data: student } = await supabaseAdmin
+        .from('students').select('nome_completo, email, telefone').eq('id', account0.student_id).maybeSingle();
       const studentName = student?.nome_completo || 'Aluno';
 
-      // Send via WhatsApp if phone available
-      if (account.phone) {
-        await sendWhatsAppOTP(account.phone, otp, studentName, true);
+      // Envia o código por E-MAIL (canal primário) e WhatsApp como reforço
+      const emailAddr = account0.email || student?.email || '';
+      const emailResult = emailAddr ? await sendEmailOTP(emailAddr, otp, studentName) : { sent: false, skipped: true };
+
+      let whatsSent = false;
+      const phoneRaw = account0.phone || (student?.telefone as string | undefined) || '';
+      const phoneDigits = phoneRaw.replace(/\D/g, '');
+      if (phoneDigits) {
+        whatsSent = await sendWhatsAppOTP(phoneDigits, otp, studentName, true);
       }
 
-      // Also send via email if available
-      const emailAddr = account.email || student?.email || '';
-      if (emailAddr) {
-        await sendEmailOTP(emailAddr, otp, studentName);
+      // Sem canal de envio configurado/possível → sinaliza para a tela oferecer o contato do núcleo
+      if (!emailResult.sent && !whatsSent) {
+        return NextResponse.json({
+          success: true,
+          send_failed: true,
+          message: 'Não foi possível enviar o código agora. Procure o admin do seu núcleo para redefinir a senha.',
+        });
       }
 
       return NextResponse.json({
         success: true,
-        student_id: account.student_id,
-        phone: account.phone ? `****${account.phone.slice(-4)}` : null,
+        student_id: account0.student_id,
+        phone: whatsSent ? `****${phoneDigits.slice(-4)}` : null,
         email: emailAddr ? emailAddr.replace(/(.{2}).+(@.+)/, '$1****$2') : null,
+        email_sent: emailResult.sent,
+        whatsapp_sent: whatsSent,
+        message: 'Código enviado.',
       });
+    }
+
+    if (action === 'verify-otp-reset') {
+      // Verifica o código ANTES de liberar a criação da nova senha
+      const { student_id, otp } = body;
+      const authMap = await loadAuthMap();
+      const account = authMap[student_id];
+      if (!account || !account.pending_otp || account.otp_purpose !== 'reset') {
+        return NextResponse.json({ error: 'Solicite um novo código.' }, { status: 400 });
+      }
+      if (account.pending_otp !== otp) {
+        return NextResponse.json({ error: 'Código incorreto. Verifique e tente novamente.' }, { status: 400 });
+      }
+      if (account.otp_expires && new Date(account.otp_expires) < new Date()) {
+        return NextResponse.json({ error: 'Código expirado. Solicite um novo.' }, { status: 400 });
+      }
+      return NextResponse.json({ success: true });
     }
 
     if (action === 'reset-password') {
@@ -603,10 +644,13 @@ export async function POST(req: NextRequest) {
       }
       const authMap = await loadAuthMap();
       const account = authMap[student_id];
-      if (!account || account.pending_otp !== otp) {
+      if (!account || !account.pending_otp || account.otp_purpose !== 'reset') {
+        return NextResponse.json({ error: 'Solicite um novo código.' }, { status: 400 });
+      }
+      if (account.pending_otp !== otp) {
         return NextResponse.json({ error: 'Código inválido.' }, { status: 400 });
       }
-      if (account.otp_expires && new Date(account.otp_expires) < new Date()) {
+      if (account.otp_expires && new Date().toISOString() > account.otp_expires) {
         return NextResponse.json({ error: 'Código expirado.' }, { status: 400 });
       }
 
@@ -617,6 +661,7 @@ export async function POST(req: NextRequest) {
         salt,
         pending_otp: undefined,
         otp_expires: undefined,
+        otp_purpose: undefined,
         active: true,
       };
       await saveAuthMap(authMap);
@@ -982,11 +1027,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function sendEmailOTP(email: string, otp: string, name: string): Promise<void> {
+async function sendEmailOTP(email: string, otp: string, name: string): Promise<EmailResult> {
   try {
     const { subject, html } = buildOtpHtml(name, otp);
-    await sendEmail(email, subject, html);
-  } catch { /* silent fail */ }
+    return await sendEmail(email, subject, html);
+  } catch {
+    return { sent: false, error: 'exceção no envio' };
+  }
 }
 
 async function sendWhatsAppMessage(phone: string, message: string): Promise<void> {

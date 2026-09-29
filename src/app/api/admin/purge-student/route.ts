@@ -84,9 +84,18 @@ export async function POST(req: NextRequest) {
     }
 
     // 3b. Mapa de matrículas — libera o número CCLN do aluno
+    // Releitura ANTES do delete (snapshot) + regravação de merge protege contra a corrida
+    // clássica: dois admins excluem alunos distintos ao mesmo tempo e um mapa sobrescreve
+    // o outro, "ressuscitando" o aluno excluído no painel.
+    const idMapBefore = await loadJson(ID_MAP_KEY);
+    const _idMapHadKey = Object.prototype.hasOwnProperty.call(idMapBefore, student_id);
     const idMap = await loadJson(ID_MAP_KEY);
-    if (idMap[student_id]) {
+    if (idMap[student_id] || _idMapHadKey) {
       delete idMap[student_id];
+      // Merge: preserva chaves criadas por escritas concorrentes desde a nossa leitura
+      for (const [k, v] of Object.entries(idMapBefore)) {
+        if (!idMap[k]) idMap[k] = v;
+      }
       await saveJson(ID_MAP_KEY, idMap);
     }
 

@@ -255,9 +255,20 @@ export default function PresencaPage() {
       return;
     }
 
+    // ── Núcleo do aluno (para local do registro e detecção de venue) ────────
+    // Fonte de verdade é o /api/presenca/students (já filtrado por núcleo p/ admins de núcleo).
+    const nucleoAluno = String(student.nucleo || '').trim();
+    const nucleoLocal = nucleoAluno
+      ? LOCAIS.find(l => l.nucleo === nucleoAluno || l.id === nucleoAluno) ?? null
+      : null;
+
     // Se tem coords mas nenhum local dentro de 200m, tenta ampliar para 1km para exibição
     if (coords && !local) {
       local = detectarLocal(coords.lat, coords.lng, 1000) ?? null;
+    }
+    // Admin sem GPS no local do aluno: o registro fica no local de treino do NÚCLEO do aluno
+    if (!local && nucleoLocal) {
+      local = { local: nucleoLocal, distMetros: 0 };
     }
 
     if (!navigator.onLine) {
@@ -270,8 +281,9 @@ export default function PresencaPage() {
         localNome: local?.local.nome ?? null,
         localEndereco: local?.local.endereco ?? null,
         localMapUrl: local?.local.mapUrl ?? gpsMapUrlOffline,
-        lat: coords?.lat ?? null,
-        lng: coords?.lng ?? null,
+        // Mesma regra do fluxo online: coordenadas do núcleo do aluno quando conhecido
+        lat: nucleoLocal?.lat ?? coords?.lat ?? null,
+        lng: nucleoLocal?.lng ?? coords?.lng ?? null,
       };
       const newQueue = [...offlineQueue.filter(q => !(q.student.id === student.id && q.date === dateKey)), entry];
       setOfflineQueue(newQueue);
@@ -296,8 +308,10 @@ export default function PresencaPage() {
       local_endereco: local?.local.endereco ?? null,
       // Prefer venue map URL; fall back to real GPS coords map URL
       local_map_url: local?.local.mapUrl ?? gpsMapUrl,
-      lat: coords?.lat ?? null,
-      lng: coords?.lng ?? null,
+      // Coordenadas gravadas: preferem o local de treino do núcleo do aluno;
+      // sem local conhecido, usam o GPS do dispositivo (sempre existirá, já validado acima).
+      lat: nucleoLocal?.lat ?? coords?.lat ?? null,
+      lng: nucleoLocal?.lng ?? coords?.lng ?? null,
     });
     setRegistering(false);
     if (result.alreadyRegistered) {
@@ -314,7 +328,14 @@ export default function PresencaPage() {
       setSearch('');
       setFiltered([]);
       setSuccess({ student, hora, data: dataStr, localDetectado: local, coords });
-      setForaDoDia(!!result.fora_do_dia);
+      setForaDoDia(false);
+      // Log de verificação (regra de ouro): local e origem das coordenadas do registro
+      console.info('[presenca] registro', {
+        aluno: student.nome_completo,
+        nucleo: nucleoAluno || '(sem núcleo)',
+        local_gravado: local?.local.nome ?? '(GPS do dispositivo)',
+        coords_origem: nucleoLocal ? `nucleo(${nucleoLocal.nome})` : 'gps',
+      });
     } else {
       alert('Erro ao registrar presença. Tente novamente.');
     }
@@ -451,7 +472,7 @@ Axé!`
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
       {/* Hero */}
-      <div style={{ background: 'linear-gradient(135deg, #dc2626 0%, #7c3aed 100%)', padding: '28px 20px', textAlign: 'center', position: 'relative' }}>
+      <div style={{ background: 'linear-gradient(135deg, #111111 0%, #3d2a05 100%)', padding: '28px 20px', textAlign: 'center', position: 'relative' }}>
         <button
           onClick={() => window.history.length > 1 ? window.history.back() : (window.location.href = '/admin')}
           style={{ position: 'absolute', left: 16, top: 18, color: 'rgba(255,255,255,0.85)', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 5 }}>

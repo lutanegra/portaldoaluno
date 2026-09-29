@@ -278,7 +278,9 @@ export async function POST(req: Request) {
     }
   }
 
-  // Build fallback Google Maps URL from GPS coords if no venue URL was provided
+  // Build Google Maps URL from GPS coords if no venue URL was provided
+  // Travas garantem: quando lat/lng existem, são as do dispositivo do admin (frontend
+  // envia as coordenadas do núcleo para aluno sem GPS). Sem coords = sem local.
   const lat = student.lat ?? null;
   const lng = student.lng ?? null;
   const fallbackMapUrl = (lat !== null && lng !== null)
@@ -322,6 +324,7 @@ export async function POST(req: Request) {
     details: {
       nucleo: student.nucleo || 'Sem núcleo',
       local: student.local_nome || null,
+      coords_origem: (student.nucleo && typeof student.lat === 'number' && typeof student.lng === 'number') ? 'nucleo_do_aluno' : 'gps_dispositivo',
       hora,
       data: today,
       registrado_por: adminNucleo ? (sess?.u || 'admin') : 'proprio_aluno',
