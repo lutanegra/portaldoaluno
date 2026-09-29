@@ -2463,6 +2463,16 @@ export default function AlunoPage() {
               });
               const data = await res.json();
               if (res.ok) {
+                // Sincroniza o e-mail também na conta de acesso do aluno
+                if (dadosForm.email && dadosForm.email.includes('@')) {
+                  try {
+                    await fetch('/api/aluno/contas', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ student_id: session.student_id, email: dadosForm.email.trim().toLowerCase() }),
+                    });
+                  } catch { /* sincronização de e-mail é melhor-esforço */ }
+                }
                 setDadosMsg('✅ Dados salvos com sucesso!');
                 setDadosMsgType('success');
                 if (data.student) setStudent(data.student);
@@ -2744,6 +2754,11 @@ export default function AlunoPage() {
                         } catch { /* silent */ }
                       }}
                       style={fs} placeholder="seu@email.com" />
+                    {!dadosForm.email.trim() && (
+                      <div style={{ marginTop: 6, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: '#9a3412', lineHeight: 1.5 }}>
+                        ⚠️ <strong>Sem e-mail vinculado, você corre o risco de perder o acesso à conta</strong> se esquecer sua senha — sem e-mail não há recuperação automática. Nesse caso, será preciso contatar o admin responsável do seu núcleo para redefinir o acesso.
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -45,3 +45,32 @@ export async function GET() {
     return NextResponse.json([]);
   }
 }
+
+// PUT /api/aluno/contas — atualiza o e-mail da conta de um aluno.
+// Chamado por "Meus Dados" quando o aluno salva um e-mail no perfil:
+// mantém a conta (login/recuperação) alinhada com o cadastro.
+export async function PUT(req: Request) {
+  try {
+    const { student_id, email } = await req.json();
+    if (!student_id || typeof email !== 'string') {
+      return NextResponse.json({ error: 'student_id e email são obrigatórios.' }, { status: 400 });
+    }
+    const clean = email.trim().toLowerCase();
+    if (clean && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
+      return NextResponse.json({ error: 'E-mail inválido.' }, { status: 400 });
+    }
+
+    const authMap = (await loadFromStorage(AUTH_KEY)) as Record<string, Record<string, unknown>>;
+    const entry = Object.values(authMap).find((a: any) => a?.student_id === student_id) as Record<string, unknown> | undefined;
+    const entryKey = Object.keys(authMap).find(k => (authMap[k] as any)?.student_id === student_id);
+
+    if (clean && entry && entryKey) {
+      authMap[entryKey] = { ...entry, email: clean };
+      const blob = new Blob([JSON.stringify(authMap)], { type: 'application/json' });
+      await supabaseAdmin.storage.from(BUCKET).upload(AUTH_KEY, blob, { upsert: true });
+    }
+    return NextResponse.json({ ok: true, synced: !!clean && !!entryKey });
+  } catch {
+    return NextResponse.json({ error: 'Erro interno.' }, { status: 500 });
+  }
+}

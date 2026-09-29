@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { readPanelSession } from '@/lib/panelSession';
+import { loadCreds } from '@/lib/panelCredentials';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +51,18 @@ export async function GET(req: NextRequest) {
   const all = await loadJustificativas();
 
   if (admin) {
-    // Admin can see all or filter by nucleo
+    // Admin de núcleo (sessão em cookie) é forçado ao próprio núcleo,
+    // mesmo que peça outro valor na URL. Owner/Admin Geral veem tudo.
+    const sess = readPanelSession(req);
+    if (sess) {
+      const creds = await loadCreds();
+      const acc = creds[sess.u];
+      if (acc && acc.nucleo !== 'geral') {
+        const { data: tenant } = await supabaseAdmin.from('tenants').select('nome').eq('slug', acc.nucleo).maybeSingle();
+        const nomeNucleo = tenant?.nome || acc.nucleo;
+        return NextResponse.json(all.filter(j => j.nucleo === nomeNucleo || j.nucleo === acc.nucleo));
+      }
+    }
     const filtered = nucleo ? all.filter(j => j.nucleo === nucleo) : all;
     return NextResponse.json(filtered);
   }

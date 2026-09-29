@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { appendAudit } from '@/lib/audit';
+import { readPanelSession } from '@/lib/panelSession';
+import { loadCreds } from '@/lib/panelCredentials';
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
@@ -195,8 +197,40 @@ function extrairJanela(
 }
 
 // POST /api/checkins  body: { student }
+// Alunos passam pelas travas (núcleo, dia, horário, GPS).
+// Admins logados (cookie de sessão do painel) registram de qualquer lugar,
+// e o admin de núcleo só pode marcar presença de alunos do próprio núcleo.
 export async function POST(req: Request) {
   const { student } = await req.json();
+
+  // ── SESSÃO DE ADMIN (bypass das travas, com filtro de núcleo) ──
+  let adminNucleo: string | null = null; // null = sem admin; 'geral' = admin geral/owner
+  const sess = readPanelSession(req);
+  if (sess) {
+    const creds = await loadCreds();
+    const acc = creds[sess.u];
+    if (acc) adminNucleo = acc.nucleo;
+  }
+  if (adminNucleo && adminNucleo !== 'geral') {
+    const nucleoNomeAluno = String(student?.nucleo || '').trim();
+    const nucleoSlugAdmin = adminNucleo;
+    const mesmoNucleo = nucleoNomeAluno === nucleoSlugAdmin;
+    let nomeBate = false;
+    if (!mesmoNucleo && nucleoNomeAluno) {
+      const { data: tenant } = await admin
+        .from('tenants')
+        .select('nome')
+        .eq('slug', nucleoSlugAdmin)
+        .maybeSingle();
+      nomeBate = !!tenant && tenant.nome === nucleoNomeAluno;
+    }
+    if (!mesmoNucleo && !nomeBate) {
+      return NextResponse.json(
+        { success: false, bloqueado: true, motivo: 'fora_do_nucleo', error: 'Este aluno não é do seu núcleo. Você só pode registrar presença dos alunos do seu núcleo.' },
+        { status: 422 },
+      );
+    }
+  }
 
   // Data/hora em horário de Brasília
   const now = new Date();
@@ -207,8 +241,8 @@ export async function POST(req: Request) {
 
   await ensureBucket();
 
-  // ── TRAVAS DE PRESENÇA (núcleo, dia, horário, local) ───────────────────────
-  const bloqueio = await validarTravas(student, brDate, minutosAgora);
+  // ── TRAVAS DE PRESENÇA (somente alunos; admins têm bypass) ─────────────────
+  const bloqueio = !adminNucleo ? await validarTravas(student, brDate, minutosAgora) : null;
   if (bloqueio) {
     await appendAudit({
       actor: student.id,
@@ -280,8 +314,8 @@ export async function POST(req: Request) {
 
   // Auditoria: registro de presença
   await appendAudit({
-    actor: student.id,
-    actor_type: 'student',
+    actor: adminNucleo ? `admin:${sess?.u || ''}` : student.id,
+    actor_type: adminNucleo ? 'admin' : 'student',
     action: 'presenca_registrada',
     target_id: student.id,
     target_name: student.nome_completo,
@@ -290,6 +324,7 @@ export async function POST(req: Request) {
       local: student.local_nome || null,
       hora,
       data: today,
+      registrado_por: adminNucleo ? (sess?.u || 'admin') : 'proprio_aluno',
       fora_do_dia_de_treino: false,
     },
   });

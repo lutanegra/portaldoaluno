@@ -1,10 +1,34 @@
 /**
- * Credenciais do painel administrativo.
- * Senhas são armazenadas com hash scrypt (formato "scrypt:salt:hash").
- * Credenciais legadas em texto simples continuam válidas na comparação,
- * para não quebrar logins antigos de responsáveis até serem trocadas.
+ * Contas de acesso do painel (owner, admins gerais e admins de núcleo).
+ * Armazenadas em config/panel-credentials.json no Supabase Storage (bucket privado).
+ * Senhas com hash scrypt. Campos opcionais: cpf (11 dígitos, também é login) e
+ * email (recuperação de senha).
  */
+import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 'dummy-key-for-build'
+);
+
+const BUCKET = 'photos';
+export const CREDS_KEY = 'config/panel-credentials.json';
+export const OWNER_KEY = 'owner';
+
+export interface PanelAccount {
+  nucleo: string;          // slug do núcleo ou 'geral'
+  label: string;
+  color: string;
+  password: string;        // hash scrypt ou legado em texto simples
+  email?: string;
+  cpf?: string;            // apenas dígitos; pode ser usado como login
+  nome?: string;
+  createdBy?: string;
+  first_login?: boolean;
+}
+
+export type CredsMap = Record<string, PanelAccount>;
 
 const SCRYPT_KEYLEN = 64;
 
@@ -25,20 +49,126 @@ export function verifyPassword(password: string, stored: string): boolean {
       return false;
     }
   }
-  // Legado: texto simples
   return stored === password;
 }
 
+export function normalizeLogin(s: string): string {
+  return (s || '').trim().toLowerCase();
+}
+
+export function normalizeCpfDigits(s: string): string {
+  return (s || '').replace(/\D/g, '');
+}
+
+export function normalizeEmail(s: string): string {
+  return (s || '').trim().toLowerCase();
+}
+
+/** Contas fixas de gestão — garantidas sempre (seed). */
+export const DEFAULT_CREDS: CredsMap = {
+  owner: { nucleo: 'geral', label: 'Owner (Desenvolvedor)', color: '#7c3aed', password: 'Mp27032013@', first_login: false },
+  admin: { nucleo: 'geral', label: 'Admin Geral', color: '#1d4ed8', password: 'Scoralick0405@', first_login: false },
+};
+
+export async function loadCreds(): Promise<CredsMap> {
+  try {
+    const { data } = await supabase.storage.from(BUCKET).createSignedUrl(CREDS_KEY, 30);
+    if (!data?.signedUrl) return { ...DEFAULT_CREDS };
+    const res = await fetch(data.signedUrl, { cache: 'no-store' });
+    if (!res.ok) return { ...DEFAULT_CREDS };
+    const stored = await res.json();
+    return { ...DEFAULT_CREDS, ...stored };
+  } catch {
+    return { ...DEFAULT_CREDS };
+  }
+}
+
+export async function saveCreds(map: CredsMap): Promise<void> {
+  const blob = new Blob([JSON.stringify(map)], { type: 'application/json' });
+  await supabase.storage.from(BUCKET).upload(CREDS_KEY, blob, { upsert: true });
+}
+
+/** Índice de logins alternativos: cpf → username, email → username. */
+export function buildAltIndex(creds: CredsMap): { byCpf: Record<string, string>; byEmail: Record<string, string> } {
+  const byCpf: Record<string, string> = {};
+  const byEmail: Record<string, string> = {};
+  for (const [username, acc] of Object.entries(creds)) {
+    const cpf = normalizeCpfDigits((acc as PanelAccount).cpf || '');
+    if (cpf.length === 11 && !byCpf[cpf]) byCpf[cpf] = username;
+    const email = normalizeEmail((acc as PanelAccount).email || '');
+    if (email.includes('@') && !byEmail[email]) byEmail[email] = username;
+  }
+  return { byCpf, byEmail };
+}
+
 /**
- * Senha padrão do admin de um núcleo: o próprio nome do núcleo
- * (slug sem hífens, minúsculo). Ex.: "CIEP 229" → slug "ciep-229" → "ciep229".
+ * Resolve o username real a partir de login (username), CPF ou e-mail.
+ * Retorna null quando não encontra.
  */
+export function resolveUsername(creds: CredsMap, rawLogin: string): string | null {
+  const login = normalizeLogin(rawLogin);
+  if (!login) return null;
+  if (creds[login]) return login;
+  const digits = normalizeCpfDigits(rawLogin);
+  if (digits.length === 11) {
+    const byCpf = buildAltIndex(creds).byCpf;
+    if (byCpf[digits]) return byCpf[digits];
+  }
+  if (login.includes('@')) {
+    const byEmail = buildAltIndex(creds).byEmail;
+    if (byEmail[login]) return byEmail[login];
+  }
+  return null;
+}
+
+/**
+ * Garante a existência do usuário auth no Supabase para o e-mail dado
+ * (recuperação de senha via Supabase Auth). Sem e-mail, não cria nada.
+ * user_metadata guarda o login do painel para o reset sincronizar.
+ */
+export async function ensureSupabaseAuthUser(email: string, panelUsername: string, nome?: string): Promise<{ id?: string; error?: string }> {
+  if (!email || !email.includes('@')) return {};
+  const { data: list } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
+  const existing = list?.users?.find(u => (u.email || '').toLowerCase() === email);
+  if (existing) {
+    const meta = (existing.user_metadata || {}) as Record<string, unknown>;
+    if (meta.panel_login !== panelUsername) {
+      await supabase.auth.admin.updateUserById(existing.id, {
+        user_metadata: { ...meta, panel_login: panelUsername, panel_nome: nome || '' },
+      });
+    }
+    return { id: existing.id };
+  }
+  const { data, error } = await supabase.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    user_metadata: { panel_login: panelUsername, panel_nome: nome || '' },
+  });
+  if (error) return { error: error.message };
+  return { id: data?.user?.id };
+}
+
+export function publicAccount(username: string, acc: PanelAccount, nucleoNome?: string | null) {
+  return {
+    username,
+    label: acc.label,
+    nucleo: acc.nucleo,
+    nucleo_nome: nucleoNome ?? null,
+    color: acc.color,
+    nome: acc.nome || '',
+    email: acc.email || '',
+    cpf: acc.cpf || '',
+    first_login: acc.first_login === true,
+    is_owner: username === OWNER_KEY,
+  };
+}
+
+/** Senha padrão do admin de um núcleo: o próprio nome do núcleo. */
 export function defaultPasswordForSlug(slug: string): string {
   const clean = slug.toLowerCase().replace(/-/g, '');
   return clean.length >= 4 ? clean : slug.toLowerCase();
 }
 
-/** Paleta de cores para badges de núcleo (usada ao criar credencial). */
 export const NUCLEO_COLOR_PALETTE = [
   '#0ea5e9', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed',
   '#0d9488', '#db2777', '#4f46e5', '#ca8a04', '#059669',

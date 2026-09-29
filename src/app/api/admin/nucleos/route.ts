@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { hashPassword, verifyPassword, defaultPasswordForSlug, sanitizeDiasTreino, pickColorForSlug } from '@/lib/panelCredentials';
+import {
+  hashPassword,
+  verifyPassword,
+  defaultPasswordForSlug,
+  sanitizeDiasTreino,
+  pickColorForSlug,
+  loadCreds,
+  saveCreds,
+  resolveUsername,
+  normalizeCpfDigits,
+  normalizeEmail,
+  ensureSupabaseAuthUser,
+  OWNER_KEY,
+  type CredsMap,
+} from '@/lib/panelCredentials';
 import { appendAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
@@ -9,23 +23,6 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
   process.env.SUPABASE_SERVICE_ROLE_KEY || 'dummy-key-for-build'
 );
-
-const BUCKET = 'photos';
-const CREDS_KEY = 'config/panel-credentials.json';
-
-interface CredencialNucleo {
-  nucleo: string;
-  label: string;
-  color: string;
-  password: string;
-  email?: string;
-  nome?: string;
-  first_login?: boolean;
-}
-
-type CredsMap = Record<string, CredencialNucleo>;
-
-const OWNER_KEY = 'owner';
 
 function slugify(text: string): string {
   return text
@@ -36,49 +33,43 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
-async function loadCreds(): Promise<CredsMap> {
-  try {
-    const { data } = await supabaseAdmin.storage.from(BUCKET).createSignedUrl(CREDS_KEY, 30);
-    if (!data?.signedUrl) return {};
-    const res = await fetch(data.signedUrl, { cache: 'no-store' });
-    if (!res.ok) return {};
-    return await res.json();
-  } catch { return {}; }
-}
-
 /**
  * Autentica a chamada de duas formas:
  * - Gestão (owner/admin): header/body com admin_username + admin_password (senha real).
  * - Compatibilidade: header x-admin-auth: "owner" | "geral" (usado por telas já logadas).
+ * - Admin de núcleo: nucleo_login + nucleo_password (login, CPF ou e-mail).
  */
 async function autenticar(
   req: NextRequest,
   body: Record<string, unknown>
-): Promise<{ autorizado: boolean; owner: boolean; adminGeral: boolean; loginNucleo?: string }> {
-  const explicitUser = String(body.admin_username || req.headers.get('x-admin-username') || '').trim().toLowerCase();
+): Promise<{ autorizado: boolean; owner: boolean; adminGeral: boolean; loginNucleo?: string; actor: string }> {
+  const credsFor = async () => loadCreds();
+  const explicitRaw = String(body.admin_username || req.headers.get('x-admin-username') || '').trim();
   const explicitPass = String(body.admin_password || req.headers.get('x-admin-password') || '');
-  if (explicitUser && explicitPass) {
-    const creds = await loadCreds();
-    const user = creds[explicitUser];
+  if (explicitRaw && explicitPass) {
+    const creds = await credsFor();
+    const explicitUser = resolveUsername(creds, explicitRaw);
+    const user = explicitUser ? creds[explicitUser] : undefined;
     if (!user || !verifyPassword(explicitPass, user.password) || user.nucleo !== 'geral')
-      return { autorizado: false, owner: false, adminGeral: false };
-    return { autorizado: true, owner: explicitUser === OWNER_KEY, adminGeral: true };
+      return { autorizado: false, owner: false, adminGeral: false, actor: explicitRaw };
+    return { autorizado: true, owner: explicitUser === OWNER_KEY, adminGeral: true, actor: explicitUser ?? '' };
   }
   // Compat: sessão já validada por login manda apenas a marcação
   const marcador = String(req.headers.get('x-admin-auth') || body.admin_auth || '').toLowerCase();
-  if (marcador === 'owner') return { autorizado: true, owner: true, adminGeral: true };
-  if (marcador === 'geral' || marcador === 'admin') return { autorizado: true, owner: false, adminGeral: true };
+  if (marcador === 'owner') return { autorizado: true, owner: true, adminGeral: true, actor: 'owner' };
+  if (marcador === 'geral' || marcador === 'admin') return { autorizado: true, owner: false, adminGeral: true, actor: 'admin-geral' };
   // Admin de núcleo: login + senha da própria conta, para editar o próprio núcleo
-  const nucleoLogin = String(body.nucleo_login || '').trim().toLowerCase();
+  const nucleoRaw = String(body.nucleo_login || '').trim();
   const nucleoPass = String(body.nucleo_password || '');
-  if (nucleoLogin && nucleoPass) {
-    const creds = await loadCreds();
-    const user = creds[nucleoLogin];
+  if (nucleoRaw && nucleoPass) {
+    const creds = await credsFor();
+    const nucleoLogin = resolveUsername(creds, nucleoRaw);
+    const user = nucleoLogin ? creds[nucleoLogin] : undefined;
     if (!user || !verifyPassword(nucleoPass, user.password) || user.nucleo === 'geral')
-      return { autorizado: false, owner: false, adminGeral: false };
-    return { autorizado: true, owner: false, adminGeral: false, loginNucleo: user.nucleo };
+      return { autorizado: false, owner: false, adminGeral: false, actor: nucleoRaw };
+    return { autorizado: true, owner: false, adminGeral: false, loginNucleo: user.nucleo, actor: nucleoLogin ?? '' };
   }
-  return { autorizado: false, owner: false, adminGeral: false };
+  return { autorizado: false, owner: false, adminGeral: false, actor: '' };
 }
 
 // GET /api/admin/nucleos - List all nucleos (tenants)
@@ -106,8 +97,9 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/admin/nucleos - Create a new nucleo (tenant) - OWNER/ADMIN GERAL
-// Campos: nome*, endereco, cidade, estado, telefone, email, lat, lng,
-//         dias_treino[], admin_login*, admin_senha (padrão = nome do núcleo)
+// Campos: nome*, endereco*, cidade, estado, telefone, email, lat, lng,
+//         dias_treino[], admin_login*, admin_senha (padrão = nome do núcleo),
+//         admin_nome, admin_email, admin_cpf (opcionais)
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({} as Record<string, unknown>));
@@ -144,21 +136,34 @@ export async function POST(req: NextRequest) {
 
     const slug = slugify(nome);
 
+    const creds = await loadCreds();
+    if (creds[adminLogin]) {
+      return NextResponse.json({ error: `O login "${adminLogin}" já está em uso.` }, { status: 400 });
+    }
+
+    const adminEmail = normalizeEmail(String(body.admin_email || ''));
+    if (adminEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
+      return NextResponse.json({ error: 'E-mail do admin inválido.' }, { status: 400 });
+    }
+    if (adminEmail && Object.values(creds).some(c => normalizeEmail(c.email || '') === adminEmail)) {
+      return NextResponse.json({ error: 'Este e-mail já está vinculado a outra conta de acesso.' }, { status: 400 });
+    }
+    const adminCpf = normalizeCpfDigits(String(body.admin_cpf || ''));
+    if (adminCpf && adminCpf.length !== 11) {
+      return NextResponse.json({ error: 'CPF do admin deve ter 11 dígitos.' }, { status: 400 });
+    }
+    if (adminCpf && Object.values(creds).some(c => normalizeCpfDigits(c.cpf || '') === adminCpf)) {
+      return NextResponse.json({ error: 'Este CPF já está vinculado a outra conta de acesso.' }, { status: 400 });
+    }
+
     // Check if slug already exists
     const { data: existing } = await supabaseAdmin
       .from('tenants')
       .select('id')
       .eq('slug', slug)
       .maybeSingle();
-
     if (existing) {
-      return NextResponse.json({ error: 'Já existe um núcleo com esse nome.' }, { status: 400 });
-    }
-
-    // Login do admin precisa estar livre
-    const creds = await loadCreds();
-    if (creds[adminLogin]) {
-      return NextResponse.json({ error: `O login "${adminLogin}" já está em uso.` }, { status: 400 });
+      return NextResponse.json({ error: 'Já existe um núcleo com este nome.' }, { status: 409 });
     }
 
     // Insert new tenant
@@ -193,13 +198,15 @@ export async function POST(req: NextRequest) {
       color: pickColorForSlug(slug),
       password: hashPassword(senhaInformada || defaultPasswordForSlug(slug)),
       nome: String(body.admin_nome || '').trim(),
+      email: adminEmail || undefined,
+      cpf: adminCpf || undefined,
       first_login: false,
     };
-    const blob = new Blob([JSON.stringify(creds)], { type: 'application/json' });
-    await supabaseAdmin.storage.from(BUCKET).upload(CREDS_KEY, blob, { upsert: true });
+    await saveCreds(creds);
+    if (adminEmail) await ensureSupabaseAuthUser(adminEmail, adminLogin, String(body.admin_nome || ''));
 
     await appendAudit({
-      actor: auth.owner ? 'owner' : 'admin-geral',
+      actor: auth.actor || 'admin-geral',
       actor_type: 'admin',
       action: 'nucleo_criado',
       target_id: String(data.id),
@@ -248,7 +255,7 @@ export async function DELETE(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Remove a credencial do admin deste núcleo
+    // Remove as credenciais de todos os admins deste núcleo
     const { data: tenant } = await supabaseAdmin
       .from('tenants')
       .select('slug, admin_login')
@@ -265,19 +272,19 @@ export async function DELETE(req: NextRequest) {
     }
 
     await appendAudit({
-      actor: auth.owner ? 'owner' : 'admin-geral',
+      actor: auth.actor || 'admin-geral',
       actor_type: 'admin',
       action: 'nucleo_excluido',
       target_id: String(id),
       details: { slug: tenant?.slug, admin_login_removido: tenant?.admin_login || null },
     });
 
-    if (tenant?.admin_login) {
+    if (tenant?.slug) {
       const creds = await loadCreds();
-      if (creds[String(tenant.admin_login)]) {
-        delete creds[String(tenant.admin_login)];
-        const blob = new Blob([JSON.stringify(creds)], { type: 'application/json' });
-        await supabaseAdmin.storage.from(BUCKET).upload(CREDS_KEY, blob, { upsert: true });
+      const loginsDoNucleo = Object.keys(creds).filter(k => creds[k].nucleo === tenant.slug);
+      if (loginsDoNucleo.length > 0) {
+        for (const k of loginsDoNucleo) delete creds[k];
+        await saveCreds(creds);
       }
     }
 
@@ -355,8 +362,23 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Renomeou o núcleo? Propaga o novo slug para as contas de admin vinculadas.
+    const oldSlug = typeof body.slug_anterior === 'string' ? body.slug_anterior : null;
+    const newSlug = typeof updates.slug === 'string' ? updates.slug : null;
+    if (oldSlug && newSlug && oldSlug !== newSlug) {
+      const creds = await loadCreds();
+      let mudou = false;
+      for (const [k, c] of Object.entries(creds)) {
+        if (c.nucleo === oldSlug) {
+          creds[k] = { ...c, nucleo: newSlug };
+          mudou = true;
+        }
+      }
+      if (mudou) await saveCreds(creds);
+    }
+
     await appendAudit({
-      actor: auth.owner ? 'owner' : 'admin-geral',
+      actor: auth.actor || 'admin-geral',
       actor_type: 'admin',
       action: 'nucleo_atualizado',
       target_id: String(id),

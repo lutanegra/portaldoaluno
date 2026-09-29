@@ -11,9 +11,9 @@ const supabase = createClient(
 const BUCKET = 'photos';
 const KEY = 'config/manual-videos.json';
 
-export type Platform = 'youtube' | 'spotify' | 'deezer' | 'tiktok' | 'kwai' | 'outro';
+type Platform = 'youtube' | 'spotify' | 'deezer' | 'tiktok' | 'kwai' | 'outro';
 
-export type VideoLink = {
+type VideoLink = {
   id: string;
   title: string;
   url: string;
@@ -21,7 +21,7 @@ export type VideoLink = {
   created_at: string;
 };
 
-export function detectPlatform(url: string): Platform {
+function detectPlatform(url: string): Platform {
   try {
     const u = new URL(url);
     const h = u.hostname.replace('www.', '');
@@ -34,7 +34,7 @@ export function detectPlatform(url: string): Platform {
   return 'outro';
 }
 
-export function getPlatformEmbed(url: string, platform: Platform): string | null {
+function getPlatformEmbed(url: string, platform: Platform): string | null {
   try {
     const u = new URL(url);
     if (platform === 'youtube') {

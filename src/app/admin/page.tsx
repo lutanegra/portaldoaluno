@@ -12,6 +12,8 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { getTenantIdByKey } from '@/lib/tenants';
 import WhatsappFilaPanel from '@/components/WhatsappFilaPanel';
 import { invalidateConfigCache } from '@/hooks/useSystemConfig';
+import EditAccountModal from '@/components/EditAccountModal';
+import MyAccountCard from '@/components/MyAccountCard';
 
 interface PresencaCount {
   student_id: string;
@@ -670,17 +672,7 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState('');
   const [showPass, setShowPass] = useState(false);
   // Change-credentials modal
-  const [showChangeCreds, setShowChangeCreds] = useState(false);
   const [editingProfile, setEditingProfile] = useState<NucleoKey>('edson-alves');
-  const [newPassConfirmPass, setNewPassConfirmPass] = useState('');
-  const [newPass, setNewPass] = useState('');
-  const [newPassConfirm, setNewPassConfirm] = useState('');
-  const [showNewPass, setShowNewPass] = useState(false);
-  const [changeError, setChangeError] = useState('');
-  const [changeDone, setChangeDone] = useState(false);
-  const [profileEmail, setProfileEmail] = useState('');
-  const [changeEmailMsg, setChangeEmailMsg] = useState('');
-  const [changeSending, setChangeSending] = useState(false);
   // Admin forgot-password inline flow
   const [showAdminForgot, setShowAdminForgot] = useState(false);
   const [adminForgotCpf, setAdminForgotCpf] = useState('');
@@ -882,41 +874,6 @@ export default function AdminPage() {
     }
   };
 
-  const handleChangeCreds = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPass.length < 6) { setChangeError('Senha deve ter ao menos 6 caracteres.'); return; }
-    if (newPass !== newPassConfirm) { setChangeError('As senhas não coincidem.'); return; }
-    setChangeSending(true); setChangeEmailMsg('');
-    try {
-      const res = await fetch('/api/admin/panel-auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'change-password', username: editingProfile, current_password: newPassConfirmPass || '', new_password: newPass }),
-      });
-      const d = await res.json();
-      if (!res.ok) {
-        setChangeError(d.error || 'Não foi possível alterar a senha.');
-        setChangeSending(false);
-        return;
-      }
-      if (profileEmail.trim()) {
-        try {
-          await fetch('/api/admin/send-creds-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ to: profileEmail.trim(), label: editingProfile, username: editingProfile, password: newPass }),
-          });
-          setChangeEmailMsg('✉️ Nova senha enviada por e-mail!');
-        } catch { setChangeEmailMsg('⚠️ Senha alterada, mas e-mail não enviado.'); }
-      }
-    } catch { setChangeError('Erro de conexão.'); setChangeSending(false); return; }
-    setChangeSending(false);
-    setChangeDone(true);
-    setTimeout(() => {
-      setChangeDone(false); setShowChangeCreds(false);
-      setNewPass(''); setNewPassConfirm(''); setNewPassConfirmPass(''); setChangeError(''); setChangeEmailMsg(''); setProfileEmail('');
-    }, 2500);
-  };
 
   const currentProfile: { label: string; color: string } | undefined = activeNucleo === 'geral'
     ? (isOwner ? { label: 'Owner', color: '#7c3aed' } : { label: 'Admin Geral', color: '#1d4ed8' })
@@ -951,7 +908,7 @@ export default function AdminPage() {
   const [deleteAdminPass, setDeleteAdminPass] = useState('');
   const [matriculaEditNum, setMatriculaEditNum] = useState('');
   const [matriculaEditPass, setMatriculaEditPass] = useState('');
-  const [activeTab, setActiveTab] = useState<'alunos' | 'presencas' | 'relatorio' | 'ranking' | 'certificado' | 'financeiro' | 'doacoes' | 'editais' | 'materiais' | 'patrimonio' | 'rascunhos' | 'dados-faltantes' | 'manual' | 'eventos' | 'lixeira' | 'justificativas' | 'contas' | 'auditoria' | 'responsaveis' | 'docs-historicos' | 'bibliografia' | 'estatuto' | 'regimento' | 'informacoes' | 'playlist' | 'admins' | 'aluno-view' | 'restauracao' | 'organograma' | 'hierarquia' | 'nucleos' | 'system-config'>('alunos');
+  const [activeTab, setActiveTab] = useState<'alunos' | 'presencas' | 'relatorio' | 'ranking' | 'certificado' | 'financeiro' | 'doacoes' | 'editais' | 'materiais' | 'patrimonio' | 'rascunhos' | 'dados-faltantes' | 'manual' | 'eventos' | 'lixeira' | 'justificativas' | 'contas' | 'auditoria' | 'responsaveis' | 'docs-historicos' | 'bibliografia' | 'estatuto' | 'regimento' | 'informacoes' | 'playlist' | 'minha-conta' | 'email-config' | 'aluno-view' | 'restauracao' | 'organograma' | 'hierarquia' | 'nucleos' | 'system-config'>('alunos');
   const [institucionalExpanded, setInstitucionalExpanded] = useState(false);
   // Área do Aluno — visualização pelo admin
   const [alunoViewStudentId, setAlunoViewStudentId] = useState('');
@@ -983,6 +940,14 @@ export default function AdminPage() {
   const [respGeralCreating, setRespGeralCreating] = useState(false);
   const [respNewCpf, setRespNewCpf] = useState('');
   const [respNewNome, setRespNewNome] = useState('');
+  const [respNewEmail, setRespNewEmail] = useState('');
+  const [respNewCpfNum, setRespNewCpfNum] = useState('');
+  const [editAccountData, setEditAccountData] = useState<{ username: string; nome: string; email: string; cpf: string } | null>(null);
+  const [editAccountSaving, setEditAccountSaving] = useState(false);
+  const [editAccountMsg, setEditAccountMsg] = useState('');
+  const [myAccountNome, setMyAccountNome] = useState('');
+  const [myAccountEmail, setMyAccountEmail] = useState('');
+  const [myAccountCpf, setMyAccountCpf] = useState('');
   // Justificativas
   type JustificativaAdmin = { id: string; student_id: string; student_name: string; nucleo: string; data_falta: string; motivo: string; status: 'pendente' | 'aprovado' | 'recusado'; resposta_mestre?: string; created_at: string; updated_at: string; };
   const [justificativas, setJustificativas] = useState<JustificativaAdmin[]>([]);
@@ -1013,7 +978,7 @@ export default function AdminPage() {
   const [nucleosList, setNucleosList] = useState<NucleoTenant[]>([]);
   const [loadingNucleos, setLoadingNucleos] = useState(false);
   const [showCreateNucleoModal, setShowCreateNucleoModal] = useState(false);
-  const [nucleoForm, setNucleoForm] = useState<{ nome: string; endereco: string; cidade: string; estado: string; telefone: string; email: string; lat: string; lng: string; dias_treino: string[]; admin_login: string; admin_senha: string; admin_nome: string }>({ nome: '', endereco: '', cidade: '', estado: '', telefone: '', email: '', lat: '', lng: '', dias_treino: [], admin_login: '', admin_senha: '', admin_nome: '' });
+  const [nucleoForm, setNucleoForm] = useState<{ nome: string; endereco: string; cidade: string; estado: string; telefone: string; email: string; lat: string; lng: string; dias_treino: string[]; admin_login: string; admin_senha: string; admin_nome: string; admin_email: string; admin_cpf: string }>({ nome: '', endereco: '', cidade: '', estado: '', telefone: '', email: '', lat: '', lng: '', dias_treino: [], admin_login: '', admin_senha: '', admin_nome: '', admin_email: '', admin_cpf: '' });
   const [nucleoEditForm, setNucleoEditForm] = useState<Record<string, any> | null>(null);
   const [nucleoEditSaving, setNucleoEditSaving] = useState(false);
   const [nucleoEditMsg, setNucleoEditMsg] = useState('');
@@ -1275,11 +1240,6 @@ export default function AdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang]);
 
-  // ── Extra Admins state ────────────────────────────────────────────────────
-  const [extraAdmins, setExtraAdmins] = useState<Array<{ id: string; username: string; nome: string; email?: string; created_at: string }>>([]);
-  const [extraAdminsLoading, setExtraAdminsLoading] = useState(false);
-  const [extraAdminForm, setExtraAdminForm] = useState({ username: '', nome: '', email: '', password: '', confirmPassword: '' });
-  const [extraAdminMsg, setExtraAdminMsg] = useState('');
   // Email config state
   const [emailCfg, setEmailCfg] = useState<{ provider: string; resend_api_key?: string; resend_from?: string; smtp_host?: string; smtp_port?: string; smtp_user?: string; smtp_pass?: string; smtp_from?: string; has_resend?: boolean; has_smtp?: boolean }>({ provider: '' });
   const [emailCfgLoaded, setEmailCfgLoaded] = useState(false);
@@ -1287,7 +1247,6 @@ export default function AdminPage() {
   const [emailCfgMsg, setEmailCfgMsg] = useState('');
   const [emailTestTo, setEmailTestTo] = useState('');
   const [emailTestLoading, setEmailTestLoading] = useState(false);
-  const [savingExtraAdmin, setSavingExtraAdmin] = useState(false);
   // ── DB setup panel (informacoes tab) ─────────────────────────────────────
   const [dbStatus, setDbStatus] = useState<Record<string, unknown> | null>(null);
   const [dbLoading, setDbLoading] = useState(false);
@@ -1840,81 +1799,6 @@ export default function AdminPage() {
   };
 
   // ── Change-creds modal (shared between login screen and panel) ──────────────
-  const ChangeCrendsModal = () => {
-    const generateTempPass = () => {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-      let pass = '';
-      for (let i = 0; i < 10; i++) pass += chars[Math.floor(Math.random() * chars.length)];
-      setNewPass(pass); setNewPassConfirm(pass); setShowNewPass(true);
-    };
-    return (
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20 }}>
-        <div style={{ background: '#fff', borderRadius: 16, padding: '28px 24px', width: '100%', maxWidth: 420, boxShadow: '0 8px 40px rgba(0,0,0,0.3)', maxHeight: '90vh', overflowY: 'auto' }}>
-          <h3 style={{ margin: '0 0 4px', color: '#1e3a8a', fontWeight: 800, fontSize: '1rem' }}>🔐 Gerenciar Credenciais</h3>
-          <p style={{ margin: '0 0 16px', fontSize: '0.75rem', color: '#6b7280' }}>Criar ou redefinir login e senha do painel</p>
-          {changeDone ? (
-            <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: '14px', textAlign: 'center' }}>
-              <div style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.95rem' }}>✅ Credenciais salvas com sucesso!</div>
-              {changeEmailMsg && <div style={{ marginTop: 8, fontSize: '0.82rem', color: changeEmailMsg.startsWith('✉️') ? '#16a34a' : '#b45309', fontWeight: 600 }}>{changeEmailMsg}</div>}
-            </div>
-          ) : (
-            <form onSubmit={handleChangeCreds} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {/* Conta sendo alterada */}
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#374151' }}>
-                <span style={{ fontWeight: 700 }}>Conta:</span> <code style={{ background: '#f3f4f6', borderRadius: 4, padding: '1px 5px' }}>{editingProfile}</code>
-              </div>
-              <div>
-                <label style={{ display: 'block', color: '#374151', fontSize: '0.8rem', fontWeight: 600, marginBottom: 4 }}>Senha atual</label>
-                <input type="password" value={newPassConfirmPass} onChange={e => setNewPassConfirmPass(e.target.value)}
-                  placeholder="Confirme sua senha atual"
-                  style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
-              </div>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <label style={{ color: '#374151', fontSize: '0.8rem', fontWeight: 600 }}>Nova senha (mín. 6 caracteres)</label>
-                  <button type="button" onClick={generateTempPass}
-                    style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6, padding: '3px 9px', color: '#1d4ed8', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
-                    🎲 Gerar senha
-                  </button>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <input type={showNewPass ? 'text' : 'password'} value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="••••••••"
-                    style={{ width: '100%', padding: '10px 38px 10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
-                  <button type="button" onClick={() => setShowNewPass(p => !p)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}>
-                    {showNewPass ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label style={{ display: 'block', color: '#374151', fontSize: '0.8rem', fontWeight: 600, marginBottom: 4 }}>Confirmar nova senha</label>
-                <input type="password" value={newPassConfirm} onChange={e => setNewPassConfirm(e.target.value)} placeholder="••••••••"
-                  style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
-              </div>
-
-              {/* Email para envio */}
-              <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 12 }}>
-                <label style={{ display: 'block', color: '#374151', fontSize: '0.8rem', fontWeight: 600, marginBottom: 4 }}>
-                  📧 E-mail para enviar as credenciais <span style={{ color: '#9ca3af', fontWeight: 400 }}>(opcional)</span>
-                </label>
-                <input type="email" value={profileEmail} onChange={e => setProfileEmail(e.target.value)}
-                  placeholder="email@responsavel.com"
-                  style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }} />
-                {profileEmail && <div style={{ fontSize: '0.72rem', color: '#16a34a', marginTop: 3 }}>✅ As novas credenciais serão enviadas para este e-mail ao salvar.</div>}
-              </div>
-
-              {changeError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: '0.8rem', fontWeight: 600 }}>⚠ {changeError}</div>}
-              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                <button type="button" onClick={() => { setShowChangeCreds(false); setChangeError(''); setProfileEmail(''); }} style={{ flex: 1, padding: '10px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem', color: '#64748b' }}>{t('admin_cancel')}</button>
-                <button type="submit" disabled={changeSending} style={{ flex: 2, padding: '10px', background: changeSending ? '#9ca3af' : 'linear-gradient(135deg,#1d4ed8,#1e40af)', border: 'none', borderRadius: 8, cursor: changeSending ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.88rem', color: '#fff' }}>
-                  {changeSending ? '⏳ Salvando...' : (profileEmail ? '💾 Salvar e Enviar por E-mail' : '💾 Salvar Credenciais')}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   if (authChecking) {
     return (
@@ -1952,8 +1836,8 @@ export default function AdminPage() {
         <div style={{ width: '100%', maxWidth: 360, background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(12px)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.12)', padding: '28px 24px' }}>
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', fontWeight: 600, marginBottom: 5 }}>Usuário ou CPF</label>
-              <input value={loginUser} onChange={e => setLoginUser(e.target.value)} placeholder="Usuário ou CPF do responsável" autoFocus
+              <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', fontWeight: 600, marginBottom: 5 }}>Login, CPF ou e-mail</label>
+              <input value={loginUser} onChange={e => setLoginUser(e.target.value)} placeholder="Login, CPF ou e-mail da conta" autoFocus
                 style={{ width: '100%', padding: '11px 14px', border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: 10, fontSize: '0.95rem', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box' }} />
             </div>
             <div>
@@ -2037,7 +1921,6 @@ export default function AdminPage() {
           )}
         </div>
 
-        {showChangeCreds && <ChangeCrendsModal />}
       </div>
     );
   }
@@ -2251,26 +2134,24 @@ export default function AdminPage() {
               </div>
             )}
             <button
-              onClick={() => {
-                setShowChangeCreds(true); setChangeError(''); setChangeDone(false);
-                setEditingProfile(sessionUser() || 'owner'); setNewPass(''); setNewPassConfirm(''); setNewPassConfirmPass('');
-                setProfileEmail(''); setChangeEmailMsg('');
-              }}
-              style={{ background: 'rgba(29,78,216,0.1)', border: '1px solid rgba(29,78,216,0.3)', color: '#1d4ed8', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}
+              onClick={() => { setActiveTab('minha-conta'); }}
+              style={{ background: 'rgba(255,146,0,0.1)', border: '1px solid rgba(255,146,0,0.3)', color: '#FF9200', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-              Alterar senha
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
+              Minha Conta
             </button>
             <button
-              onClick={() => { sessionStorage.removeItem('admin_auth'); sessionStorage.removeItem('admin_auth_nucleos'); setAuthed(false); setActiveNucleo(null); setAvailableNucleos([]); }}
+              onClick={() => {
+                fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) }).catch(() => {});
+                sessionStorage.removeItem('admin_auth'); sessionStorage.removeItem('admin_auth_nucleos'); sessionStorage.removeItem('admin_is_owner'); sessionStorage.removeItem('admin_user'); setAuthed(false); setActiveNucleo(null); setAvailableNucleos([]);
+              }}
               style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
               Sair
             </button>
           </div>
-          {showChangeCreds && <ChangeCrendsModal />}
-        </div>
+          </div>
 
         <div className="admin-header">
           <div>
@@ -2352,9 +2233,12 @@ export default function AdminPage() {
               // Also load video links
               fetch('/api/admin/manual-videos').then(r => r.json()).then(d => setManualVideos(d.videos || [])).catch(() => {});
             }
-            if (key === 'admins') {
-              setExtraAdminsLoading(true); setExtraAdminMsg('');
-              fetch('/api/admin/extra-admins').then(r => r.json()).then(d => { setExtraAdmins(d.admins || []); setExtraAdminsLoading(false); }).catch(() => setExtraAdminsLoading(false));
+            if (key === 'minha-conta') {
+              fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'me' }) }).then(r => r.json()).then(d => {
+                if (d.authenticated) { setMyAccountEmail(d.email || ''); setMyAccountCpf(d.cpf || ''); setMyAccountNome(d.nome || ''); }
+              }).catch(() => {});
+            }
+            if (key === 'email-config') {
               if (!emailCfgLoaded) { fetch('/api/admin/email-config').then(r => r.json()).then(d => { setEmailCfg(d); setEmailCfgLoaded(true); }).catch(() => {}); }
             }
             if (key === 'lixeira') { setLoadingLixeira(true); setLixeiraMsg(''); fetch('/api/lixeira').then(r => r.json()).then(d => { setLixeira(Array.isArray(d) ? d : []); setLoadingLixeira(false); }).catch(() => setLoadingLixeira(false)); }
@@ -2389,7 +2273,6 @@ export default function AdminPage() {
                 { key: 'presencas',   icon: '👥', label: 'Presenças' },
                 { key: 'certificado', icon: '🏅', label: 'Certificado' },
                 { key: 'manual',      icon: '📖', label: 'Manual Ginga Gestão' },
-                { key: 'admins',      icon: '🔐', label: 'Administradores', geralOnly: true },
                 { key: 'restauracao', icon: '🔧', label: 'Restaurar Dados', geralOnly: true },
                 { key: 'lixeira',     icon: '🗑️', label: 'Cadastros Excluídos', geralOnly: true, badge: lixeira.length > 0 ? lixeira.length : undefined },
               ],
@@ -2401,6 +2284,7 @@ export default function AdminPage() {
                 { key: 'contas',        icon: '👤', label: 'Contas Alunos', badge: undefined },
                 { key: 'alunos',        icon: '🎓', label: 'Alunos' },
                 { key: 'responsaveis',  icon: '🔐', label: 'Contas de Acesso', geralOnly: true },
+                { key: 'minha-conta',   icon: '👤', label: 'Minha Conta' },
                 { key: 'rascunhos',     icon: '📝', label: 'Cadastro dos Responsáveis', badge: rascunhosCount > 0 ? rascunhosCount : undefined },
                 { key: 'justificativas',icon: '📋', label: 'Justificativas', badge: justPendCount > 0 ? justPendCount : undefined },
               ],
@@ -2418,6 +2302,7 @@ export default function AdminPage() {
               title: 'Administrativo e Materiais', color: '#6b7280', bg: 'rgba(107,114,128,0.08)',
               buttons: [
                 { key: 'financeiro',  icon: '💰', label: 'Administrativo', badge: finAlertCount > 0 ? finAlertCount : undefined },
+                { key: 'email-config', icon: '📧', label: 'Config. E-mail', geralOnly: true },
                 { key: 'patrimonio',  icon: '🏛️', label: 'Patrimonio' },
                 { key: 'materiais',   icon: '📦', label: 'Materiais' },
                 { key: 'doacoes',     icon: '💝', label: 'Doacoes', geralOnly: true },
@@ -6125,7 +6010,7 @@ _Portal Aluno_`
             </div>
             {(isOwner || activeNucleo === 'geral') ? (
               <button
-                onClick={() => { setNucleoForm({ nome: '', endereco: '', cidade: '', estado: '', telefone: '', email: '', lat: '', lng: '', dias_treino: [], admin_login: '', admin_senha: '', admin_nome: '' }); setNucleoFormMsg(''); setShowCreateNucleoModal(true); }}
+                onClick={() => { setNucleoForm({ nome: '', endereco: '', cidade: '', estado: '', telefone: '', email: '', lat: '', lng: '', dias_treino: [], admin_login: '', admin_senha: '', admin_nome: '', admin_email: '', admin_cpf: '' }); setNucleoFormMsg(''); setShowCreateNucleoModal(true); }}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: 'linear-gradient(135deg,#0ea5e9,#0284c7)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(14,165,233,0.3)' }}
               >
                 <span style={{ fontSize: '1rem' }}>+</span> Criar Novo Nucleo
@@ -6157,7 +6042,7 @@ _Portal Aluno_`
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
-              {nucleosList.map(nucleo => (
+              {nucleosList.filter(n => activeNucleo === 'geral' || n.slug === activeNucleo).map(nucleo => (
                 <div key={nucleo.id} style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
                   <div style={{ background: nucleo.ativo ? 'linear-gradient(135deg,#0ea5e9,#0284c7)' : 'linear-gradient(135deg,#6b7280,#4b5563)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem' }}>{nucleo.nome}</div>
@@ -6351,6 +6236,27 @@ _Portal Aluno_`
                           value={nucleoForm.admin_nome}
                           onChange={e => setNucleoForm(f => ({ ...f, admin_nome: e.target.value }))}
                           placeholder="Nome do responsável"
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.82rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>E-mail do Admin (opcional)</label>
+                        <input
+                          type="email"
+                          value={(nucleoForm as any).admin_email || ''}
+                          onChange={e => setNucleoForm(f => ({ ...f, admin_email: e.target.value }))}
+                          placeholder="email@exemplo.com — usado no Esqueci minha senha"
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.82rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>CPF do Admin (opcional)</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={(nucleoForm as any).admin_cpf || ''}
+                          onChange={e => setNucleoForm(f => ({ ...f, admin_cpf: e.target.value.replace(/\D/g, '').slice(0, 11) }))}
+                          placeholder="Também funciona como login"
                           style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.82rem' }}
                         />
                       </div>
@@ -7255,289 +7161,16 @@ _Portal Aluno_`
             </div>
           </div>
 
-          {/* Responsaveis por Nucleo config — apenas owner pode gerenciar */}
-          {activeNucleo === 'geral' && isOwner && (() => {
-            // Nucleos carregados dinamicamente
-            const nucleosList = dynamicNucleos.map(n => ({ key: n.slug, label: n.nome }));
-            return (
-              <div style={{ background: 'var(--bg-card)', border: '2px solid rgba(251,191,36,0.2)', borderRadius: 14, padding: '18px 20px', marginBottom: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                  <div style={{ fontWeight: 800, color: '#fbbf24', fontSize: '0.9rem' }}>🔐 Responsáveis por Núcleo (login por CPF)</div>
-                  {responsaveisUnlocked && (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={async () => {
-                        setLoadingResponsaveis(true);
-                        const cfg = await fetch('/api/admin/responsaveis').then(r => r.json()).catch(() => ({ responsaveis: [] }));
-                        setResponsaveis(cfg.responsaveis || []);
-                        setLoadingResponsaveis(false);
-                      }}
-                        style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
-                        ↻ Recarregar
-                      </button>
-                      <button onClick={() => { setResponsaveisUnlocked(false); setResponsaveisLockCpf(''); setResponsaveisLockError(''); }}
-                        style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#f87171', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
-                        🔒 Bloquear
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Trava de segurança — exige senha do desenvolvedor */}
-                {!responsaveisUnlocked && (
-                  <div style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 10, padding: '20px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', marginBottom: 8 }}>🔒</div>
-                    <div style={{ color: '#fbbf24', fontWeight: 800, fontSize: '0.9rem', marginBottom: 4 }}>Acesso Exclusivo — Desenvolvedor</div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginBottom: 16 }}>
-                      O cadastro de responsáveis por núcleo é restrito ao desenvolvedor responsável.<br/>
-                      Digite a senha de desenvolvedor para continuar.
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, maxWidth: 340, margin: '0 auto' }}>
-                      <input
-                        type="password"
-                        placeholder="Senha do desenvolvedor"
-                        value={responsaveisLockCpf}
-                        onChange={e => { setResponsaveisLockCpf(e.target.value); setResponsaveisLockError(''); }}
-                        onKeyDown={async e => {
-                          if (e.key !== 'Enter') return;
-                          setDevLockLoading(true);
-                          try {
-                            const res = await fetch('/api/admin/dev-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: responsaveisLockCpf }) });
-                            const json = await res.json();
-                            if (json.ok) {
-                              setResponsaveisUnlocked(true);
-                              setResponsaveisLockError('');
-                              setLoadingResponsaveis(true);
-                              const resp = await fetch('/api/admin/responsaveis').then(r => r.json()).catch(() => ({ responsaveis: [] }));
-                              setResponsaveis(resp.responsaveis || []);
-                              setLoadingResponsaveis(false);
-                            } else {
-                              setResponsaveisLockError(json.error || 'Senha incorreta. Acesso negado.');
-                            }
-                          } catch { setResponsaveisLockError('Erro ao verificar. Tente novamente.'); }
-                          setDevLockLoading(false);
-                        }}
-                        style={{ flex: 1, padding: '9px 12px', background: 'var(--bg-input)', border: `1px solid ${responsaveisLockError ? '#f87171' : 'var(--border)'}`, borderRadius: 8, color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
-                      />
-                      <button
-                        disabled={devLockLoading}
-                        onClick={async () => {
-                          setDevLockLoading(true);
-                          try {
-                            const res = await fetch('/api/admin/dev-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: responsaveisLockCpf }) });
-                            const json = await res.json();
-                            if (json.ok) {
-                              setResponsaveisUnlocked(true);
-                              setResponsaveisLockError('');
-                              setLoadingResponsaveis(true);
-                              const resp = await fetch('/api/admin/responsaveis').then(r => r.json()).catch(() => ({ responsaveis: [] }));
-                              setResponsaveis(resp.responsaveis || []);
-                              setLoadingResponsaveis(false);
-                            } else {
-                              setResponsaveisLockError(json.error || 'Senha incorreta. Acesso negado.');
-                            }
-                          } catch { setResponsaveisLockError('Erro ao verificar. Tente novamente.'); }
-                          setDevLockLoading(false);
-                        }}
-                        style={{ background: devLockLoading ? '#94a3b8' : '#fbbf24', color: '#1a1a1a', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: devLockLoading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                        {devLockLoading ? '...' : '🔓 Confirmar'}
-                      </button>
-                    </div>
-                    {responsaveisLockError && (
-                      <div style={{ marginTop: 8, color: '#f87171', fontSize: '0.75rem', fontWeight: 700 }}>{responsaveisLockError}</div>
-                    )}
-                  </div>
-                )}
-
-                {/* Conteúdo só visível após desbloqueio */}
-                {responsaveisUnlocked && <>
-                {loadingResponsaveis ? <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>Carregando...</div> : (
-                  <div style={{ display: 'grid', gap: 10 }}>
-
-                    {/* ── Tabela-resumo: visão geral de todos os responsáveis ── */}
-                    <div style={{ overflowX: 'auto', marginBottom: 8 }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem', color: 'var(--text-primary)' }}>
-                        <thead>
-                          <tr style={{ background: 'rgba(251,191,36,0.12)', borderBottom: '2px solid rgba(251,191,36,0.3)' }}>
-                            <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 800, color: '#fbbf24', whiteSpace: 'nowrap' }}>Núcleo</th>
-                            <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 800, color: '#fbbf24', whiteSpace: 'nowrap' }}>Responsável 1</th>
-                            <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 800, color: '#fbbf24', whiteSpace: 'nowrap' }}>CPF 1</th>
-                            <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 800, color: '#fbbf24', whiteSpace: 'nowrap' }}>Responsável 2</th>
-                            <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 800, color: '#fbbf24', whiteSpace: 'nowrap' }}>CPF 2</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {nucleosList.map(n => {
-                            const r = responsaveis.find(x => x.nucleo_key === n.key) as any;
-                            const cpf1Fmt = r?.cpf ? r.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—';
-                            const cpf2Fmt = r?.cpf2 ? r.cpf2.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—';
-                            const hasData = r?.nome || r?.cpf;
-                            return (
-                              <tr key={n.key} style={{ borderBottom: '1px solid var(--border)', background: hasData ? 'rgba(74,222,128,0.03)' : 'transparent' }}>
-                                <td style={{ padding: '7px 10px', fontWeight: 700, color: hasData ? '#4ade80' : 'var(--text-secondary)' }}>{n.label}</td>
-                                <td style={{ padding: '7px 10px', color: r?.nome ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{r?.nome || '—'}</td>
-                                <td style={{ padding: '7px 10px', fontFamily: 'monospace', fontSize: '0.72rem', color: r?.cpf ? '#93c5fd' : 'var(--text-secondary)' }}>{cpf1Fmt}</td>
-                                <td style={{ padding: '7px 10px', color: r?.nome2 ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{r?.nome2 || '—'}</td>
-                                <td style={{ padding: '7px 10px', fontFamily: 'monospace', fontSize: '0.72rem', color: r?.cpf2 ? '#93c5fd' : 'var(--text-secondary)' }}>{cpf2Fmt}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {nucleosList.map(n => {
-                      const resp = responsaveis.find(r => r.nucleo_key === n.key);
-                      const has1 = resp?.nome?.trim() || resp?.cpf?.trim();
-                      const has2 = (resp as any)?.nome2?.trim() || (resp as any)?.cpf2?.trim();
-                      const hasAny = has1 || has2;
-
-                      // Helper to update a field for this nucleo
-                      const updateField = (field: string, val: string) => {
-                        setResponsaveis(prev => {
-                          const idx = prev.findIndex(r => r.nucleo_key === n.key);
-                          const existing = (prev[idx] || { nucleo_key: n.key, nucleo_label: n.label, nome: '', cpf: '' }) as any;
-                          const item = { ...existing, [field]: val };
-                          if (idx >= 0) { const c = [...prev]; c[idx] = item; return c; }
-                          return [...prev, item];
-                        });
-                      };
-
-                      const inputStyle: React.CSSProperties = { padding: '7px 10px', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-primary)', fontSize: '0.82rem', outline: 'none', width: '100%', boxSizing: 'border-box' };
-
-                      return (
-                        <div key={n.key} style={{ background: hasAny ? 'rgba(22,163,74,0.05)' : 'var(--bg-input)', border: `1px solid ${hasAny ? 'rgba(22,163,74,0.2)' : 'var(--border)'}`, borderRadius: 10, padding: '12px 14px' }}>
-                          {/* Núcleo header */}
-                          <div style={{ fontWeight: 800, fontSize: '0.88rem', color: hasAny ? '#4ade80' : 'var(--text-secondary)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span>{n.label}</span>
-                            {hasAny && <span style={{ fontSize: '0.68rem', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: 99, padding: '1px 7px', color: '#4ade80', fontWeight: 600 }}>✓ {[has1 && 'R1', has2 && 'R2'].filter(Boolean).join(' + ')}</span>}
-                          </div>
-
-                          {/* Tabs: Responsável 1 | Responsável 2 */}
-                          <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
-                            <div style={{ flex: 1, background: has1 ? 'rgba(251,191,36,0.1)' : 'var(--bg-input)', border: `2px solid ${has1 ? 'rgba(255,146,0,0.4)' : 'var(--border)'}`, borderRadius: 8, padding: '10px 12px' }}>
-                              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#fbbf24', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                👤 Responsável 1
-                                {has1 && <span style={{ color: '#4ade80', fontWeight: 600 }}>✓</span>}
-                                {has1 && (
-                                  <button onClick={async () => {
-                                    if (!confirm(`Remover Responsável 1 do ${n.label}?`)) return;
-                                    const cfg = await fetch('/api/admin/responsaveis').then(r => r.json()).catch(() => ({ responsaveis: [] }));
-                                    const updated = (cfg.responsaveis || []).map((r: any) => r.nucleo_key === n.key ? { ...r, nome: '', cpf: '', email: undefined } : r).filter((r: any) => r.nome?.trim() || r.nome2?.trim());
-                                    setResponsaveis(updated);
-                                    const res = await fetch('/api/admin/responsaveis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ responsaveis: updated }) });
-                                    setResponsaveisMsg(res.ok ? '✓ Responsável 1 removido!' : 'Erro ao remover.');
-                                    setTimeout(() => setResponsaveisMsg(''), 3000);
-                                  }} style={{ marginLeft: 'auto', background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#f87171', borderRadius: 5, padding: '1px 7px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 700 }}>
-                                    🗑
-                                  </button>
-                                )}
-                              </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                                <input type="text" placeholder="Nome completo" value={(resp as any)?.nome || ''} onChange={e => updateField('nome', e.target.value)} style={inputStyle} />
-                                <input type="text" placeholder="CPF (apenas números)" value={(resp as any)?.cpf || ''} onChange={e => updateField('cpf', e.target.value.replace(/\D/g, ''))} style={inputStyle} inputMode="numeric" maxLength={11} />
-                                <input type="email" placeholder="E-mail (recuperação de senha)" value={(resp as any)?.email || ''} onChange={e => updateField('email', e.target.value)} style={inputStyle} />
-                              </div>
-                            </div>
-                            <div style={{ flex: 1, background: has2 ? 'rgba(96,165,250,0.08)' : 'var(--bg-input)', border: `2px solid ${has2 ? 'rgba(96,165,250,0.3)' : 'var(--border)'}`, borderRadius: 8, padding: '10px 12px' }}>
-                              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                👤 Responsável 2 <span style={{ opacity: 0.6 }}>(opcional)</span>
-                                {has2 && <span style={{ color: '#4ade80', fontWeight: 600 }}>✓</span>}
-                                {has2 && (
-                                  <button onClick={async () => {
-                                    if (!confirm(`Remover Responsável 2 do ${n.label}?`)) return;
-                                    const cfg = await fetch('/api/admin/responsaveis').then(r => r.json()).catch(() => ({ responsaveis: [] }));
-                                    const updated = (cfg.responsaveis || []).map((r: any) => r.nucleo_key === n.key ? { ...r, nome2: undefined, cpf2: undefined, email2: undefined } : r);
-                                    setResponsaveis(updated);
-                                    const res = await fetch('/api/admin/responsaveis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ responsaveis: updated }) });
-                                    setResponsaveisMsg(res.ok ? '✓ Responsável 2 removido!' : 'Erro ao remover.');
-                                    setTimeout(() => setResponsaveisMsg(''), 3000);
-                                  }} style={{ marginLeft: 'auto', background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#f87171', borderRadius: 5, padding: '1px 7px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 700 }}>
-                                    🗑
-                                  </button>
-                                )}
-                              </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                                <input type="text" placeholder="Nome completo" value={(resp as any)?.nome2 || ''} onChange={e => updateField('nome2', e.target.value)} style={inputStyle} />
-                                <input type="text" placeholder="CPF (apenas números)" value={(resp as any)?.cpf2 || ''} onChange={e => updateField('cpf2', e.target.value.replace(/\D/g, ''))} style={inputStyle} inputMode="numeric" maxLength={11} />
-                                <input type="email" placeholder="E-mail (recuperação de senha)" value={(resp as any)?.email2 || ''} onChange={e => updateField('email2', e.target.value)} style={inputStyle} />
-                              </div>
-                            </div>
-                          </div>
-
-                          {responsaveisSavedMsg[n.key] && (
-                            <div style={{ padding: '6px 10px', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: 7, color: '#4ade80', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                              ✅ {responsaveisSavedMsg[n.key]}
-                            </div>
-                          )}
-
-                          {/* Botão salvar individual do núcleo */}
-                          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            <button onClick={async () => {
-                              setResponsaveisMsg('');
-                              const cfg = await fetch('/api/admin/responsaveis').then(r => r.json()).catch(() => ({ responsaveis: [] }));
-                              const currentList: any[] = cfg.responsaveis || [];
-                              const thisEntry = responsaveis.find((r: any) => r.nucleo_key === n.key) as any;
-                              const entry = {
-                                nucleo_key: n.key,
-                                nucleo_label: n.label,
-                                nome: thisEntry?.nome?.trim() || '',
-                                cpf: thisEntry?.cpf?.replace(/\D/g,'')?.trim() || '',
-                                email: thisEntry?.email?.trim() || undefined,
-                                nome2: thisEntry?.nome2?.trim() || undefined,
-                                cpf2: thisEntry?.cpf2?.replace(/\D/g,'')?.trim() || undefined,
-                                email2: thisEntry?.email2?.trim() || undefined,
-                              };
-                              const idx = currentList.findIndex((r: any) => r.nucleo_key === n.key);
-                              const updated = idx >= 0
-                                ? currentList.map((r: any) => r.nucleo_key === n.key ? entry : r)
-                                : [...currentList, entry];
-                              const res = await fetch('/api/admin/responsaveis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ responsaveis: updated }) });
-                              if (res.ok) {
-                                setResponsaveis(updated);
-                                const msg = `✅ Cadastro realizado com sucesso — ${n.label}${entry.nome2 ? ` (R2: ${entry.nome2})` : ''}`;
-                                setResponsaveisSavedMsg(prev => ({ ...prev, [n.key]: msg }));
-                                setTimeout(() => setResponsaveisSavedMsg(prev => { const c = {...prev}; delete c[n.key]; return c; }), 5000);
-                              } else {
-                                setResponsaveisMsg('Erro ao salvar.');
-                                setTimeout(() => setResponsaveisMsg(''), 3000);
-                              }
-                            }}
-                              style={{ background: '#fbbf24', color: '#1a1a1a', border: 'none', borderRadius: 7, padding: '7px 18px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>
-                              💾 Salvar
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <div style={{ marginTop: 8, display: 'flex', gap: 10, alignItems: 'center' }}>
-                      <button onClick={async () => {
-                        setResponsaveisMsg('');
-                        const filtered = responsaveis
-                          .map((r: any) => ({
-                            ...r,
-                            nome: r.nome?.trim() || '',
-                            cpf: r.cpf?.trim() || '',
-                            email: r.email?.trim() || undefined,
-                            nome2: r.nome2?.trim() || undefined,
-                            cpf2: r.cpf2?.trim() ? r.cpf2.replace(/\D/g,'') : undefined,
-                            email2: r.email2?.trim() || undefined,
-                          }))
-                          .filter((r: any) => r.nome || r.cpf || r.nome2 || r.cpf2);
-                        const res = await fetch('/api/admin/responsaveis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ responsaveis: filtered }) });
-                        if (res.ok) { setResponsaveisMsg('✓ Todos os responsáveis salvos!'); } else { setResponsaveisMsg('Erro ao salvar'); }
-                        setTimeout(() => setResponsaveisMsg(''), 3000);
-                      }}
-                        style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 8, padding: '9px 22px', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
-                        💾 Salvar Todos
-                      </button>
-                      {responsaveisMsg && <span style={{ fontSize: '0.8rem', color: responsaveisMsg.includes('Erro') || responsaveisMsg.includes('Preencha') ? '#f87171' : '#4ade80', fontWeight: 700 }}>{responsaveisMsg}</span>}
-                    </div>
-                  </div>
-                )}
-                </>}
+          {/* Responsáveis por Núcleo — legado; gestão agora é na aba Contas de Acesso */}
+          {activeNucleo === 'geral' && isOwner && (
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 18px', marginBottom: 20 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>🔐 Responsáveis por Núcleo</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: 4 }}>
+                As contas de acesso dos núcleos (login, senha, e-mail e CPF) agora são gerenciadas na aba <strong>Contas de Acesso</strong>.
               </div>
-            );
-          })()}
+            </div>
+          )}
+
 
           {/* Draft list */}
           {loadingRascunhos ? (
@@ -10110,216 +9743,6 @@ _Portal Aluno_`
       })()}
 
       {/* ===== ABA ADMINISTRADORES GERAIS ===== */}
-      {activeTab === 'admins' && activeNucleo === 'geral' && (
-        <div>
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontWeight: 800, fontSize: '1rem', color: '#a78bfa' }}>🔐 Gestão de Administradores Gerais</div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: 2 }}>Cadastre até 3 administradores gerais adicionais. Cada um terá acesso completo ao painel.</div>
-          </div>
-
-          {/* Cadastrar novo admin */}
-          {extraAdmins.length < 3 && (
-            <div style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 14, padding: '18px 20px', marginBottom: 24 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#a78bfa', marginBottom: 14 }}>➕ Novo Administrador</div>
-              {extraAdminMsg && (
-                <div style={{ marginBottom: 12, padding: '8px 14px', background: extraAdminMsg.startsWith('✓') ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${extraAdminMsg.startsWith('✓') ? 'rgba(22,163,74,0.3)' : 'rgba(220,38,38,0.3)'}`, borderRadius: 8, fontSize: '0.82rem', color: extraAdminMsg.startsWith('✓') ? '#4ade80' : '#f87171', fontWeight: 600 }}>{extraAdminMsg}</div>
-              )}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {([
-                  { key: 'nome',            label: 'Nome completo *', placeholder: 'Ex: Maria Silva',      type: 'text' },
-                  { key: 'username',        label: 'Usuário de login *', placeholder: 'Ex: maria.admin', type: 'text' },
-                  { key: 'email',           label: 'E-mail',          placeholder: 'admin@email.com',     type: 'email' },
-                  { key: 'password',        label: 'Senha *',         placeholder: 'Mínimo 6 caracteres', type: 'password' },
-                  { key: 'confirmPassword', label: 'Confirmar senha *',placeholder: 'Repita a senha',     type: 'password' },
-                ] as const).map(({ key, label, placeholder, type }) => (
-                  <div key={key} style={{ gridColumn: key === 'email' || key === 'confirmPassword' ? undefined : undefined }}>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>{label}</label>
-                    <input type={type} value={(extraAdminForm as Record<string, string>)[key] || ''} placeholder={placeholder}
-                      onChange={e => setExtraAdminForm(p => ({ ...p, [key]: e.target.value }))}
-                      style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontSize: '0.85rem', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
-                  </div>
-                ))}
-              </div>
-              <button disabled={savingExtraAdmin || !extraAdminForm.username || !extraAdminForm.nome || !extraAdminForm.password}
-                onClick={async () => {
-                  if (extraAdminForm.password !== extraAdminForm.confirmPassword) { setExtraAdminMsg('As senhas não coincidem.'); return; }
-                  if (extraAdminForm.password.length < 6) { setExtraAdminMsg('Senha deve ter pelo menos 6 caracteres.'); return; }
-                  setSavingExtraAdmin(true); setExtraAdminMsg('');
-                  try {
-                    const res = await fetch('/api/admin/extra-admins', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: extraAdminForm.username, nome: extraAdminForm.nome, email: extraAdminForm.email, password: extraAdminForm.password }) });
-                    const j = await res.json();
-                    if (res.ok) {
-                      setExtraAdminMsg('✓ Administrador cadastrado com sucesso!');
-                      setExtraAdminForm({ username: '', nome: '', email: '', password: '', confirmPassword: '' });
-                      const d = await fetch('/api/admin/extra-admins').then(r => r.json());
-                      setExtraAdmins(d.admins || []);
-                    } else { setExtraAdminMsg('Erro: ' + (j.error || 'falha')); }
-                  } catch { setExtraAdminMsg('Erro de conexão.'); }
-                  setSavingExtraAdmin(false);
-                }}
-                style={{ marginTop: 14, background: savingExtraAdmin ? '#6b7280' : 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 22px', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', opacity: (!extraAdminForm.username || !extraAdminForm.nome || !extraAdminForm.password) ? 0.5 : 1 }}>
-                {savingExtraAdmin ? '⏳ Salvando...' : '✓ Cadastrar Administrador'}
-              </button>
-            </div>
-          )}
-
-          {/* Lista de admins */}
-          {extraAdminsLoading ? (
-            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Carregando...</div>
-          ) : extraAdmins.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)', fontSize: '0.85rem', background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)' }}>
-              <div style={{ fontSize: '2rem', marginBottom: 8 }}>👤</div>
-              Nenhum administrador adicional cadastrado.<br/>
-              <span style={{ fontSize: '0.75rem' }}>Você pode cadastrar até 3 administradores gerais.</span>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>Administradores Cadastrados ({extraAdmins.length}/3)</div>
-              </div>
-              {extraAdmins.map((a, i) => (
-                <div key={a.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>
-                    {(i + 1)}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{a.nome}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                      Usuário: <strong>{a.username}</strong>
-                      {a.email && <> · {a.email}</>}
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                      Criado em {fmtDate(a.created_at)}
-                    </div>
-                  </div>
-                  <span style={{ background: 'rgba(29,78,216,0.15)', color: '#60a5fa', borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>Admin Geral</span>
-                  <button onClick={async () => {
-                    if (!confirm(`Remover o administrador "${a.nome}"?`)) return;
-                    const res = await fetch('/api/admin/extra-admins', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: a.id }) });
-                    if (res.ok) { setExtraAdmins(prev => prev.filter(x => x.id !== a.id)); setExtraAdminMsg('✓ Administrador removido.'); }
-                    else { const j = await res.json(); setExtraAdminMsg('Erro: ' + (j.error || 'falha')); }
-                  }} style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#f87171', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, flexShrink: 0 }}>
-                    🗑 Remover
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          {extraAdmins.length >= 3 && (
-            <div style={{ marginTop: 14, padding: '10px 16px', background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 10, fontSize: '0.82rem', color: '#fbbf24', fontWeight: 600 }}>
-              ⚠️ Limite de 3 administradores gerais atingido. Remova um para adicionar outro.
-            </div>
-          )}
-
-          {/* Configuração de e-mail */}
-          <div style={{ marginTop: 28, borderTop: '1px solid var(--border)', paddingTop: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#a78bfa' }}>📧 Configuração de E-mail</div>
-              {(emailCfg.has_resend || emailCfg.has_smtp) && (
-                <span style={{ background: 'rgba(22,163,74,0.15)', color: '#4ade80', border: '1px solid rgba(22,163,74,0.3)', borderRadius: 20, padding: '2px 12px', fontSize: '0.75rem', fontWeight: 700 }}>✓ Ativo</span>
-              )}
-            </div>
-
-            {/* Seletor de provedor */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-              {[
-                { value: 'resend', label: '🚀 Resend', desc: 'Gratuito · fácil' },
-                { value: 'smtp',   label: '📬 SMTP / Gmail', desc: 'Gmail, Outlook...' },
-              ].map(opt => (
-                <button key={opt.value} onClick={() => setEmailCfg(prev => ({ ...prev, provider: opt.value }))}
-                  style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: `2px solid ${emailCfg.provider === opt.value ? '#7c3aed' : 'rgba(255,255,255,0.1)'}`, background: emailCfg.provider === opt.value ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.03)', cursor: 'pointer', textAlign: 'left' }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: emailCfg.provider === opt.value ? '#c4b5fd' : 'var(--text-primary)' }}>{opt.label}</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 2 }}>{opt.desc}</div>
-                </button>
-              ))}
-            </div>
-
-            {emailCfg.provider === 'resend' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: 4 }}>
-                  Crie uma conta gratuita em <strong style={{ color: '#c4b5fd' }}>resend.com</strong> → API Keys → Create API Key
-                </div>
-                <input value={emailCfg.resend_api_key || ''} onChange={e => setEmailCfg(prev => ({ ...prev, resend_api_key: e.target.value }))}
-                  placeholder="re_xxxxxxxxxxxxxxxxxxxx (API Key do Resend)"
-                  style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', fontSize: '0.85rem', fontFamily: 'monospace' }} />
-                <input value={emailCfg.resend_from || ''} onChange={e => setEmailCfg(prev => ({ ...prev, resend_from: e.target.value }))}
-                  placeholder="CCLN <noreply@portalaluno.app> (remetente)"
-                  style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
-              </div>
-            )}
-
-            {emailCfg.provider === 'smtp' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: 4 }}>
-                  Gmail: use <strong style={{ color: '#c4b5fd' }}>smtp.gmail.com</strong>, porta <strong>587</strong> e uma <strong>Senha de App</strong> (não a senha normal) — ative em conta.google.com → Segurança → Senhas de app
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: 8 }}>
-                  <input value={emailCfg.smtp_host || ''} onChange={e => setEmailCfg(prev => ({ ...prev, smtp_host: e.target.value }))}
-                    placeholder="smtp.gmail.com"
-                    style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
-                  <input value={emailCfg.smtp_port || '587'} onChange={e => setEmailCfg(prev => ({ ...prev, smtp_port: e.target.value }))}
-                    placeholder="587"
-                    style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', fontSize: '0.85rem', textAlign: 'center' }} />
-                </div>
-                <input value={emailCfg.smtp_user || ''} onChange={e => setEmailCfg(prev => ({ ...prev, smtp_user: e.target.value }))}
-                  placeholder="seuemail@gmail.com"
-                  style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
-                <input type="password" value={emailCfg.smtp_pass || ''} onChange={e => setEmailCfg(prev => ({ ...prev, smtp_pass: e.target.value }))}
-                  placeholder="Senha de App (16 caracteres — ex: xxxx xxxx xxxx xxxx)"
-                  style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
-                <input value={emailCfg.smtp_from || ''} onChange={e => setEmailCfg(prev => ({ ...prev, smtp_from: e.target.value }))}
-                  placeholder="CCLN <seuemail@gmail.com> (opcional, usa o usuário se vazio)"
-                  style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
-              </div>
-            )}
-
-            {emailCfgMsg && (
-              <div style={{ marginTop: 10, padding: '8px 14px', borderRadius: 8, background: emailCfgMsg.startsWith('✓') ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${emailCfgMsg.startsWith('✓') ? 'rgba(22,163,74,0.3)' : 'rgba(220,38,38,0.3)'}`, fontSize: '0.82rem', color: emailCfgMsg.startsWith('✓') ? '#4ade80' : '#f87171', fontWeight: 600 }}>{emailCfgMsg}</div>
-            )}
-
-            {emailCfg.provider && (
-              <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <button disabled={emailCfgSaving}
-                  onClick={async () => {
-                    setEmailCfgSaving(true); setEmailCfgMsg('');
-                    const res = await fetch('/api/admin/email-config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(emailCfg) });
-                    const d = await res.json();
-                    setEmailCfgSaving(false);
-                    setEmailCfgMsg(d.ok ? '✓ Configuração salva com sucesso!' : `Erro: ${d.error || 'Falha ao salvar'}`);
-                    if (d.ok) { fetch('/api/admin/email-config').then(r => r.json()).then(d => setEmailCfg(d)); }
-                  }}
-                  style={{ padding: '10px 22px', borderRadius: 10, border: 'none', background: emailCfgSaving ? '#6b7280' : 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
-                  {emailCfgSaving ? 'Salvando...' : '💾 Salvar Configuração'}
-                </button>
-
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1, minWidth: 200 }}>
-                  <input value={emailTestTo} onChange={e => setEmailTestTo(e.target.value)}
-                    placeholder="email@teste.com"
-                    style={{ flex: 1, padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', fontSize: '0.82rem' }} />
-                  <button disabled={emailTestLoading || !emailTestTo}
-                    onClick={async () => {
-                      setEmailTestLoading(true); setEmailCfgMsg('');
-                      const res = await fetch('/api/admin/email-config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...emailCfg, test_to: emailTestTo }) });
-                      const d = await res.json();
-                      setEmailTestLoading(false);
-                      if (d.ok && d.test?.sent) setEmailCfgMsg(`✓ E-mail de teste enviado para ${emailTestTo}! Verifique a caixa de entrada.`);
-                      else setEmailCfgMsg(`Falha ao enviar teste: ${d.test?.error || d.error || 'verifique as credenciais'}`);
-                    }}
-                    style={{ padding: '10px 16px', borderRadius: 8, border: 'none', background: emailTestLoading || !emailTestTo ? '#6b7280' : '#0ea5e9', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-                    {emailTestLoading ? '⏳' : '🧪 Testar'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {!emailCfg.provider && (
-              <div style={{ padding: '12px 16px', background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.2)', borderRadius: 10, fontSize: '0.82rem', color: '#fbbf24', fontWeight: 600 }}>
-                ⚠️ Nenhum serviço de e-mail configurado. Selecione Resend ou SMTP acima para ativar o envio automático de e-mails (recuperação de senha, notificações).
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* ===== ABA LIXEIRA ===== */}
       {activeTab === 'lixeira' && (
@@ -12227,7 +11650,7 @@ Portal Aluno 🥋`
 
           {/* ── CONTAS CADASTRADAS ── */}
           {(() => {
-            const allActive = students.filter((s: any) => !s.deleted_at);
+            const allActive = students.filter((s: any) => !s.deleted_at && (!nucleoFilter || s.nucleo === nucleoFilter));
             const contaIds = new Set(alunoContas.map(a => a.student_id));
             const semConta = allActive.filter((s: any) => !contaIds.has(s.id));
             const shown = semConta;
@@ -12886,13 +12309,13 @@ Suporte Ginga Gestão.`
         </div>
       )}
 
-      {/* ===== ABA CONTAS DE ACESSO (owner/admin geral) ===== */}
+      {/* ===== ABA CONTAS DE ACESSO (gestão de todas as contas do painel) ===== */}
       {activeTab === 'responsaveis' && activeNucleo === 'geral' && (
         <div style={{ paddingTop: 24 }}>
           <div style={{ marginBottom: 20 }}>
             <h2 style={{ margin: '0 0 4px', fontSize: '1.15rem', color: 'var(--text-primary)' }}>🔐 Contas de Acesso do Painel</h2>
             <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              Cada núcleo tem uma conta de admin criada junto com o núcleo. Aqui você reseta senhas, remove contas e cria admins gerais (máx. 3, além do Owner).
+              Cada núcleo pode ter vários admins. Aqui você cria, edita (login, e-mail, CPF), reseta senhas e remove contas.
             </p>
           </div>
 
@@ -12964,7 +12387,7 @@ Suporte Ginga Gestão.`
                     {respUsers.map(u => (
                       <div key={u.username} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                         <div style={{ width: 10, height: 10, borderRadius: '50%', background: u.color, flexShrink: 0 }} />
-                        <div style={{ flex: 1, minWidth: 140 }}>
+                        <div style={{ flex: 1, minWidth: 200 }}>
                           <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
                             {(u as any).nucleo_nome || u.label}
                           </div>
@@ -12972,8 +12395,16 @@ Suporte Ginga Gestão.`
                             Login: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{u.username}</strong>
                             {(u as any).nome ? <> · {(u as any).nome}</> : null}
                           </div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
+                            {(u as any).email ? <>✉️ {(u as any).email}</> : <span style={{ color: '#b45309' }}>⚠ sem e-mail de recuperação</span>}
+                            {(u as any).cpf ? <> · 🪪 CPF {(u as any).cpf}</> : null}
+                          </div>
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <button onClick={() => { setEditAccountData({ username: u.username, nome: (u as any).nome || '', email: (u as any).email || '', cpf: (u as any).cpf || '' }); setEditAccountMsg(''); }}
+                            style={{ background: 'rgba(255,146,0,0.12)', border: '1px solid rgba(255,146,0,0.35)', color: '#FF9200', borderRadius: 7, padding: '4px 10px', fontSize: '0.73rem', cursor: 'pointer', fontWeight: 600 }}>
+                            ✏️ Editar
+                          </button>
                           <button onClick={() => { setRespResetTarget(u.username); setRespResetPass(''); setRespResetMsg(''); }}
                             style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', color: '#ca8a04', borderRadius: 7, padding: '4px 10px', fontSize: '0.73rem', cursor: 'pointer', fontWeight: 600 }}>
                             🔑 Resetar
@@ -13020,6 +12451,18 @@ Suporte Ginga Gestão.`
                             style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }} />
                         </div>
                         <div>
+                          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>E-mail de recuperação (opcional)</div>
+                          <input type="email" placeholder="email@exemplo.com" value={respNewEmail} onChange={e => { setRespNewEmail(e.target.value); setRespCreateMsg(''); }}
+                            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }} />
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-secondary)', marginTop: 3 }}>Usado no "Esqueci minha senha"</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>CPF (opcional)</div>
+                          <input type="text" placeholder="000.000.000-00" inputMode="numeric" value={respNewCpfNum} onChange={e => { setRespNewCpfNum(e.target.value.replace(/\D/g, '').slice(0, 11)); setRespCreateMsg(''); }}
+                            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }} />
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-secondary)', marginTop: 3 }}>Também funciona como login</div>
+                        </div>
+                        <div>
                           <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Senha (opcional)</div>
                           <input type="text" placeholder="vazio = padrão (nome do núcleo)" value={respNewPass} onChange={e => { setRespNewPass(e.target.value); setRespCreateMsg(''); }}
                             style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${respNewPass ? 'rgba(22,163,74,0.5)' : 'var(--border)'}`, background: respNewPass ? 'rgba(22,163,74,0.07)' : 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none', fontFamily: 'monospace', letterSpacing: '0.04em', fontWeight: 700 }} />
@@ -13035,12 +12478,14 @@ Suporte Ginga Gestão.`
                         if (!respNewNucleo || !respNewCpf) { setRespCreateMsg('Preencha núcleo e login.'); return; }
                         if (respNewCpf.length < 3) { setRespCreateMsg('Login deve ter pelo menos 3 caracteres.'); return; }
                         if (respNewPass && respNewPass.length < 6) { setRespCreateMsg('Senha deve ter pelo menos 6 caracteres.'); return; }
+                        if (respNewEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(respNewEmail)) { setRespCreateMsg('E-mail inválido.'); return; }
+                        if (respNewCpfNum && respNewCpfNum.length !== 11) { setRespCreateMsg('CPF deve ter 11 dígitos.'); return; }
                         setRespCreating(true);
-                        const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create-user', admin_username: sessionUser(), admin_password: respAdminPass, login: respNewCpf, nome: respNewNome, new_password: respNewPass || undefined, nucleo_key: respNewNucleo }) });
+                        const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create-user', admin_username: sessionUser(), admin_password: respAdminPass, login: respNewCpf, nome: respNewNome, email: respNewEmail || undefined, cpf: respNewCpfNum || undefined, new_password: respNewPass || undefined, nucleo_key: respNewNucleo }) });
                         const d = await res.json();
                         if (res.ok) {
                           setRespCreateMsg(`✅ Conta criada! Login "${respNewCpf}" vinculado ao núcleo. Senha: ${respNewPass || '(padrão = nome do núcleo)'}`);
-                          setRespNewCpf(''); setRespNewNome(''); setRespNewPass(''); setRespNewNucleo('');
+                          setRespNewCpf(''); setRespNewNome(''); setRespNewPass(''); setRespNewNucleo(''); setRespNewEmail(''); setRespNewCpfNum('');
                           const lr = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: sessionUser(), admin_password: respAdminPass }) });
                           const ld = await lr.json();
                           if (Array.isArray(ld)) { setRespUsers(ld.filter((u: any) => u.nucleo !== 'geral')); setRespGeralUsers(ld.filter((u: any) => u.nucleo === 'geral')); }
@@ -13053,6 +12498,36 @@ Suporte Ginga Gestão.`
                   );
                 })()}
               </div>
+
+              {/* Modal de edição de conta */}
+              {editAccountData && (
+                <EditAccountModal
+                  data={editAccountData}
+                  saving={editAccountSaving}
+                  msg={editAccountMsg}
+                  onClose={() => setEditAccountData(null)}
+                  onSave={async payload => {
+                    setEditAccountSaving(true);
+                    setEditAccountMsg('');
+                    try {
+                      const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update-user', admin_username: sessionUser(), admin_password: respAdminPass, target_username: editAccountData.username, login: payload.login, nome: payload.nome, email: payload.email, cpf: payload.cpf, new_password: payload.new_password }) });
+                      const d = await res.json();
+                      if (res.ok) {
+                        setEditAccountMsg('✓ Conta atualizada!');
+                        const lr = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: sessionUser(), admin_password: respAdminPass }) });
+                        const ld = await lr.json();
+                        if (Array.isArray(ld)) { setRespUsers(ld.filter((u: any) => u.nucleo !== 'geral')); setRespGeralUsers(ld.filter((u: any) => u.nucleo === 'geral')); }
+                        setTimeout(() => { setEditAccountData(null); setEditAccountMsg(''); }, 1200);
+                      } else {
+                        setEditAccountMsg(d.error || 'Erro ao salvar.');
+                      }
+                    } catch {
+                      setEditAccountMsg('Erro de conexão.');
+                    }
+                    setEditAccountSaving(false);
+                  }}
+                />
+              )}
 
               {/* Reset / remover — vale para qualquer conta listada */}
               {respResetTarget && (
@@ -13199,7 +12674,7 @@ Suporte Ginga Gestão.`
               {/* Rodapé */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  💡 Cada núcleo tem um login de admin próprio · Owner e Admin Geral acessam com suas contas fixas
+                  💡 Cada núcleo pode ter vários admins · Owner e Admin Geral têm visão completa
                 </div>
                 <button onClick={() => { setRespAdminAuthed(false); setRespAdminPass(''); setRespUsers([]); setRespGeralUsers([]); }}
                   style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 14px', fontSize: '0.78rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
@@ -13208,6 +12683,152 @@ Suporte Ginga Gestão.`
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ===== ABA MINHA CONTA (qualquer admin) ===== */}
+      {activeTab === 'minha-conta' && (
+        <div style={{ paddingTop: 24, maxWidth: 760, margin: '0 auto' }}>
+          <div style={{ marginBottom: 20 }}>
+            <h2 style={{ margin: '0 0 4px', fontSize: '1.15rem', color: 'var(--text-primary)' }}>👤 Minha Conta</h2>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              Gerencie seu próprio acesso: nome, e-mail de recuperação, CPF (login alternativo) e senha.
+            </p>
+          </div>
+          <MyAccountCard
+            username={sessionUser()}
+            nome={myAccountNome || loginLabel || ''}
+            email={myAccountEmail}
+            cpf={myAccountCpf}
+            nucleoNome={activeNucleo === 'geral' ? 'Administração Geral' : (dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || activeNucleo || '')}
+            roleLabel={isOwner ? 'Owner' : activeNucleo === 'geral' ? 'Admin Geral' : 'Admin de Núcleo'}
+            onSaved={() => {
+              fetch('/api/admin/panel-auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'me' }),
+              }).then(r => r.json()).then(d => {
+                if (d.authenticated) {
+                  setMyAccountEmail(d.email || '');
+                  setMyAccountCpf(d.cpf || '');
+                  setMyAccountNome(d.nome || '');
+                }
+              }).catch(() => {});
+            }}
+          />
+        </div>
+      )}
+
+      {/* ===== ABA CONFIG DE E-MAIL (owner/admin geral) ===== */}
+      {activeTab === 'email-config' && activeNucleo === 'geral' && (
+        <div style={{ paddingTop: 24, maxWidth: 760 }}>
+          <div style={{ marginBottom: 20 }}>
+            <h2 style={{ margin: '0 0 4px', fontSize: '1.15rem', color: 'var(--text-primary)' }}>📧 Configuração de E-mail</h2>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              Usada para recuperação de senha e avisos. Se uma chave também estiver nas variáveis de ambiente do projeto, ela tem prioridade.
+            </p>
+          </div>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: '22px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {([
+                { value: 'resend', label: '🚀 Resend', desc: 'Recomendado — conta gratuita em resend.com' },
+                { value: 'smtp',   label: '📬 SMTP / Gmail', desc: 'Gmail, Outlook ou servidor próprio' },
+              ] as const).map(opt => (
+                <button key={opt.value} type="button" onClick={() => setEmailCfg(prev => ({ ...prev, provider: opt.value }))}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: '12px 14px', borderRadius: 10, border: `2px solid ${emailCfg.provider === opt.value ? '#FF9200' : 'var(--border)'}`, background: emailCfg.provider === opt.value ? 'rgba(255,146,0,0.08)' : 'var(--bg-input)', cursor: 'pointer', textAlign: 'left' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: emailCfg.provider === opt.value ? '#FF9200' : 'var(--text-primary)' }}>{opt.label}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{opt.desc}</div>
+                </button>
+              ))}
+
+              {emailCfg.provider === 'resend' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    Crie uma conta gratuita em <strong style={{ color: '#FF9200' }}>resend.com</strong> → API Keys → Create API Key
+                  </div>
+                  <input value={emailCfg.resend_api_key || ''} onChange={e => setEmailCfg(prev => ({ ...prev, resend_api_key: e.target.value }))}
+                    placeholder="re_xxxxxxxxxxxxxxxxxxxx (API Key do Resend)"
+                    style={{ padding: '10px 14px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem', fontFamily: 'monospace' }} />
+                  <input value={emailCfg.resend_from || ''} onChange={e => setEmailCfg(prev => ({ ...prev, resend_from: e.target.value }))}
+                    placeholder="CCLN <noreply@seudominio.com> (remetente)"
+                    style={{ padding: '10px 14px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+                </div>
+              )}
+
+              {emailCfg.provider === 'smtp' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    Gmail: use <strong style={{ color: '#FF9200' }}>smtp.gmail.com</strong>, porta <strong>587</strong> e uma <strong>Senha de App</strong> (não a senha normal) — ative em conta.google.com → Segurança → Senhas de app
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: 8 }}>
+                    <input value={emailCfg.smtp_host || ''} onChange={e => setEmailCfg(prev => ({ ...prev, smtp_host: e.target.value }))}
+                      placeholder="smtp.gmail.com" style={{ padding: '10px 14px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+                    <input value={emailCfg.smtp_port || '587'} onChange={e => setEmailCfg(prev => ({ ...prev, smtp_port: e.target.value }))}
+                      placeholder="587" style={{ padding: '10px 14px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem', textAlign: 'center' }} />
+                  </div>
+                  <input value={emailCfg.smtp_user || ''} onChange={e => setEmailCfg(prev => ({ ...prev, smtp_user: e.target.value }))}
+                    placeholder="seuemail@gmail.com" style={{ padding: '10px 14px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+                  <input type="password" value={emailCfg.smtp_pass || ''} onChange={e => setEmailCfg(prev => ({ ...prev, smtp_pass: e.target.value }))}
+                    placeholder="Senha de App (16 caracteres — ex: xxxx xxxx xxxx xxxx)" style={{ padding: '10px 14px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+                  <input value={emailCfg.smtp_from || ''} onChange={e => setEmailCfg(prev => ({ ...prev, smtp_from: e.target.value }))}
+                    placeholder="CCLN <seuemail@gmail.com> (opcional, usa o usuário se vazio)" style={{ padding: '10px 14px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+                </div>
+              )}
+
+              {emailCfgMsg && (
+                <div style={{ padding: '8px 14px', borderRadius: 8, background: emailCfgMsg.startsWith('✓') ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${emailCfgMsg.startsWith('✓') ? 'rgba(22,163,74,0.3)' : 'rgba(220,38,38,0.3)'}`, fontSize: '0.82rem', color: emailCfgMsg.startsWith('✓') ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
+                  {emailCfgMsg}
+                </div>
+              )}
+
+              {emailCfg.provider && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button disabled={emailCfgSaving}
+                    onClick={async () => {
+                      setEmailCfgSaving(true); setEmailCfgMsg('');
+                      const res = await fetch('/api/admin/email-config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(emailCfg) });
+                      const d = await res.json();
+                      setEmailCfgSaving(false);
+                      setEmailCfgMsg(d.ok ? '✓ Configuração salva com sucesso!' : `Erro: ${d.error || 'Falha ao salvar'}`);
+                      if (d.ok) { fetch('/api/admin/email-config').then(r => r.json()).then(d => setEmailCfg(d)); }
+                    }}
+                    style={{ padding: '10px 22px', borderRadius: 10, border: 'none', background: emailCfgSaving ? '#6b7280' : 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
+                    {emailCfgSaving ? 'Salvando...' : '💾 Salvar Configuração'}
+                  </button>
+
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1, minWidth: 200 }}>
+                    <input value={emailTestTo} onChange={e => setEmailTestTo(e.target.value)}
+                      placeholder="email@teste.com"
+                      style={{ flex: 1, padding: '10px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.82rem' }} />
+                    <button disabled={emailTestLoading || !emailTestTo}
+                      onClick={async () => {
+                        setEmailTestLoading(true); setEmailCfgMsg('');
+                        const res = await fetch('/api/admin/email-config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...emailCfg, test_to: emailTestTo }) });
+                        const d = await res.json();
+                        setEmailTestLoading(false);
+                        if (d.ok && d.test?.sent) setEmailCfgMsg(`✓ E-mail de teste enviado para ${emailTestTo}! Verifique a caixa de entrada.`);
+                        else setEmailCfgMsg(`Falha ao enviar teste: ${d.test?.error || d.error || 'verifique as credenciais'}`);
+                      }}
+                      style={{ padding: '10px 16px', borderRadius: 8, border: 'none', background: emailTestLoading || !emailTestTo ? '#6b7280' : '#0ea5e9', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                      {emailTestLoading ? '⏳' : '🧪 Testar'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {(emailCfg.has_resend || emailCfg.has_smtp) && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <span style={{ background: 'rgba(22,163,74,0.15)', color: '#22c55e', border: '1px solid rgba(22,163,74,0.3)', borderRadius: 20, padding: '2px 12px', fontSize: '0.75rem', fontWeight: 700 }}>✓ Ativo</span>
+                </div>
+              )}
+
+              {!emailCfg.provider && (
+                <div style={{ padding: '12px 16px', background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.2)', borderRadius: 10, fontSize: '0.82rem', color: '#fbbf24', fontWeight: 600 }}>
+                  ⚠️ Nenhum serviço de e-mail configurado. Selecione Resend ou SMTP acima para ativar o envio automático (recuperação de senha, notificações).
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
