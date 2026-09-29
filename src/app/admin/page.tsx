@@ -687,7 +687,6 @@ export default function AdminPage() {
   const [adminForgotMsg, setAdminForgotMsg] = useState('');
   const [adminForgotLoading, setAdminForgotLoading] = useState(false);
   const [adminForgotDone, setAdminForgotDone] = useState(false);
-  const [adminResetUrl, setAdminResetUrl] = useState('');
 
   // ── Funções Histórico de Graduações ───────────────────────────────────────
   async function loadHistGrad(studentId: string) {
@@ -729,6 +728,11 @@ export default function AdminPage() {
     const res = await fetch(`/api/historico-graduacoes?student_id=${encodeURIComponent(studentId)}&registro_id=${encodeURIComponent(registroId)}`, { method: 'DELETE' });
     const data = await res.json();
     if (data.ok) setHistGradRecords(data.records || []);
+  }
+
+  /** Login (chave) do admin autenticado nesta sessão — fonte: sessionStorage. */
+  function sessionUser(): string {
+    try { return (sessionStorage.getItem('admin_user') || '').trim(); } catch { return ''; }
   }
 
   // Admin action logger
@@ -944,6 +948,9 @@ export default function AdminPage() {
   const [editFotoFile, setEditFotoFile] = useState<File | null>(null);
   const editFotoRef = useRef<HTMLInputElement>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Student | null>(null);
+  const [deleteAdminPass, setDeleteAdminPass] = useState('');
+  const [matriculaEditNum, setMatriculaEditNum] = useState('');
+  const [matriculaEditPass, setMatriculaEditPass] = useState('');
   const [activeTab, setActiveTab] = useState<'alunos' | 'presencas' | 'relatorio' | 'ranking' | 'certificado' | 'financeiro' | 'doacoes' | 'editais' | 'materiais' | 'patrimonio' | 'rascunhos' | 'dados-faltantes' | 'manual' | 'eventos' | 'lixeira' | 'justificativas' | 'contas' | 'auditoria' | 'responsaveis' | 'docs-historicos' | 'bibliografia' | 'estatuto' | 'regimento' | 'informacoes' | 'playlist' | 'admins' | 'aluno-view' | 'restauracao' | 'organograma' | 'hierarquia' | 'nucleos' | 'system-config'>('alunos');
   const [institucionalExpanded, setInstitucionalExpanded] = useState(false);
   // Área do Aluno — visualização pelo admin
@@ -1743,20 +1750,23 @@ export default function AdminPage() {
         }),
       });
     } catch {}
-    // Use API com service role para bypass de RLS
-    const res = await fetch('/api/admin/delete-student', {
-      method: 'DELETE',
+    // Exclusão definitiva: banco + conta de acesso + mapa de matrícula + lixeira + arquivos
+    const res = await fetch('/api/admin/purge-student', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: deleteConfirm.id }),
+      body: JSON.stringify({
+        student_id: deleteConfirm.id,
+        admin_username: sessionUser(),
+        admin_password: deleteAdminPass,
+      }),
     });
     const data = await res.json();
     if (!res.ok || data.error) {
       alert(data.error || 'Erro ao excluir. Tente novamente.');
     } else {
-      // Remove extras do Storage junto com o aluno
-      fetch(`/api/student-extras?id=${deleteConfirm.id}`, { method: 'DELETE' }).catch(() => {});
       logAdminAction('delete_student', `id:${deleteConfirm.id} nome:${deleteConfirm.nome_completo}`);
       setDeleteConfirm(null);
+      setDeleteAdminPass('');
       setSelected(null);
       fetchStudents(activeNucleo);
     }
@@ -1960,13 +1970,13 @@ export default function AdminPage() {
             <button type="submit" style={{ background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', marginTop: 4 }}>Entrar</button>
           </form>
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
-            <button type="button" onClick={() => { setShowAdminForgot(v => !v); setAdminForgotMsg(''); setAdminForgotDone(false); setAdminForgotCpf(''); setAdminResetUrl(''); }}
+            <button type="button" onClick={() => { setShowAdminForgot(v => !v); setAdminForgotMsg(''); setAdminForgotDone(false); setAdminForgotCpf(''); }}
               style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}>
               Esqueci minha senha
             </button>
           </div>
 
-{/* Admin forgot-password inline panel */}
+{/* Admin forgot-password inline panel (Supabase Auth) */}
           {showAdminForgot && (
             <div style={{ marginTop: 14, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: '16px 18px' }}>
               <div style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 700, fontSize: '0.88rem', marginBottom: 10 }}>Recuperar Acesso</div>
@@ -1974,7 +1984,7 @@ export default function AdminPage() {
               {!adminForgotDone ? (
                 <>
                   <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', lineHeight: 1.5, marginBottom: 12 }}>
-                    Informe seu login de acesso. Se houver e-mail cadastrado na conta, enviaremos um link para você definir uma nova senha.
+                    Informe seu login de acesso. Enviaremos um link seguro para o e-mail cadastrado na sua conta, válido por pouco tempo, para você definir uma nova senha.
                   </div>
                   <input
                     type="text"
@@ -2000,14 +2010,11 @@ export default function AdminPage() {
                         });
                         const data = await res.json();
                         if (res.ok && data.ok) {
-                          if (data.sent_email) {
+                          if (data.sent) {
                             setAdminForgotDone(true);
-                            setAdminForgotMsg(`✓ Link enviado para ${data.email_mascarado}. Verifique a caixa de entrada e o spam.`);
-                          } else if (data.reset_url) {
-                            setAdminResetUrl(data.reset_url);
-                            setAdminForgotMsg('Não foi possível enviar o e-mail. Use o link abaixo para redefinir sua senha.');
+                            setAdminForgotMsg(`✓ ${data.message}`);
                           } else {
-                            setAdminForgotMsg(data.message || 'Conta não encontrada ou sem e-mail cadastrado. Fale com o Owner/Admin Geral.');
+                            setAdminForgotMsg(data.message || 'Conta sem e-mail cadastrado. Fale com o Owner/Admin Geral.');
                           }
                         } else {
                           setAdminForgotMsg(data.error || 'Erro ao solicitar redefinição.');
@@ -2024,16 +2031,6 @@ export default function AdminPage() {
                   📬 {adminForgotMsg}
                   <br />
                   <button type="button" onClick={() => { setShowAdminForgot(false); setAdminForgotDone(false); setAdminForgotMsg(''); setAdminForgotCpf(''); }} style={{ marginTop: 10, padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '0.78rem', cursor: 'pointer' }}>Fechar</button>
-                </div>
-              )}
-
-              {/* Fallback: link direto quando o e-mail não pôde ser enviado */}
-              {adminResetUrl && !adminForgotDone && (
-                <div style={{ marginTop: 12, background: 'rgba(255,146,0,0.1)', border: '1px solid rgba(255,146,0,0.3)', borderRadius: 10, padding: '12px 14px' }}>
-                  <div style={{ color: '#FF9200', fontWeight: 700, fontSize: '0.78rem', marginBottom: 8 }}>🔗 Link de redefinição (válido por 30 minutos):</div>
-                  <a href={adminResetUrl} style={{ display: 'block', background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', borderRadius: 8, padding: '10px 14px', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 700, textAlign: 'center', wordBreak: 'break-all' }}>
-                    Redefinir minha senha agora
-                  </a>
                 </div>
               )}
             </div>
@@ -2256,7 +2253,7 @@ export default function AdminPage() {
             <button
               onClick={() => {
                 setShowChangeCreds(true); setChangeError(''); setChangeDone(false);
-                setEditingProfile(loginUser.trim() || 'owner'); setNewPass(''); setNewPassConfirm(''); setNewPassConfirmPass('');
+                setEditingProfile(sessionUser() || 'owner'); setNewPass(''); setNewPassConfirm(''); setNewPassConfirmPass('');
                 setProfileEmail(''); setChangeEmailMsg('');
               }}
               style={{ background: 'rgba(29,78,216,0.1)', border: '1px solid rgba(29,78,216,0.3)', color: '#1d4ed8', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}
@@ -3603,7 +3600,7 @@ _Portal Aluno_`
                         <rect x="30" y="724" width="50" height="50" fill="none" stroke="#b45309" stroke-width="3"/>
                         <rect x="1042" y="724" width="50" height="50" fill="none" stroke="#b45309" stroke-width="3"/>
                         <rect x="50" y="50" width="1022" height="694" fill="none" stroke="#d6cfc3" stroke-width="1" stroke-dasharray="4,4"/>
-                        <text x="561" y="130" text-anchor="middle" font-family="Georgia" font-size="11" font-weight="bold" fill="#92400e" letter-spacing="3">ASSOCIAÇÃO CULTURAL DE CAPOEIRA BARÃO DE MAUÁ</text>
+                        <text x="561" y="130" text-anchor="middle" font-family="Georgia" font-size="11" font-weight="bold" fill="#92400e" letter-spacing="3">{(systemConfig?.organization_name || 'PORTAL ALUNO').toUpperCase()}</text>
                         <line x1="200" y1="155" x2="922" y2="155" stroke="#b45309" stroke-width="1"/>
                         <text x="561" y="220" text-anchor="middle" font-family="Georgia" font-size="54" font-weight="bold" fill="#78350f" letter-spacing="6">CERTIFICADO</text>
                         <text x="561" y="260" text-anchor="middle" font-family="Georgia" font-size="14" fill="#92400e" letter-spacing="3">EVENTO / NOME DO EVENTO AQUI</text>
@@ -3615,8 +3612,8 @@ _Portal Aluno_`
                         <text x="561" y="483" text-anchor="middle" font-family="Georgia" font-size="14" font-weight="bold" fill="#78350f">GRADUAÇÃO / CORDA</text>
                         <text x="561" y="540" text-anchor="middle" font-family="Georgia" font-size="12" fill="#92400e">LOCAL — DATA DO EVENTO</text>
                         <line x1="361" y1="660" x2="561" y2="660" stroke="#1e3a8a" stroke-width="1.5"/>
-                        <text x="461" y="680" text-anchor="middle" font-family="Georgia" font-size="10" font-weight="bold" fill="#1e3a8a">ASSINATURA DO MESTRE</text>
-                        <text x="461" y="694" text-anchor="middle" font-family="Georgia" font-size="9" fill="#3b82f6">Presidente / Vice-Administrador - Portal Aluno</text>
+                        <text x="461" y="680" text-anchor="middle" font-family="Georgia" font-size="10" font-weight="bold" fill="#1e3a8a">${(systemConfig?.signature_name || 'DIREÇÃO').toUpperCase()}</text>
+                        <text x="461" y="694" text-anchor="middle" font-family="Georgia" font-size="9" fill="#3b82f6">${systemConfig?.signature_role || 'Coordenação Geral'} - ${systemConfig?.organization_short || 'CCLN'}</text>
                       </svg>`;
                       const blob = new Blob([svgContent], { type: 'image/svg+xml' });
                       const url = URL.createObjectURL(blob);
@@ -3711,17 +3708,17 @@ _Portal Aluno_`
                       borderRight: pos.includes('right') ? '3px solid #b45309' : 'none',
                     }} />
                   ))}
-                  {/* Tricolor top stripe */}
+                  {/* Top stripe */}
                   <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 5, display: 'flex' }}>
-                    <div style={{ flex: 1, background: '#dc2626' }} />
-                    <div style={{ flex: 1, background: '#1d4ed8' }} />
-                    <div style={{ flex: 1, background: '#16a34a' }} />
+                    <div style={{ flex: 1, background: 'var(--accent, #FF9200)' }} />
+                    <div style={{ flex: 1, background: '#1a1a1a' }} />
+                    <div style={{ flex: 1, background: 'var(--accent, #FF9200)' }} />
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     {/* Logo + org name */}
-                    <img src="/logo-portal-aluno.png" alt="CCLN" style={{ width: 52, height: 52, objectFit: 'contain', marginBottom: 4 }} />
+                    <img src={systemConfig?.logo_url || '/logo-portal-aluno.png'} alt={systemConfig?.organization_short || 'CCLN'} style={{ width: 52, height: 52, objectFit: 'contain', marginBottom: 4 }} />
                     <div style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#92400e' }}>
-                      Portal Aluno
+                      {systemConfig?.organization_name || 'Portal Aluno'}
                     </div>
                     <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,#b45309,transparent)', margin: '10px 0' }} />
                     <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#78350f', letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1.2 }}>
@@ -3768,9 +3765,9 @@ _Portal Aluno_`
                   </div>
                   {/* Bottom stripe */}
                   <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 5, display: 'flex' }}>
-                    <div style={{ flex: 1, background: '#16a34a' }} />
-                    <div style={{ flex: 1, background: '#1d4ed8' }} />
-                    <div style={{ flex: 1, background: '#dc2626' }} />
+                    <div style={{ flex: 1, background: 'var(--accent, #FF9200)' }} />
+                    <div style={{ flex: 1, background: '#1a1a1a' }} />
+                    <div style={{ flex: 1, background: 'var(--accent, #FF9200)' }} />
                   </div>
                 </div>
                 {!certStudent && (
@@ -6195,7 +6192,7 @@ _Portal Aluno_`
                           setNucleoEditForm({
                             id: nucleo.id, nome: nucleo.nome, endereco: nucleo.endereco || '', cidade: nucleo.cidade || '', estado: nucleo.estado || '', telefone: nucleo.telefone || '', email: nucleo.email || '', lat: nucleo.lat != null ? String(nucleo.lat) : '', lng: nucleo.lng != null ? String(nucleo.lng) : '', dias_treino: ((nucleo as any).dias_treino || []) as string[],
                           });
-                          setNucleoEditMsg(''); setNucleoEditAuth({ user: loginUser.trim(), pass: '' });
+                          setNucleoEditMsg(''); setNucleoEditAuth({ user: sessionUser(), pass: '' });
                         }}
                         style={{ flex: 1, padding: '8px 12px', background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.3)', color: '#0284c7', borderRadius: 8, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}
                       >
@@ -8551,6 +8548,51 @@ _Portal Aluno_`
               </button>
             )}
 
+            {/* Alterar matrícula CCLN */}
+            <div style={{ marginTop: 10, background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: 12 }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                🪪 Matrícula CCLN {studentDisplayIds[selected.id] ? `atual: ${studentDisplayIds[selected.id]}` : '(sem matrícula)'}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="number" min={1} max={999}
+                  placeholder="nº (ex: 1 → CCLN-001)"
+                  value={matriculaEditNum}
+                  onChange={e => setMatriculaEditNum(e.target.value)}
+                  style={{ flex: 1, padding: '8px 10px', background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }}
+                />
+                <button
+                  onClick={async () => {
+                    const n = parseInt(matriculaEditNum, 10);
+                    if (!Number.isFinite(n) || n < 1 || n > 999) { alert('Informe um número entre 1 e 999.'); return; }
+                    const res = await fetch('/api/admin/student-matricula', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ student_id: selected.id, novo_numero: n, admin_username: sessionUser(), admin_password: matriculaEditPass }),
+                    });
+                    const d = await res.json();
+                    if (res.ok && d.ok) {
+                      setStudentDisplayIds(prev => ({ ...prev, [selected.id]: d.display_id }));
+                      setMatriculaEditNum(''); setMatriculaEditPass('');
+                      alert(`Matrícula alterada para ${d.display_id}.`);
+                    } else {
+                      alert(d.error || 'Erro ao alterar matrícula.');
+                    }
+                  }}
+                  style={{ padding: '8px 14px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)', color: '#818cf8', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem' }}
+                >
+                  Salvar
+                </button>
+              </div>
+              <input
+                type="password"
+                placeholder="Sua senha de Owner/Admin Geral para confirmar"
+                value={matriculaEditPass}
+                onChange={e => setMatriculaEditPass(e.target.value)}
+                style={{ width: '100%', marginTop: 8, padding: '8px 10px', background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
             <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
               <button
                 onClick={() => openEdit(selected)}
@@ -9006,18 +9048,35 @@ _Portal Aluno_`
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: 24 }}>
               {t('admin_delete_warning')}
             </p>
+            <div style={{ marginBottom: 20, textAlign: 'left' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Confirme com a sua senha de Owner/Admin Geral
+              </label>
+              <input
+                type="password"
+                value={deleteAdminPass}
+                onChange={e => setDeleteAdminPass(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && deleteAdminPass) confirmDelete(); }}
+                placeholder="Sua senha de acesso ao painel"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', background: 'var(--bg-input)', border: '1.5px solid var(--border)', borderRadius: 9, color: 'var(--text-primary)', fontSize: '0.92rem', outline: 'none' }}
+              />
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 6 }}>
+                A exclusão é definitiva: cadastro, conta de acesso, arquivos e a matrícula CCLN volta a ficar disponível.
+              </div>
+            </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button
-                onClick={() => setDeleteConfirm(null)}
+                onClick={() => { setDeleteConfirm(null); setDeleteAdminPass(''); }}
                 style={{ flex: 1, padding: '10px', background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}
               >
                 {t('admin_cancel')}
               </button>
               <button
                 onClick={confirmDelete}
-                style={{ flex: 1, padding: '10px', background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.4)', color: '#f87171', borderRadius: 10, cursor: 'pointer', fontWeight: 700 }}
+                disabled={!deleteAdminPass}
+                style={{ flex: 1, padding: '10px', background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.4)', color: '#f87171', borderRadius: 10, cursor: deleteAdminPass ? 'pointer' : 'not-allowed', fontWeight: 700, opacity: deleteAdminPass ? 1 : 0.5 }}
               >
-                Sim, Excluir
+                Excluir definitivamente
               </button>
             </div>
           </div>
@@ -12852,9 +12911,14 @@ Suporte Ginga Gestão.`
                 onKeyDown={async e => {
                   if (e.key !== 'Enter' || !respAdminPass) return;
                   setRespLoading(true);
-                  const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: loginUser.trim(), admin_password: respAdminPass }) });
+                  const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'verify-login', username: sessionUser(), password: respAdminPass }) });
                   const d = await res.json();
-                  if (Array.isArray(d)) { setRespUsers(d.filter((u: any) => u.nucleo !== 'geral')); setRespGeralUsers(d.filter((u: any) => u.nucleo === 'geral')); setRespAdminAuthed(true); setRespAuthMsg(''); }
+                  if (res.ok && d.ok) {
+                    const lr = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: sessionUser(), admin_password: respAdminPass }) });
+                    const ld = await lr.json();
+                    if (Array.isArray(ld)) { setRespUsers(ld.filter((u: any) => u.nucleo !== 'geral')); setRespGeralUsers(ld.filter((u: any) => u.nucleo === 'geral')); setRespAdminAuthed(true); setRespAuthMsg(''); }
+                    else setRespAuthMsg(ld.error || 'Erro ao carregar contas.');
+                  }
                   else setRespAuthMsg(d.error || 'Senha incorreta.');
                   setRespLoading(false);
                 }}
@@ -12864,9 +12928,14 @@ Suporte Ginga Gestão.`
               <button disabled={respLoading} onClick={async () => {
                 if (!respAdminPass) { setRespAuthMsg('Digite sua senha.'); return; }
                 setRespLoading(true);
-                const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: loginUser.trim(), admin_password: respAdminPass }) });
+                const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'verify-login', username: sessionUser(), password: respAdminPass }) });
                 const d = await res.json();
-                if (Array.isArray(d)) { setRespUsers(d.filter((u: any) => u.nucleo !== 'geral')); setRespGeralUsers(d.filter((u: any) => u.nucleo === 'geral')); setRespAdminAuthed(true); setRespAuthMsg(''); }
+                if (res.ok && d.ok) {
+                  const lr = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: sessionUser(), admin_password: respAdminPass }) });
+                  const ld = await lr.json();
+                  if (Array.isArray(ld)) { setRespUsers(ld.filter((u: any) => u.nucleo !== 'geral')); setRespGeralUsers(ld.filter((u: any) => u.nucleo === 'geral')); setRespAdminAuthed(true); setRespAuthMsg(''); }
+                  else setRespAuthMsg(ld.error || 'Erro ao carregar contas.');
+                }
                 else setRespAuthMsg(d.error || 'Senha incorreta.');
                 setRespLoading(false);
               }} style={{ padding: '10px', borderRadius: 9, background: 'linear-gradient(135deg,#1d4ed8,#1e40af)', border: 'none', color: '#fff', fontWeight: 700, cursor: respLoading ? 'wait' : 'pointer', opacity: respLoading ? 0.7 : 1, fontSize: '0.95rem' }}>
@@ -12967,12 +13036,12 @@ Suporte Ginga Gestão.`
                         if (respNewCpf.length < 3) { setRespCreateMsg('Login deve ter pelo menos 3 caracteres.'); return; }
                         if (respNewPass && respNewPass.length < 6) { setRespCreateMsg('Senha deve ter pelo menos 6 caracteres.'); return; }
                         setRespCreating(true);
-                        const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create-user', admin_username: loginUser.trim(), admin_password: respAdminPass, login: respNewCpf, nome: respNewNome, new_password: respNewPass || undefined, nucleo_key: respNewNucleo }) });
+                        const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create-user', admin_username: sessionUser(), admin_password: respAdminPass, login: respNewCpf, nome: respNewNome, new_password: respNewPass || undefined, nucleo_key: respNewNucleo }) });
                         const d = await res.json();
                         if (res.ok) {
                           setRespCreateMsg(`✅ Conta criada! Login "${respNewCpf}" vinculado ao núcleo. Senha: ${respNewPass || '(padrão = nome do núcleo)'}`);
                           setRespNewCpf(''); setRespNewNome(''); setRespNewPass(''); setRespNewNucleo('');
-                          const lr = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: loginUser.trim(), admin_password: respAdminPass }) });
+                          const lr = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: sessionUser(), admin_password: respAdminPass }) });
                           const ld = await lr.json();
                           if (Array.isArray(ld)) { setRespUsers(ld.filter((u: any) => u.nucleo !== 'geral')); setRespGeralUsers(ld.filter((u: any) => u.nucleo === 'geral')); }
                         } else setRespCreateMsg(d.error || 'Erro ao cadastrar.');
@@ -12995,7 +13064,7 @@ Suporte Ginga Gestão.`
                     <button disabled={respResetting} onClick={async () => {
                       if (!respResetPass || respResetPass.length < 6) { setRespResetMsg('Mínimo 6 caracteres.'); return; }
                       setRespResetting(true);
-                      const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reset-password', admin_username: loginUser.trim(), admin_password: respAdminPass, target_username: respResetTarget, new_password: respResetPass }) });
+                      const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reset-password', admin_username: sessionUser(), admin_password: respAdminPass, target_username: respResetTarget, new_password: respResetPass }) });
                       const d = await res.json();
                       setRespResetMsg(res.ok ? '✓ Senha redefinida!' : (d.error || 'Erro.'));
                       if (res.ok) { setRespResetPass(''); setTimeout(() => { setRespResetTarget(''); setRespResetMsg(''); }, 2000); }
@@ -13016,7 +13085,7 @@ Suporte Ginga Gestão.`
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button disabled={respDeleting} onClick={async () => {
                       setRespDeleting(true);
-                      const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete-user', admin_username: loginUser.trim(), admin_password: respAdminPass, target_username: respDeleteTarget }) });
+                      const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete-user', admin_username: sessionUser(), admin_password: respAdminPass, target_username: respDeleteTarget }) });
                       const d = await res.json();
                       if (res.ok) {
                         setRespUsers(prev => prev.filter(u => u.username !== respDeleteTarget));
@@ -13106,12 +13175,12 @@ Suporte Ginga Gestão.`
                       if (respNewGeralLogin.length < 3) { setRespGeralCreateMsg('Login deve ter pelo menos 3 caracteres.'); return; }
                       if (respNewGeralPass.length < 6) { setRespGeralCreateMsg('Senha deve ter pelo menos 6 caracteres.'); return; }
                       setRespGeralCreating(true);
-                      const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create-geral', admin_username: loginUser.trim(), admin_password: respAdminPass, new_username: respNewGeralLogin, new_password: respNewGeralPass, nome: respNewGeralNome }) });
+                      const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create-geral', admin_username: sessionUser(), admin_password: respAdminPass, new_username: respNewGeralLogin, new_password: respNewGeralPass, nome: respNewGeralNome }) });
                       const d = await res.json();
                       if (res.ok) {
                         setRespGeralCreateMsg(`✓ Admin "${d.username}" criado com sucesso!`);
                         setRespNewGeralLogin(''); setRespNewGeralNome(''); setRespNewGeralPass('');
-                        const lr = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: loginUser.trim(), admin_password: respAdminPass }) });
+                        const lr = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: sessionUser(), admin_password: respAdminPass }) });
                         const ld = await lr.json();
                         if (Array.isArray(ld)) setRespGeralUsers(ld.filter((u: any) => u.nucleo === 'geral'));
                       } else setRespGeralCreateMsg(d.error || 'Erro ao criar admin.');

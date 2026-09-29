@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Carteirinha from '@/components/Carteirinha';
 import DocumentsBar from '@/components/DocumentsBar';
+import PhotoEditor from '@/components/PhotoEditor';
 import { graduacoes as GRADUACOES_ALL, nomenclaturaGraduacao, getCordaColors } from '@/lib/graduacoes';
 
 type Student = {
@@ -123,7 +124,6 @@ export default function AlunoPage() {
   const [presencaMsg, setPresencaMsg] = useState('');
   const [presencaLoading, setPresencaLoading] = useState(false);
   const [presencaStatus, setPresencaStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [presencaLocalSelecionado, setPresencaLocalSelecionado] = useState('');
 
   // ── Justificativas ────────────────────────────────────────────────────────
   const [justificativas, setJustificativas] = useState<Justificativa[]>([]);
@@ -179,6 +179,7 @@ export default function AlunoPage() {
 
   // ── Meus Dados ────────────────────────────────────────────────────────────
   const [fotoUploading, setFotoUploading] = useState(false);
+  const [fotoEditando, setFotoEditando] = useState<File | null>(null);
   const [fotoMsg, setFotoMsg] = useState('');
   const fotoInputRef = useRef<HTMLInputElement>(null);
 
@@ -508,6 +509,11 @@ export default function AlunoPage() {
 
   const handlePresenca = async () => {
     if (!navigator.geolocation) { setPresencaMsg('Geolocalização não disponível neste dispositivo.'); setPresencaStatus('error'); return; }
+    if (!student?.nucleo) {
+      setPresencaMsg('Você precisa estar vinculado a um núcleo para registrar presença. Escolha seu núcleo na aba Meus Dados.');
+      setPresencaStatus('error');
+      return;
+    }
     setPresencaLoading(true); setPresencaMsg(''); setPresencaStatus('idle');
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try {
@@ -519,8 +525,8 @@ export default function AlunoPage() {
               id: session!.student_id,
               nome_completo: student?.nome_completo || '',
               graduacao: student?.graduacao || '',
-              nucleo: presencaLocalSelecionado || student?.nucleo || '',
-              local_treino: presencaLocalSelecionado || student?.nucleo || '',
+              nucleo: student.nucleo,
+              local_treino: student.nucleo,
               foto_url: student?.foto_url || null,
               telefone: student?.telefone || '',
               lat: pos.coords.latitude,
@@ -1280,26 +1286,28 @@ export default function AlunoPage() {
               </p>
 
               {/* Local de treino */}
-              <div style={{ textAlign: 'left', marginBottom: 18 }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: 6 }}>
-                  📍 Local de Treino <span style={{ color: '#9ca3af', fontWeight: 400 }}>(opcional)</span>
-                </label>
-                <select
-                  value={presencaLocalSelecionado}
-                  onChange={e => setPresencaLocalSelecionado(e.target.value)}
-                  style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#fff', color: '#111827' }}
-                >
-                  <option value="">— Selecione o local de treino —</option>
-                  {dynamicNucleos.map(n => (
-                    <option key={n.slug} value={n.nome}>{n.nome}</option>
-                  ))}
-                </select>
-                {!presencaLocalSelecionado && student?.nucleo && (
-                  <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 4 }}>
-                    Se não selecionado, será usado o seu núcleo: <strong>{student.nucleo}</strong>
+              {student?.nucleo && (
+                <div style={{ textAlign: 'left', marginBottom: 18 }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: 6 }}>
+                    🏫 Seu Núcleo
+                  </label>
+                  <div style={{ background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', color: '#111827', fontWeight: 600 }}>
+                    📍 {student.nucleo}
                   </div>
-                )}
-              </div>
+                  <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 4, fontWeight: 400 }}>
+                    A presença é registrada sempre no seu núcleo de cadastro.
+                  </div>
+                </div>
+              )}
+
+              {!student?.nucleo && (
+                <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 12, padding: '14px 16px', marginBottom: 18, textAlign: 'left' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#991b1b', marginBottom: 4 }}>🚫 Presença bloqueada</div>
+                  <div style={{ fontSize: '0.78rem', color: '#b91c1c', lineHeight: 1.5 }}>
+                    Você ainda não está vinculado a um núcleo. Escolha seu núcleo na aba <strong>Meus Dados</strong> para destravar o registro de presença.
+                  </div>
+                </div>
+              )}
 
               {presencaMsg && (
                 <div style={{ background: presencaStatus === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${presencaStatus === 'success' ? '#bbf7d0' : '#fecaca'}`, color: presencaStatus === 'success' ? '#166534' : '#991b1b', borderRadius: 12, padding: '12px 16px', marginBottom: 18, fontSize: '0.85rem', fontWeight: 500 }}>
@@ -2484,6 +2492,11 @@ export default function AlunoPage() {
             setFotoUploading(false);
           };
 
+          // Abre o editor de foto antes de enviar
+          const handleFotoPick = (file: File) => {
+            setFotoEditando(file);
+          };
+
           // Nucleos dinamicos carregados do banco
                 const nucleo_opts = dynamicNucleos.map(n => n.nome);
           const sexo_opts = [{ v: 'M', l: 'Masculino' }, { v: 'F', l: 'Feminino' }, { v: 'O', l: 'Outro' }];
@@ -2521,13 +2534,25 @@ export default function AlunoPage() {
                   <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', marginBottom: 2 }}>Foto de Perfil</div>
                   <div style={{ fontSize: '0.72rem', color: '#6b7280', marginBottom: 8 }}>JPG, PNG — máx. 5 MB. Aparece na carteirinha e no painel.</div>
                   {fotoMsg && <div style={{ fontSize: '0.75rem', color: fotoMsg.startsWith('✅') ? '#16a34a' : '#dc2626', marginBottom: 6, fontWeight: 600 }}>{fotoMsg}</div>}
-                  <input ref={fotoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFotoUpload(f); e.target.value = ''; }} />
+                  <input ref={fotoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFotoPick(f); e.target.value = ''; }} />
                   <button onClick={() => fotoInputRef.current?.click()} disabled={fotoUploading}
                     style={{ background: fotoUploading ? '#e5e7eb' : `${nucleoColor}18`, color: fotoUploading ? '#9ca3af' : nucleoColor, border: `1.5px solid ${fotoUploading ? '#e5e7eb' : nucleoColor}40`, borderRadius: 8, padding: '7px 16px', fontWeight: 700, fontSize: '0.8rem', cursor: fotoUploading ? 'not-allowed' : 'pointer' }}>
                     {fotoUploading ? '⏳ Enviando...' : student.foto_url ? '🔄 Trocar Foto' : '📷 Adicionar Foto'}
                   </button>
                 </div>
               </div>
+
+              {/* Editor de foto (recorte/rotação/brilho) */}
+              {fotoEditando && (
+                <PhotoEditor
+                  file={fotoEditando}
+                  onCancel={() => setFotoEditando(null)}
+                  onConfirm={edited => {
+                    setFotoEditando(null);
+                    handleFotoUpload(edited);
+                  }}
+                />
+              )}
 
               {/* ── Matrícula ── */}
               {(student.ordem_inscricao || alunoInscricaoNum) && (

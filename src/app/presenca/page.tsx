@@ -35,7 +35,6 @@ export default function PresencaPage() {
   const [localDetectado, setLocalDetectado] = useState<LocalDetectado | null>(null);
   const [gpsStatus, setGpsStatus] = useState<'idle' | 'buscando' | 'ok' | 'erro' | 'negado'>('idle');
   const [coordsRaw, setCoordsRaw] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
-  const [manualLocal, setManualLocal] = useState<typeof LOCAIS[0] | null>(null);
   const watchIdRef = useRef<number>(-1);
 
   const OFFLINE_QUEUE_KEY   = 'demo_offline_checkins';
@@ -192,6 +191,11 @@ export default function PresencaPage() {
             date: item.date,
           }),
         });
+        if (res.status === 422) {
+          // Bloqueado pelas travas (dia/horário/local/núcleo) — não volta para a fila
+          fail++;
+          continue;
+        }
         if (res.ok) { ok++; } else { fail++; remaining.push(item); }
       } catch { fail++; remaining.push(item); }
     }
@@ -244,11 +248,11 @@ export default function PresencaPage() {
       }
     }
 
-    // Se GPS foi bloqueado mas o aluno selecionou manualmente o local, usa as coords fixas do local
-    if (!coords && manualLocal) {
-      coords = { lat: manualLocal.lat, lng: manualLocal.lng, accuracy: 0 };
-      const det = detectarLocal(coords.lat, coords.lng, 5000);
-      local = det ?? null;
+    // GPS é obrigatório: sem coordenadas reais do dispositivo, a presença é bloqueada
+    if (!coords) {
+      setRegistering(false);
+      alert('Não foi possível confirmar sua localização pelo GPS. Ative a localização e tente novamente — a presença só pode ser registrada com o dispositivo no local de treino.');
+      return;
     }
 
     // Se tem coords mas nenhum local dentro de 200m, tenta ampliar para 1km para exibição
@@ -298,6 +302,11 @@ export default function PresencaPage() {
     setRegistering(false);
     if (result.alreadyRegistered) {
       setRegisteredToday(prev => new Set([...prev, student.id]));
+      return;
+    }
+    if (result.bloqueado) {
+      alert(result.error || 'Registro bloqueado pelas regras de presença do núcleo.');
+      setRegistering(false);
       return;
     }
     if (result.success) {
@@ -508,49 +517,32 @@ Axé!`
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <h2 className="form-section-title" style={{ margin: 0 }}>Locais de Treino</h2>
-            {(gpsStatus === 'negado' || gpsStatus === 'erro') && !manualLocal && (
+            {(gpsStatus === 'negado' || gpsStatus === 'erro') && (
               <span style={{ fontSize: '0.72rem', color: '#f59e0b', fontWeight: 600 }}>
-                👇 Selecione seu local abaixo
+                ⚠ GPS necessário para registrar
               </span>
-            )}
-            {manualLocal && (
-              <button
-                onClick={() => setManualLocal(null)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.72rem', cursor: 'pointer', textDecoration: 'underline' }}
-              >
-                Limpar seleção
-              </button>
             )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {LOCAIS.map(loc => {
               const isAutoDetected = localDetectado?.local.id === loc.id;
-              const isManualSelected = manualLocal?.id === loc.id;
-              const isActive = isAutoDetected || isManualSelected;
-              // Always show manual selection button so admin/users can always select venue
-              const showSelectBtn = !isAutoDetected;
               return (
                 <div
                   key={loc.id}
-                  onClick={() => setManualLocal(isManualSelected ? null : loc)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10,
-                    background: isActive ? 'rgba(22,163,74,0.1)' : 'var(--bg-input)',
-                    border: `1px solid ${isActive ? 'rgba(22,163,74,0.4)' : 'var(--border)'}`,
+                    background: isAutoDetected ? 'rgba(22,163,74,0.1)' : 'var(--bg-input)',
+                    border: `1px solid ${isAutoDetected ? 'rgba(22,163,74,0.4)' : 'var(--border)'}`,
                     borderRadius: 10, padding: '10px 14px',
                     transition: 'all 0.15s',
-                    cursor: 'pointer',
                   }}
                 >
                   <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>
-                    {isActive ? '✅' : '📍'}
+                    {isAutoDetected ? '✅' : '📍'}
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>{loc.nome}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 1 }}>{loc.endereco}</div>
-                    {isManualSelected && !isAutoDetected && (
-                      <div style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600, marginTop: 2 }}>✓ Local selecionado manualmente</div>
-                    )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end', flexShrink: 0 }}>
                     <a
@@ -561,20 +553,6 @@ Axé!`
                     >
                       Ver mapa →
                     </a>
-                    {showSelectBtn && (
-                      <button
-                        onClick={() => setManualLocal(isManualSelected ? null : loc)}
-                        style={{
-                          background: isManualSelected ? 'rgba(220,38,38,0.1)' : 'rgba(22,163,74,0.15)',
-                          border: `1px solid ${isManualSelected ? 'rgba(220,38,38,0.4)' : 'rgba(22,163,74,0.4)'}`,
-                          color: isManualSelected ? '#f87171' : '#16a34a',
-                          padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
-                          fontWeight: 700, fontSize: '0.72rem',
-                        }}
-                      >
-                        {isManualSelected ? 'Desmarcar' : 'Estou aqui'}
-                      </button>
-                    )}
                   </div>
                 </div>
               );

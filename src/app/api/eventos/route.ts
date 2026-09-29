@@ -13,7 +13,7 @@ const KEY = 'eventos/eventos.json';
 
 const supabaseWrite = createClient(SUPABASE_URL, SERVICE_KEY);
 
-export interface EventoParticipant {
+interface EventoParticipant {
   student_id: string;
   nome_completo: string;
   nucleo: string;
@@ -25,7 +25,7 @@ export interface EventoParticipant {
   data_nascimento?: string | null;
 }
 
-export interface Evento {
+interface Evento {
   id: string;
   tipo: 'batizado' | 'troca' | 'outros';
   nome: string;
@@ -39,7 +39,7 @@ export interface Evento {
   updated_at: string;
 }
 
-export function eventoTipoLabel(tipo: string, nome?: string): string {
+function eventoTipoLabel(tipo: string, nome?: string): string {
   if (tipo === 'batizado') return 'Batizado';
   if (tipo === 'troca') return 'Troca de Graduação';
   return nome || 'Evento';

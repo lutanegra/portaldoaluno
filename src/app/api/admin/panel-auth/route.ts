@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
 import { appendAudit } from '@/lib/audit';
 import {
   hashPassword,
@@ -17,7 +16,6 @@ const supabase = createClient(
 );
 const BUCKET = 'photos';
 const CREDS_KEY = 'config/panel-credentials.json';
-const TOKENS_KEY = 'config/reset-tokens.json';
 
 type NucleoKey = string; // slug do núcleo no banco, ou 'geral'
 
@@ -33,13 +31,6 @@ interface Credential {
 }
 
 type CredsMap = Record<string, Credential>;
-
-interface ResetToken {
-  cpf: string;
-  token: string;
-  expires: number; // timestamp ms
-}
-type TokensMap = Record<string, ResetToken>; // key = token
 
 // Contas de gestão: fixas, criadas por seed (ver scripts/seed-panel-credentials.mjs).
 const OWNER_KEY = 'owner';
@@ -74,21 +65,6 @@ async function loadCreds(): Promise<CredsMap> {
 async function saveCreds(map: CredsMap): Promise<void> {
   const blob = new Blob([JSON.stringify(map)], { type: 'application/json' });
   await supabase.storage.from(BUCKET).upload(CREDS_KEY, blob, { upsert: true });
-}
-
-async function loadTokens(): Promise<TokensMap> {
-  try {
-    const { data } = await supabase.storage.from(BUCKET).createSignedUrl(TOKENS_KEY, 30);
-    if (!data?.signedUrl) return {};
-    const res = await fetch(data.signedUrl, { cache: 'no-store' });
-    if (!res.ok) return {};
-    return await res.json();
-  } catch { return {}; }
-}
-
-async function saveTokens(map: TokensMap): Promise<void> {
-  const blob = new Blob([JSON.stringify(map)], { type: 'application/json' });
-  await supabase.storage.from(BUCKET).upload(TOKENS_KEY, blob, { upsert: true });
 }
 
 function isAdminGeral(creds: CredsMap, key: string): boolean {
@@ -171,6 +147,19 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // ── VERIFICAR SENHA (desafio de identidade, ex.: gate de Contas de Acesso) ──
+  if (action === 'verify-login') {
+    const { username, password } = body;
+    if (!username || !password)
+      return NextResponse.json({ error: 'Usuário e senha obrigatórios.' }, { status: 400 });
+    const creds = await loadCreds();
+    const key = normalizeKey(username);
+    const user = creds[key];
+    if (!user || !verifyPassword(password, user.password))
+      return NextResponse.json({ error: 'Senha incorreta.' }, { status: 401 });
+    return NextResponse.json({ ok: true, username: key, nucleo: user.nucleo });
+  }
+
   // ── ALTERAR MINHA SENHA ──
   if (action === 'change-password') {
     const { username, current_password, new_password } = body;
@@ -189,7 +178,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // ── SOLICITAR REDEFINIÇÃO DE SENHA (por login ou CPF) ──
+  // ── SOLICITAR REDEFINIÇÃO DE SENHA (Supabase Auth envia o e-mail) ──
   if (action === 'forgot-password') {
     const { username } = body;
     if (!username) return NextResponse.json({ error: 'Informe seu usuário de acesso.' }, { status: 400 });
@@ -199,87 +188,84 @@ export async function POST(req: NextRequest) {
     const creds = await loadCreds();
     const user: Credential | undefined = creds[targetKey];
     if (!user) {
+      // Não revela se a conta existe
       return NextResponse.json({
         ok: true,
-        no_email: true,
-        message: 'Não encontramos uma conta com este usuário. Confira o login ou fale com o Owner/Admin Geral da organização.',
+        sent: true,
+        message: 'Se existir conta com este login e e-mail cadastrado, você receberá um link de redefinição.',
       });
     }
     const email = user.email || '';
-
-    const token = crypto.randomBytes(32).toString('hex');
-    const expires = Date.now() + 30 * 60 * 1000; // 30 min
-    const tokens = await loadTokens();
-    for (const [k, v] of Object.entries(tokens)) {
-      if (v.cpf === targetKey) delete tokens[k];
+    if (!email) {
+      return NextResponse.json({
+        ok: true,
+        no_email: true,
+        message: 'Sua conta não tem e-mail cadastrado. Fale com o Owner ou Admin Geral para redefinir sua senha.',
+      });
     }
-    tokens[token] = { cpf: targetKey, token, expires };
-    await saveTokens(tokens);
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${req.headers.get('host')}`;
-    const resetUrl = `${baseUrl}/nucleo/reset-senha?token=${token}`;
-
-    if (email) {
-      try {
-        const { sendEmail, buildResetLinkHtml } = await import('@/lib/email');
-        const { subject, html } = buildResetLinkHtml(user?.nome || '', resetUrl);
-        const result = await sendEmail(email, subject, html);
-        if (result.sent) {
-          return NextResponse.json({
-            ok: true,
-            sent_email: true,
-            email_mascarado: email.replace(/(.{2}).+(@.+)/, '$1****$2'),
-            message: `E-mail de redefinição enviado para ${email.replace(/(.{2}).+(@.+)/, '$1****$2')}.`,
-          });
-        }
-      } catch { /* segue para o link administrativo */ }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${baseUrl}/admin/redefinir-senha`,
+    });
+    if (error) {
+      return NextResponse.json({
+        ok: true,
+        send_error: error.message,
+        message: `Não foi possível enviar o e-mail agora (${error.message}). Tente novamente em alguns minutos ou fale com o Owner.`,
+      });
     }
+
+    await appendAudit({
+      actor: targetKey,
+      actor_type: 'admin',
+      action: 'senha_reset_solicitada',
+      details: { email_mascarado: email.replace(/(.{2}).+(@.+)/, '$1****$2'), via: 'supabase_auth' },
+    });
 
     return NextResponse.json({
       ok: true,
-      no_email: !email,
-      message: !email
-        ? 'Conta sem e-mail cadastrado. O Admin Geral pode usar o link abaixo para redefinir a senha.'
-        : 'Falha ao enviar o e-mail. Tente novamente ou use o link abaixo.',
-      reset_url: resetUrl,
-      dev_token: token,
+      sent: true,
+      email_mascarado: email.replace(/(.{2}).+(@.+)/, '$1****$2'),
+      message: `Link de redefinição enviado para ${email.replace(/(.{2}).+(@.+)/, '$1****$2')}. Verifique a caixa de entrada e o spam.`,
     });
   }
 
-  // ── VALIDAR TOKEN DE RESET ──
-  if (action === 'validate-reset-token') {
-    const { token } = body;
-    if (!token) return NextResponse.json({ error: 'Token obrigatório.' }, { status: 400 });
-    const tokens = await loadTokens();
-    const entry = tokens[token];
-    if (!entry || entry.expires < Date.now())
-      return NextResponse.json({ error: 'Token inválido ou expirado.' }, { status: 400 });
-    const creds = await loadCreds();
-    const user: Credential | undefined = creds[entry.cpf];
-    return NextResponse.json({ ok: true, cpf: entry.cpf, nome: user?.nome || '', nucleo: user?.nucleo });  }
-
-  // ── REDEFINIR SENHA VIA TOKEN ──
-  if (action === 'reset-by-token') {
-    const { token, new_password } = body;
-    if (!token || !new_password)
+  // ── REDEFINIR SENHA COM TOKEN DO SUPABASE AUTH (link do e-mail) ──
+  if (action === 'reset-by-tokens') {
+    const { access_token, new_password } = body;
+    if (!access_token || !new_password)
       return NextResponse.json({ error: 'Campos obrigatórios ausentes.' }, { status: 400 });
     if (String(new_password).length < 6)
       return NextResponse.json({ error: 'Nova senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
 
-    const tokens = await loadTokens();
-    const entry = tokens[token];
-    if (!entry || entry.expires < Date.now())
-      return NextResponse.json({ error: 'Token inválido ou expirado.' }, { status: 400 });
+    const { data, error } = await supabase.auth.getUser(String(access_token));
+    if (error || !data?.user) {
+      return NextResponse.json({ error: 'Link inválido ou expirado. Solicite um novo em "Esqueci minha senha".' }, { status: 401 });
+    }
 
+    const { error: upErr } = await supabase.auth.admin.updateUserById(data.user.id, {
+      password: String(new_password),
+    });
+    if (upErr) return NextResponse.json({ error: 'Erro ao atualizar a senha.' }, { status: 500 });
+
+    // Mantém a credencial do painel sincronizada com o Supabase Auth
+    const email = (data.user.email || '').toLowerCase();
     const creds = await loadCreds();
-    if (!creds[entry.cpf])
-      return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 });
-    creds[entry.cpf] = { ...creds[entry.cpf], password: hashPassword(new_password), first_login: false };
-    await saveCreds(creds);
+    const credKey = Object.keys(creds).find(k => (creds[k].email || '').toLowerCase() === email);
+    if (credKey) {
+      creds[credKey] = { ...creds[credKey], password: hashPassword(String(new_password)), first_login: false };
+      await saveCreds(creds);
+    }
 
-    delete tokens[token];
-    await saveTokens(tokens);
-    return NextResponse.json({ ok: true });
+    await appendAudit({
+      actor: credKey || email,
+      actor_type: 'admin',
+      action: 'senha_redefinida_supabase',
+      details: { via: 'link_email' },
+    });
+
+    return NextResponse.json({ ok: true, synced_panel: !!credKey });
   }
 
   // ══ AÇÕES DE GESTÃO (owner/admin) ══

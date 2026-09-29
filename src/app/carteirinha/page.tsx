@@ -138,7 +138,7 @@ function CarteirinhaContent() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
+    <div style={{ minHeight: '100vh', background: 'radial-gradient(900px 500px at 50% -10%, rgba(255,146,0,0.18), transparent 60%), #0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
       {/* Botão Voltar */}
       <div style={{ position: 'fixed', top: 16, left: 16, zIndex: 100 }}>
         <button
@@ -180,7 +180,7 @@ function CarteirinhaContent() {
             <button
               onClick={() => buscar()}
               disabled={loading}
-              style={{ background: 'linear-gradient(135deg,#b45309,#78350f)', border: 'none', color: '#fff', padding: '11px 20px', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.88rem', whiteSpace: 'nowrap', opacity: loading ? 0.7 : 1 }}
+              style={{ background: 'linear-gradient(135deg,#FF9200,#d97706)', border: 'none', color: '#fff', padding: '11px 20px', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.88rem', whiteSpace: 'nowrap', opacity: loading ? 0.7 : 1 }}
             >
               {loading ? 'Buscando…' : 'Buscar'}
             </button>
@@ -216,7 +216,7 @@ function CarteirinhaContent() {
             <button
               onClick={baixarPng}
               disabled={generating}
-              style={{ padding: '11px 22px', background: generating ? 'rgba(29,78,216,0.1)' : 'rgba(29,78,216,0.25)', border: '1px solid rgba(29,78,216,0.5)', color: '#93c5fd', borderRadius: 10, cursor: generating ? 'wait' : 'pointer', fontWeight: 700, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 8, opacity: generating ? 0.7 : 1 }}
+              style={{ padding: '11px 22px', background: generating ? 'rgba(255,146,0,0.1)' : 'rgba(255,146,0,0.25)', border: '1px solid rgba(255,146,0,0.5)', color: '#FF9200', borderRadius: 10, cursor: generating ? 'wait' : 'pointer', fontWeight: 700, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 8, opacity: generating ? 0.7 : 1 }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               {generating ? 'Gerando...' : 'Salvar Imagem'}
@@ -237,7 +237,7 @@ function CarteirinhaContent() {
 export default function CarteirinhaPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#1a1a2e,#0f3460)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: 'radial-gradient(900px 500px at 50% -10%, rgba(255,146,0,0.18), transparent 60%), #0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>Carregando…</div>
       </div>
     }>

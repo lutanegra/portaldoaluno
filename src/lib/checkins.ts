@@ -36,15 +36,21 @@ export async function registerCheckin(student: {
   local_map_url?: string | null;
   lat?: number | null;
   lng?: number | null;
-}): Promise<{ success: boolean; alreadyRegistered: boolean; fora_do_dia?: boolean }> {
+}): Promise<{ success: boolean; alreadyRegistered: boolean; fora_do_dia?: boolean; bloqueado?: boolean; motivo?: string; error?: string }> {
   try {
     const res = await fetch('/api/checkins', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ student }),
     });
-    if (!res.ok) return { success: false, alreadyRegistered: false };
-    return await res.json();
+    const data = await res.json();
+    return {
+      success: res.ok && data.success !== false,
+      alreadyRegistered: !!data.alreadyRegistered,
+      bloqueado: !!data.bloqueado,
+      motivo: data.motivo,
+      error: data.error,
+    };
   } catch { return { success: false, alreadyRegistered: false }; }
 }
 
