@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { appendAudit } from '@/lib/audit';
 import {
   hashPassword,
   verifyPassword,
@@ -157,6 +158,7 @@ export async function POST(req: NextRequest) {
 
     const isGeral = user.nucleo === 'geral';
     const isOwner = key === OWNER_KEY;
+    await appendAudit({ actor: key, actor_type: 'admin', action: 'login_admin', details: { nucleo: user.nucleo, papel: isOwner ? 'owner' : isGeral ? 'admin_geral' : 'admin_nucleo' } });
     return NextResponse.json({
       ok: true,
       nucleo: user.nucleo,
@@ -183,6 +185,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Senha atual incorreta.' }, { status: 401 });
     creds[key] = { ...user, password: hashPassword(new_password), first_login: false };
     await saveCreds(creds);
+    await appendAudit({ actor: key, actor_type: 'admin', action: 'senha_proprio_alterada', details: { nucleo: user.nucleo } });
     return NextResponse.json({ ok: true });
   }
 
@@ -222,7 +225,12 @@ export async function POST(req: NextRequest) {
         const { subject, html } = buildResetLinkHtml(user?.nome || '', resetUrl);
         const result = await sendEmail(email, subject, html);
         if (result.sent) {
-          return NextResponse.json({ ok: true, message: `E-mail de redefinição enviado para ${email.replace(/(.{2}).+(@.+)/, '$1****$2')}.` });
+          return NextResponse.json({
+            ok: true,
+            sent_email: true,
+            email_mascarado: email.replace(/(.{2}).+(@.+)/, '$1****$2'),
+            message: `E-mail de redefinição enviado para ${email.replace(/(.{2}).+(@.+)/, '$1****$2')}.`,
+          });
         }
       } catch { /* segue para o link administrativo */ }
     }
@@ -337,9 +345,13 @@ export async function POST(req: NextRequest) {
       createdBy: g.key,
       first_login: false,
     };
-    // Vincula o login do admin na própria tabela do núcleo
-    await supabase.from('tenants').update({ admin_login: login }).eq('id', tenant.id);
+    // Vincula o login na tabela do núcleo quando não há admin primário ainda
+    const { data: tenantRow } = await supabase.from('tenants').select('admin_login').eq('id', tenant.id).maybeSingle();
+    if (!tenantRow?.admin_login) {
+      await supabase.from('tenants').update({ admin_login: login }).eq('id', tenant.id);
+    }
     await saveCreds(creds);
+    await appendAudit({ actor: g.key, actor_type: 'admin', action: 'conta_admin_criada', target_id: login, target_name: body.nome || undefined, details: { nucleo: slug, senha_padrao: !body.new_password } });
     return NextResponse.json({ ok: true, login, nucleo: slug, senha_definida: !!body.new_password, message: 'Conta criada e vinculada ao núcleo!' });
   }
 
@@ -403,13 +415,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Você não pode remover sua própria conta.' }, { status: 400 });
     if (!creds[targetKey])
       return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 });
-    // Remove o vínculo do núcleo, se houver
+    // Remove o vínculo do núcleo, se houver (o núcleo pode ter outros admins)
     const nucleoSlug = creds[targetKey].nucleo;
     delete creds[targetKey];
     await saveCreds(creds);
     if (nucleoSlug && nucleoSlug !== 'geral') {
-      await supabase.from('tenants').update({ admin_login: null }).eq('slug', nucleoSlug).eq('admin_login', targetKey);
+      const restantes = Object.keys(creds).filter(k => creds[k].nucleo === nucleoSlug);
+      if (restantes.length === 0) {
+        await supabase.from('tenants').update({ admin_login: null }).eq('slug', nucleoSlug).eq('admin_login', targetKey);
+      } else if (restantes.length === 1) {
+        await supabase.from('tenants').update({ admin_login: restantes[0] }).eq('slug', nucleoSlug).eq('admin_login', targetKey);
+      }
     }
+    await appendAudit({ actor: g.key, actor_type: 'admin', action: 'conta_admin_removida', target_id: targetKey, details: { nucleo: nucleoSlug || null } });
     return NextResponse.json({ ok: true });
   }
 
@@ -431,6 +449,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Senha deve ter pelo menos 4 caracteres.' }, { status: 400 });
     creds[loginAtual] = { ...creds[loginAtual], password: hashPassword(novaSenha), first_login: false };
     await saveCreds(creds);
+    await appendAudit({ actor: g.key, actor_type: 'admin', action: 'senha_admin_nucleo_alterada', target_id: loginAtual, details: { nucleo: slug, senha_padrao: !body.new_password } });
     return NextResponse.json({ ok: true, login: loginAtual, message: body.new_password ? 'Senha atualizada.' : 'Senha restaurada para o padrão.' });
   }
 
@@ -448,6 +467,7 @@ export async function POST(req: NextRequest) {
     }
     await saveCreds(creds);
     await supabase.from('tenants').update({ admin_login: null }).neq('admin_login', null as unknown as string);
+    await appendAudit({ actor: g.key, actor_type: 'admin', action: 'contas_limpeza', details: { removidas: count } });
     return NextResponse.json({ ok: true, removed: count });
   }
 

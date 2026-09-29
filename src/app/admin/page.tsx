@@ -658,10 +658,15 @@ export default function AdminPage() {
   // System Config (Owner only)
   const [systemConfig, setSystemConfig] = useState<any>(null);
   const [systemConfigLoading, setSystemConfigLoading] = useState(false);
+  // Bibliografia de mestres dinâmica
+  const [bibliografiaMestres, setBibliografiaMestres] = useState<Array<{ id: string; nome: string }>>([]);
+  const [novoMestreNome, setNovoMestreNome] = useState('');
+  const [mestresMsg, setMestresMsg] = useState('');
   const [systemConfigSaving, setSystemConfigSaving] = useState(false);
   const [systemConfigMsg, setSystemConfigMsg] = useState('');
   const [loginUser, setLoginUser] = useState('');
   const [loginPass, setLoginPass] = useState('');
+  const [loginLabel, setLoginLabel] = useState('');
   const [loginError, setLoginError] = useState('');
   const [showPass, setShowPass] = useState(false);
   // Change-credentials modal
@@ -763,6 +768,7 @@ export default function AdminPage() {
     setAuthed(true);
     setAuthChecking(false);
     setActiveNucleo(stored);
+    try { setLoginLabel(sessionStorage.getItem('admin_user') || ''); } catch {}
     
     // Restaurar estado de owner
     const ownerStored = sessionStorage.getItem('admin_is_owner');
@@ -851,6 +857,7 @@ export default function AdminPage() {
         setAuthed(true);
         setActiveNucleo(nk);
         setIsOwner(data.isOwner === true);
+        setLoginLabel(data.label || loginKey);
         setAdminLoginState(0, 0);
         setLoginError('');
         // Carrega config do sistema para exibir nome dinamico
@@ -1080,7 +1087,7 @@ export default function AdminPage() {
   const certTemplateInputRef = useRef<HTMLInputElement>(null);
 
   // ── Offline sync validation state ──────────────────────────────────────────
-  const OFFLINE_QUEUE_KEY = 'accbm_offline_checkins';
+  const OFFLINE_QUEUE_KEY = 'pa_offline_checkins';
   const [offlinePending, setOfflinePending] = useState<Array<{ student: { id: string; nome_completo: string; graduacao: string; nucleo: string | null; foto_url: string | null }; date: string; hora: string; localNome: string | null }>>([]);
   const [syncingOffline, setSyncingOffline] = useState(false);
   const [syncOfflineResult, setSyncOfflineResult] = useState<{ ok: number; fail: number } | null>(null);
@@ -1469,7 +1476,7 @@ export default function AdminPage() {
   // Builds synthetic checkin records from the offline queue stored in localStorage
   const getOfflineCheckins = (date: string): CheckinRecord[] => {
     try {
-      const raw = localStorage.getItem('accbm_offline_checkins');
+      const raw = localStorage.getItem('pa_offline_checkins');
       if (!raw) return [];
       const queue: Array<{
         student: { id: string; nome_completo: string; graduacao: string; nucleo: string | null; foto_url: string | null };
@@ -1917,20 +1924,17 @@ export default function AdminPage() {
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#0f172a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Inter, sans-serif' }}>
         {/* Logo + title */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <img src="/logo-portal-aluno.png" alt="ACCBM" style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 10, borderRadius: '50%' }} />
-          <div style={{ background: 'linear-gradient(90deg,#dc2626,#2563eb,#16a34a)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontSize: '1.15rem', fontWeight: 900, letterSpacing: '0.03em' }}>Portal Aluno — Gestao de Treinos</div>
-          <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.78rem', marginTop: 4 }}>Associação Cultural de Capoeira Barão de Mauá</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-portal-aluno.png" alt="Portal Aluno" style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 10, borderRadius: '50%' }} />
+          <div style={{ background: 'linear-gradient(90deg,#FF9200,#fbbf24)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontSize: '1.15rem', fontWeight: 900, letterSpacing: '0.03em' }}>Portal Aluno — Gestao de Treinos</div>
+          <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.78rem', marginTop: 4 }}>Owner · Admin Geral · Admin de Núcleo</div>
         </div>
 
-        {/* Dica de acesso */}
+        {/* Aviso de acesso */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <div style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.35)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
-            <div style={{ color: '#c4b5fd', fontWeight: 700, fontSize: '0.8rem' }}>Owner / Admin Geral</div>
-            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', marginTop: 2 }}>Entre com seu login e senha</div>
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
-            <div style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 700, fontSize: '0.8rem' }}>Admin de Núcleo</div>
-            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', marginTop: 2 }}>Acesse pela página do seu núcleo</div>
+          <div style={{ background: 'rgba(255,146,0,0.12)', border: '1px solid rgba(255,146,0,0.35)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
+            <div style={{ color: '#FF9200', fontWeight: 700, fontSize: '0.8rem' }}>Acesso único</div>
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', marginTop: 2 }}>Owner, Admin Geral e Núcleo entram aqui</div>
           </div>
         </div>
 
@@ -1953,16 +1957,12 @@ export default function AdminPage() {
               </div>
             </div>
             {loginError && <div style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.4)', borderRadius: 8, padding: '8px 12px', color: '#fca5a5', fontSize: '0.82rem', fontWeight: 600 }}>⚠ {loginError}</div>}
-            <button type="submit" style={{ background: 'linear-gradient(135deg,#1d4ed8,#1e40af)', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', marginTop: 4 }}>Entrar</button>
+            <button type="submit" style={{ background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', marginTop: 4 }}>Entrar</button>
           </form>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
             <button type="button" onClick={() => { setShowAdminForgot(v => !v); setAdminForgotMsg(''); setAdminForgotDone(false); setAdminForgotCpf(''); setAdminResetUrl(''); }}
-              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', cursor: 'pointer' }}>
-              🔑 Esqueceu a senha?
-            </button>
-            <button type="button" onClick={() => { setShowAdminForgot(v => !v); setAdminForgotMsg(''); setAdminForgotDone(false); setAdminForgotCpf(''); setAdminResetUrl(''); }}
-              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>
-              Primeiro acesso / Redefinir
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}>
+              Esqueci minha senha
             </button>
           </div>
 
@@ -1970,124 +1970,70 @@ export default function AdminPage() {
           {showAdminForgot && (
             <div style={{ marginTop: 14, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: '16px 18px' }}>
               <div style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 700, fontSize: '0.88rem', marginBottom: 10 }}>Recuperar Acesso</div>
-              
-              {/* Tabs para Admin Geral vs Owner */}
-              <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-                <button 
-                  type="button"
-                  onClick={() => setAdminForgotCpf('admin')}
-                  style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
-                    background: adminForgotCpf === 'admin' || adminForgotCpf === '' ? 'rgba(29,78,216,0.4)' : 'rgba(255,255,255,0.1)',
-                    color: adminForgotCpf === 'admin' || adminForgotCpf === '' ? '#93c5fd' : 'rgba(255,255,255,0.5)' }}>
-                  Admin Geral
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setAdminForgotCpf('owner')}
-                  style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
-                    background: adminForgotCpf === 'owner' ? 'rgba(124,58,237,0.4)' : 'rgba(255,255,255,0.1)',
-                    color: adminForgotCpf === 'owner' ? '#c4b5fd' : 'rgba(255,255,255,0.5)' }}>
-                  Owner
-                </button>
-              </div>
 
-              {/* Recuperacao Admin Geral */}
-              {(adminForgotCpf === 'admin' || adminForgotCpf === '') && (
-                <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', lineHeight: 1.6 }}>
-                  <div style={{ marginBottom: 12, padding: 12, background: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 10 }}>
-                    <div style={{ fontWeight: 700, color: '#fbbf24', marginBottom: 6 }}>Atencao</div>
-                    <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem' }}>
-                      A senha do Admin Geral so pode ser alterada pelo <strong>Owner</strong> do sistema.
-                    </div>
+              {!adminForgotDone ? (
+                <>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', lineHeight: 1.5, marginBottom: 12 }}>
+                    Informe seu login de acesso. Se houver e-mail cadastrado na conta, enviaremos um link para você definir uma nova senha.
                   </div>
-                  <p style={{ margin: '8px 0', fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)' }}>
-                    Entre em contato com o Owner para solicitar a redefinicao da sua senha.
-                  </p>
-                  <button type="button" onClick={() => setShowAdminForgot(false)} style={{ marginTop: 8, padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', cursor: 'pointer' }}>Fechar</button>
-                </div>
-              )}
-
-              {/* Recuperacao Owner */}
-              {adminForgotCpf === 'owner' && !adminForgotDone && (
-                <div>
-                  <div style={{ marginBottom: 12, padding: 12, background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: 10 }}>
-                    <div style={{ fontWeight: 700, color: '#a78bfa', marginBottom: 6, fontSize: '0.82rem' }}>Recuperacao de Senha do Owner</div>
-                    <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', lineHeight: 1.5 }}>
-                      Para redefinir a senha do Owner, informe a <strong>senha de confirmacao</strong> e a nova senha desejada.
-                    </div>
-                  </div>
-                  
                   <input
-                    type="password"
-                    value={adminResetUrl}
-                    onChange={e => setAdminResetUrl(e.target.value)}
-                    placeholder="Senha de confirmacao"
-                    style={{ width: '100%', padding: '9px 12px', border: '1.5px solid rgba(124,58,237,0.4)', borderRadius: 8, fontSize: '0.85rem', outline: 'none', color: '#fff', background: 'rgba(124,58,237,0.15)', boxSizing: 'border-box', marginBottom: 8 }}
+                    type="text"
+                    value={adminForgotCpf}
+                    onChange={e => { setAdminForgotCpf(e.target.value); setAdminForgotMsg(''); }}
+                    placeholder="Seu login de acesso"
+                    style={{ width: '100%', padding: '10px 12px', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 8, fontSize: '0.9rem', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box', marginBottom: 8 }}
                   />
-                  <input
-                    type="password"
-                    value={(window as any).__ownerNewPass || ''}
-                    onChange={e => { (window as any).__ownerNewPass = e.target.value; setAdminForgotMsg(''); }}
-                    placeholder="Nova senha (min. 6 caracteres)"
-                    style={{ width: '100%', padding: '9px 12px', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 8, fontSize: '0.85rem', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box', marginBottom: 8 }}
-                  />
-                  <input
-                    type="password"
-                    value={(window as any).__ownerNewPassConfirm || ''}
-                    onChange={e => { (window as any).__ownerNewPassConfirm = e.target.value; setAdminForgotMsg(''); }}
-                    placeholder="Confirmar nova senha"
-                    style={{ width: '100%', padding: '9px 12px', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 8, fontSize: '0.85rem', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box', marginBottom: 8 }}
-                  />
-                  
                   {adminForgotMsg && (
-                    <div style={{ fontSize: '0.78rem', color: adminForgotMsg.includes('sucesso') ? '#86efac' : '#fca5a5', marginBottom: 8, lineHeight: 1.5, textAlign: 'center' }}>{adminForgotMsg}</div>
+                    <div style={{ fontSize: '0.78rem', color: adminForgotMsg.includes('✓') ? '#86efac' : '#fca5a5', marginBottom: 8, lineHeight: 1.5 }}>{adminForgotMsg}</div>
                   )}
-                  
                   <button
                     type="button"
                     disabled={adminForgotLoading}
                     onClick={async () => {
-                      const newPass = (window as any).__ownerNewPass || '';
-                      const confirmPass = (window as any).__ownerNewPassConfirm || '';
-                      
-                      if (!adminResetUrl) { setAdminForgotMsg('Informe a senha de confirmacao.'); return; }
-                      if (!newPass || newPass.length < 6) { setAdminForgotMsg('Nova senha deve ter pelo menos 6 caracteres.'); return; }
-                      if (newPass !== confirmPass) { setAdminForgotMsg('As senhas nao coincidem.'); return; }
-                      
+                      const login = adminForgotCpf.trim();
+                      if (!login) { setAdminForgotMsg('Informe seu login de acesso.'); return; }
                       setAdminForgotLoading(true); setAdminForgotMsg('');
                       try {
-                        const res = await fetch('/api/admin/recover-owner', {
+                        const res = await fetch('/api/admin/panel-auth', {
                           method: 'POST', headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ action: 'confirm', confirmationPassword: adminResetUrl, newPassword: newPass }),
+                          body: JSON.stringify({ action: 'forgot-password', username: login }),
                         });
                         const data = await res.json();
-                        if (data.ok) {
-                          setAdminForgotMsg(data.message || 'Senha atualizada com sucesso!');
-                          setAdminForgotDone(true);
-                          (window as any).__ownerNewPass = '';
-                          (window as any).__ownerNewPassConfirm = '';
+                        if (res.ok && data.ok) {
+                          if (data.sent_email) {
+                            setAdminForgotDone(true);
+                            setAdminForgotMsg(`✓ Link enviado para ${data.email_mascarado}. Verifique a caixa de entrada e o spam.`);
+                          } else if (data.reset_url) {
+                            setAdminResetUrl(data.reset_url);
+                            setAdminForgotMsg('Não foi possível enviar o e-mail. Use o link abaixo para redefinir sua senha.');
+                          } else {
+                            setAdminForgotMsg(data.message || 'Conta não encontrada ou sem e-mail cadastrado. Fale com o Owner/Admin Geral.');
+                          }
                         } else {
-                          setAdminForgotMsg(data.error || 'Erro ao redefinir senha.');
+                          setAdminForgotMsg(data.error || 'Erro ao solicitar redefinição.');
                         }
                       } catch { setAdminForgotMsg('Erro de conexao.'); }
                       setAdminForgotLoading(false);
                     }}
-                    style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', opacity: adminForgotLoading ? 0.6 : 1 }}>
-                    {adminForgotLoading ? 'Processando...' : 'Redefinir Senha do Owner'}
+                    style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', opacity: adminForgotLoading ? 0.6 : 1 }}>
+                    {adminForgotLoading ? 'Enviando...' : 'Enviar link de recuperação'}
                   </button>
-                  
-                  <div style={{ marginTop: 10, fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
-                    Nao tem a senha de confirmacao? Entre em contato: <strong>andrecapoeirabarao@gmail.com</strong>
-                  </div>
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', color: '#86efac', fontSize: '0.85rem', lineHeight: 1.6 }}>
+                  📬 {adminForgotMsg}
+                  <br />
+                  <button type="button" onClick={() => { setShowAdminForgot(false); setAdminForgotDone(false); setAdminForgotMsg(''); setAdminForgotCpf(''); }} style={{ marginTop: 10, padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '0.78rem', cursor: 'pointer' }}>Fechar</button>
                 </div>
               )}
 
-              {/* Sucesso Owner */}
-              {adminForgotCpf === 'owner' && adminForgotDone && (
-                <div style={{ textAlign: 'center', color: '#86efac', fontSize: '0.85rem', lineHeight: 1.6 }}>
-                  Senha do Owner atualizada com sucesso!<br />Faca login com a nova senha.
-                  <br />
-                  <button type="button" onClick={() => { setAdminForgotDone(false); setShowAdminForgot(false); setAdminResetUrl(''); }} style={{ marginTop: 10, padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '0.78rem', cursor: 'pointer' }}>Fechar e Fazer Login</button>
+              {/* Fallback: link direto quando o e-mail não pôde ser enviado */}
+              {adminResetUrl && !adminForgotDone && (
+                <div style={{ marginTop: 12, background: 'rgba(255,146,0,0.1)', border: '1px solid rgba(255,146,0,0.3)', borderRadius: 10, padding: '12px 14px' }}>
+                  <div style={{ color: '#FF9200', fontWeight: 700, fontSize: '0.78rem', marginBottom: 8 }}>🔗 Link de redefinição (válido por 30 minutos):</div>
+                  <a href={adminResetUrl} style={{ display: 'block', background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', borderRadius: 8, padding: '10px 14px', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 700, textAlign: 'center', wordBreak: 'break-all' }}>
+                    Redefinir minha senha agora
+                  </a>
                 </div>
               )}
             </div>
@@ -2165,7 +2111,7 @@ export default function AdminPage() {
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"/>
-<title>Relatório ${tipoLabel} — ACCBM</title>
+<title>Relatório ${tipoLabel} — Portal Aluno</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1e293b; background: #fff; padding: 32px; }
@@ -2203,9 +2149,9 @@ export default function AdminPage() {
 <body>
 <div class="header">
   <div class="header-left">
-    <img class="header-logo" src="${origin}/logo-portal-aluno.png" alt="ACCBM" onerror="this.src='${origin}/logo-portal-aluno.png'"/>
+    <img class="header-logo" src="${origin}/logo-portal-aluno.png" alt="CCLN" onerror="this.src='${origin}/logo-portal-aluno.png'"/>
     <div class="header-text">
-      <div class="org">Associação Cultural de Capoeira Barão de Mauá</div>
+      <div class="org">Portal Aluno</div>
       <div class="title">${tipoIcon} Relatório — ${tipoLabel}</div>
       <div class="subtitle">${filtersInfo}</div>
     </div>
@@ -2253,7 +2199,7 @@ export default function AdminPage() {
 <div class="footer">
   <div style="display:flex;align-items:center;gap:8px;">
     <img class="footer-logo" src="${origin}/logo-portal-aluno.png" alt="" onerror="this.src='${origin}/logo-portal-aluno.png'"/>
-    <span>ACCBM — Associação Cultural de Capoeira Barão de Mauá</span>
+    <span>Portal Aluno</span>
   </div>
   <span>Emitido em ${now}</span>
 </div>
@@ -2303,15 +2249,14 @@ export default function AdminPage() {
             })}
             {/* Current profile badge — so mostra quando tem 1 nucleo */}
             {availableNucleos.length <= 1 && currentProfile && (
-              <div style={{ padding: '4px 10px', borderRadius: 20, background: `${isOwner ? '#7c3aed' : currentProfile.color}22`, border: `1px solid ${isOwner ? '#7c3aed' : currentProfile.color}55`, color: isOwner ? '#7c3aed' : currentProfile.color, fontSize: '0.75rem', fontWeight: 700 }}>
-                {isOwner ? 'Owner' : currentProfile.label}
+              <div style={{ padding: '4px 10px', borderRadius: 20, background: `${isOwner ? '#FF9200' : currentProfile.color}22`, border: `1px solid ${isOwner ? '#FF9200' : currentProfile.color}55`, color: isOwner ? '#FF9200' : currentProfile.color, fontSize: '0.75rem', fontWeight: 700 }}>
+                {isOwner ? 'Owner' : (loginLabel && !isOwner && activeNucleo !== 'geral' ? `${currentProfile.label} · ${loginLabel}` : currentProfile.label)}
               </div>
             )}
             <button
               onClick={() => {
-                const nk = activeNucleo || 'edson-alves';
                 setShowChangeCreds(true); setChangeError(''); setChangeDone(false);
-                setEditingProfile(nk); setNewPass(''); setNewPassConfirm(''); setNewPassConfirmPass('');
+                setEditingProfile(loginUser.trim() || 'owner'); setNewPass(''); setNewPassConfirm(''); setNewPassConfirmPass('');
                 setProfileEmail(''); setChangeEmailMsg('');
               }}
               style={{ background: 'rgba(29,78,216,0.1)', border: '1px solid rgba(29,78,216,0.3)', color: '#1d4ed8', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}
@@ -2395,6 +2340,7 @@ export default function AdminPage() {
             if (key === 'system-config') {
               setSystemConfigLoading(true);
               fetch('/api/admin/system-config').then(r => r.json()).then(d => { setSystemConfig(d); setSystemConfigLoading(false); }).catch(() => setSystemConfigLoading(false));
+              fetch('/api/admin/mestres').then(r => r.json()).then(d => { setBibliografiaMestres(d.mestres || []); }).catch(() => {});
             }
             if (key === 'dados-faltantes') { setLoadingRascunhos(true); fetch('/api/rascunhos').then(r => r.json()).then(d => { setRascunhos(d); setRascunhosCount(d.length); setLoadingRascunhos(false); }).catch(() => setLoadingRascunhos(false)); }
             if (key === 'manual') {
@@ -2700,7 +2646,7 @@ export default function AdminPage() {
           );
         })()}
 
-        {/* ── Documentos ACCBM — after tabs (admin always unlocked, somente download aqui) ────── */}
+        {/* ── Documentos CCLN — after tabs (admin always unlocked, somente download aqui) ────── */}
         <DocumentsBar
           adminAlwaysUnlocked
           readOnly={true}
@@ -2773,7 +2719,7 @@ export default function AdminPage() {
                     const age = now.getFullYear() - parseInt(s.data_nascimento.split('-')[0]);
                     const phone = (s.telefone || '').replace(/\D/g, '');
                     const br = phone.startsWith('55') ? phone : `55${phone}`;
-                    const msg = encodeURIComponent(`Feliz aniversário! Hoje o dia está mais alegre porque celebramos a sua vida.\n\nDesejamos que Deus ilumine cada passo do seu caminho, protegendo seus sonhos e derramando muitas bênçãos de saúde, paz e felicidade sobre você e toda a sua família.\n\nQue Ele seja sempre o seu guia, te dando forças para conquistar tudo o que deseja.\n\nÉ uma alegria enorme ter você conosco!\n\nAssociação Cultural de Capoeira Barão de Mauá 🥋`);
+                    const msg = encodeURIComponent(`Feliz aniversário! Hoje o dia está mais alegre porque celebramos a sua vida.\n\nDesejamos que Deus ilumine cada passo do seu caminho, protegendo seus sonhos e derramando muitas bênçãos de saúde, paz e felicidade sobre você e toda a sua família.\n\nQue Ele seja sempre o seu guia, te dando forças para conquistar tudo o que deseja.\n\nÉ uma alegria enorme ter você conosco!\n\nPortal Aluno 🥋`);
                     return (
                       <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(220,38,38,0.35)', borderRadius: 10, padding: '8px 12px' }}>
                         {s.foto_url
@@ -3097,7 +3043,7 @@ export default function AdminPage() {
                                 const phone = (student.telefone || '').replace(/\D/g, '');
                                 const br = phone.startsWith('55') ? phone : `55${phone}`;
                                 const msg = encodeURIComponent(
-`📋 *Termo de Autorização — Capoeira Barão de Mauá*
+`📋 *Termo de Autorização — Portal Aluno*
 
 Olá! Para concluir a inscrição de *${student.nome_completo}*, pedimos que o responsável legal assine o Termo de Autorização pelo link abaixo:
 
@@ -3105,7 +3051,7 @@ Olá! Para concluir a inscrição de *${student.nome_completo}*, pedimos que o r
 
 Basta acessar o link, preencher os dados e assinar eletronicamente.
 
-_Associação Cultural de Capoeira Barão de Mauá_`
+_Portal Aluno_`
                                 );
                                 window.open(`https://api.whatsapp.com/send?phone=${br}&text=${msg}`, '_blank');
                                 // Registra o envio e atualiza badge
@@ -3493,9 +3439,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
       {/* ===== ABA CERTIFICADO ===== */}
       {activeTab === 'certificado' && (() => {
         const sig = certStudent
-          ? (certStudent.nucleo === 'Mauá'
-            ? { nome: 'Mestre Márcio da Silva Frazão', cargo: 'Administrador - Portal Aluno', img: '/logo-portal-aluno.png' }
-            : { nome: 'Mestre Elionaldo Pontes de Lima', cargo: 'Vice-Administrador - Portal Aluno', img: '/assinatura-naldo.png' })
+          ? { nome: systemConfig?.signature_name || 'Direção Portal Aluno', cargo: systemConfig?.signature_role || 'Coordenação Geral', img: systemConfig?.signature_image_url || '/logo-portal-aluno.png' }
           : null;
 
         const printCertificado = async () => {
@@ -3528,15 +3472,15 @@ _Associação Cultural de Capoeira Barão de Mauá_`
           const phone = (certStudent.telefone || '').replace(/\D/g, '');
           const br = phone.startsWith('55') ? phone : `55${phone}`;
           const dataFmt = certData ? new Date(certData + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
-          const msg = encodeURIComponent(`🎓 *Certificado — Capoeira Barão de Mauá*\n\nOlá, *${certStudent.nome_completo}*!\n\nParabéns pela sua graduação em *${certGraduacao || certStudent.graduacao}*!\n\n📅 Data: ${dataFmt}\n📍 Local: ${certLocal || 'ACCBM'}\n🎉 Evento: ${certEvento || 'Batizado / Troca de Cordas'}\n\n_Associação Cultural de Capoeira Barão de Mauá_\nAxé! 🤸`);
+          const msg = encodeURIComponent(`🎓 *Certificado — Portal Aluno*\n\nOlá, *${certStudent.nome_completo}*!\n\nParabéns pela sua graduação em *${certGraduacao || certStudent.graduacao}*!\n\n📅 Data: ${dataFmt}\n📍 Local: ${certLocal || 'CCLN'}\n🎉 Evento: ${certEvento || 'Batizado / Troca de Cordas'}\n\n_Portal Aluno_\nAxé! 🤸`);
           window.open(`https://api.whatsapp.com/send?phone=${br}&text=${msg}`, '_blank');
         };
 
         const sendCertEmail = () => {
           if (!certStudent) return;
           const dataFmt = certData ? new Date(certData + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
-          const subject = encodeURIComponent(`Certificado — ${certGraduacao || certStudent.graduacao} — Capoeira Barão de Mauá`);
-          const body = encodeURIComponent(`Certificado de Graduação — Capoeira Barão de Mauá\n\nAluno(a): ${certStudent.nome_completo}\nGraduação: ${certGraduacao || certStudent.graduacao}\nEvento: ${certEvento || 'Batizado / Troca de Cordas'}\nData: ${dataFmt}\nLocal: ${certLocal || 'ACCBM'}\n\nParabéns pelo desempenho!\nAssociação Cultural de Capoeira Barão de Mauá\nAxé!`);
+          const subject = encodeURIComponent(`Certificado — ${certGraduacao || certStudent.graduacao} — Portal Aluno`);
+          const body = encodeURIComponent(`Certificado de Graduação — Portal Aluno\n\nAluno(a): ${certStudent.nome_completo}\nGraduação: ${certGraduacao || certStudent.graduacao}\nEvento: ${certEvento || 'Batizado / Troca de Cordas'}\nData: ${dataFmt}\nLocal: ${certLocal || 'CCLN'}\n\nParabéns pelo desempenho!\nPortal Aluno\nAxé!`);
           window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
         };
 
@@ -3678,7 +3622,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
                       a.href = url;
-                      a.download = 'modelo-certificado-ACCBM.svg';
+                      a.download = 'modelo-certificado-CCLN.svg';
                       document.body.appendChild(a);
                       a.click();
                       document.body.removeChild(a);
@@ -3775,9 +3719,9 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     {/* Logo + org name */}
-                    <img src="/logo-portal-aluno.png" alt="ACCBM" style={{ width: 52, height: 52, objectFit: 'contain', marginBottom: 4 }} />
+                    <img src="/logo-portal-aluno.png" alt="CCLN" style={{ width: 52, height: 52, objectFit: 'contain', marginBottom: 4 }} />
                     <div style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#92400e' }}>
-                      Associação Cultural de Capoeira Barão de Mauá
+                      Portal Aluno
                     </div>
                     <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,#b45309,transparent)', margin: '10px 0' }} />
                     <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#78350f', letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1.2 }}>
@@ -3988,10 +3932,10 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                   const svgHtml = svgEl ? svgEl.outerHTML : '';
                   const now = new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
                   const dateStr = now.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
-                  pw.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatório Mensal — ACCBM</title>
+                  pw.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatório Mensal — CCLN</title>
                     <style>*{margin:0;padding:0;box-sizing:border-box;} @page{size:A4 landscape;margin:15mm} body{font-family:Arial,sans-serif;padding:20px;} h1{font-size:16px;color:#1e3a8a;margin-bottom:4px;} .sub{font-size:11px;color:#64748b;margin-bottom:16px;} svg{width:100%;}</style>
                     </head><body>
-                    <h1>📊 Relatório Mensal de Presenças — Capoeira Barão de Mauá</h1>
+                    <h1>📊 Relatório Mensal de Presenças — Portal Aluno</h1>
                     <div class="sub">Gerado em ${dateStr} · ${total} alunos · Período: últimos ${relDias} dias</div>
                     ${svgHtml}
                     <script>window.onload=()=>{window.print();setTimeout(()=>pw.close(),1500);}<\/script>
@@ -5189,7 +5133,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                   {finStudent.telefone && (() => {
                     const tel = finStudent.telefone.replace(/\D/g, '');
                     const phone = tel.startsWith('55') ? tel : `55${tel}`;
-                    const waMsg = encodeURIComponent(`Olá ${finStudent.nome_completo.split(' ')[0]}, segue informação da sua ficha financeira na Associação Cultural de Capoeira Barão de Mauá.`);
+                    const waMsg = encodeURIComponent(`Olá ${finStudent.nome_completo.split(' ')[0]}, segue informação da sua ficha financeira na Portal Aluno.`);
                     return (
                       <a href={`https://api.whatsapp.com/send?phone=${phone}&text=${waMsg}`} target="_blank" rel="noreferrer"
                         style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 13px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}>
@@ -5310,7 +5254,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                           : `${numParc}× de R$ ${f.batizado.parcelas[0]?.valor?.toFixed(2)} (total ${totalLabel})`;
 
                         // Confirmation message for event
-                        const confirmMsg = `Olá ${firstName}! 🥋\n\nSeu batizado foi registrado com sucesso na Associação Cultural de Capoeira Barão de Mauá.\n\n💰 Forma de pagamento: ${parcLabel}\n${f.batizado.parcelas.map((p: any) => `  • Parcela ${p.numero}: R$ ${p.valor.toFixed(2)} — vence ${p.vencimento ? new Date(p.vencimento + 'T12:00:00').toLocaleDateString('pt-BR') : 'a definir'}`).join('\n')}\n\nQualquer dúvida, estamos à disposição. 🤝`;
+                        const confirmMsg = `Olá ${firstName}! 🥋\n\nSeu batizado foi registrado com sucesso na Portal Aluno.\n\n💰 Forma de pagamento: ${parcLabel}\n${f.batizado.parcelas.map((p: any) => `  • Parcela ${p.numero}: R$ ${p.valor.toFixed(2)} — vence ${p.vencimento ? new Date(p.vencimento + 'T12:00:00').toLocaleDateString('pt-BR') : 'a definir'}`).join('\n')}\n\nQualquer dúvida, estamos à disposição. 🤝`;
                         const waConfirmLink = buildWaLink(confirmMsg);
 
                         return (
@@ -5400,7 +5344,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                             const atrasado = displayStatus === 'atrasado';
                             const aguardando = displayStatus === 'aguardando_confirmacao';
                             // WhatsApp vencimento alert
-                            const alertMsg = `⏰ Aviso de vencimento — ACCBM\n\nOlá ${firstName}! Sua parcela ${p.numero}/${numParc} do batizado está próxima do vencimento.\n\n💰 Valor: R$ ${p.valor.toFixed(2)}\n📅 Vencimento: ${p.vencimento ? new Date(p.vencimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}\n\nEvite atrasos e quite em dia. Qualquer dúvida, estamos à disposição. 🙏`;
+                            const alertMsg = `⏰ Aviso de vencimento — CCLN\n\nOlá ${firstName}! Sua parcela ${p.numero}/${numParc} do batizado está próxima do vencimento.\n\n💰 Valor: R$ ${p.valor.toFixed(2)}\n📅 Vencimento: ${p.vencimento ? new Date(p.vencimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}\n\nEvite atrasos e quite em dia. Qualquer dúvida, estamos à disposição. 🙏`;
                             const waAlertLink = buildWaLink(alertMsg);
                             const cardBg = atrasado ? 'rgba(220,38,38,0.05)' : vencendo ? 'rgba(234,179,8,0.05)' : p.status === 'pago' ? 'rgba(22,163,74,0.04)' : 'var(--bg-input)';
                             const cardBorder = atrasado ? 'rgba(220,38,38,0.3)' : vencendo ? 'rgba(234,179,8,0.3)' : aguardando ? 'rgba(234,179,8,0.25)' : p.status === 'pago' ? 'rgba(22,163,74,0.2)' : 'var(--border)';
@@ -6126,7 +6070,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                         @media print { body { padding: 20px; } }
                       </style></head><body>
                       <div class="header">
-                        <h1>Associação Cultural de Capoeira Barão de Mauá</h1>
+                        <h1>Portal Aluno</h1>
                         <p>CNPJ: 58.860.408/0001-13</p>
                         <p>Recibo de Doação</p>
                       </div>
@@ -6142,7 +6086,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                         <div class="valor">${valorFormatado}</div>
                       </div>
                       <p style="font-size:12px;text-align:justify;margin-bottom:24px;">
-                        A Associação Cultural de Capoeira Barão de Mauá, CNPJ 58.860.408/0001-13, declara ter recebido a doação acima
+                        A Portal Aluno, CNPJ 58.860.408/0001-13, declara ter recebido a doação acima
                         descrita, destinada ao desenvolvimento de atividades culturais, sociais e esportivas de capoeira junto às comunidades
                         atendidas pela associação.
                       </p>
@@ -6152,7 +6096,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                         </div>
                         <div class="ass-line">
                           <p>Assinatura do Responsável</p>
-                          <p style="margin-top:4px;font-size:11px;">Associação Cultural de Capoeira Barão de Mauá</p>
+                          <p style="margin-top:4px;font-size:11px;">Portal Aluno</p>
                         </div>
                       </div>
                       <script>window.onload=()=>{window.print();}<\/script>
@@ -7634,8 +7578,8 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                   })();
                   const waNome = (r.nome_completo || 'Aluno').split(' ')[0];
                   const waMsg = isCompleto
-                    ? encodeURIComponent(`Olá ${waNome}! Seu pré-cadastro na Associação Cultural de Capoeira Barão de Mauá está completo e pronto para ser finalizado pelo responsável do núcleo. Em breve você receberá a confirmação. 🥋`)
-                    : encodeURIComponent(`Olá ${waNome}! Seu pré-cadastro na Associação Cultural de Capoeira Barão de Mauá precisa de atenção.\n\n📋 *Dados que ainda precisam ser preenchidos:*\n${pendentes.map((p: string) => `• ${p}`).join('\n')}\n\nAcesse o link do formulário, corrija as informações e salve novamente para completar seu cadastro. 🥋`);
+                    ? encodeURIComponent(`Olá ${waNome}! Seu pré-cadastro na Portal Aluno está completo e pronto para ser finalizado pelo responsável do núcleo. Em breve você receberá a confirmação. 🥋`)
+                    : encodeURIComponent(`Olá ${waNome}! Seu pré-cadastro na Portal Aluno precisa de atenção.\n\n📋 *Dados que ainda precisam ser preenchidos:*\n${pendentes.map((p: string) => `• ${p}`).join('\n')}\n\nAcesse o link do formulário, corrija as informações e salve novamente para completar seu cadastro. 🥋`);
 
                   return (
                     <div key={r.id} style={{ background: bgAccent as any, border: `2px solid ${borderColor}33`, borderLeft: `4px solid ${borderColor}`, borderRadius: 12, overflow: 'hidden' }}>
@@ -7900,8 +7844,8 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                   @media print{body{padding:14px};@page{size:A4 landscape;margin:1cm}}</style></head>
                   <body>
                   <div class="header">
-                    <img src="${origin}/logo-portal-aluno.png" alt="ACCBM" onerror="this.src='${origin}/logo-portal-aluno.png'"/>
-                    <div><div class="assoc">Associação Cultural de Capoeira Barão de Mauá</div>
+                    <img src="${origin}/logo-portal-aluno.png" alt="CCLN" onerror="this.src='${origin}/logo-portal-aluno.png'"/>
+                    <div><div class="assoc">Portal Aluno</div>
                     <div class="title">📋 Relatório de Alunos</div>
                     <div class="sub">Núcleo: <strong>${nucleoLabel}</strong> &nbsp;|&nbsp; Mês: <strong>${mesLabel}</strong> &nbsp;|&nbsp; Total: <strong>${relAlunosList.length} alunos</strong></div></div>
                   </div>
@@ -8276,7 +8220,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
               </div>
             </div>
 
-            {/* ACCBM ID */}
+            {/* CCLN ID */}
             {(studentDisplayIds[selected.id]) && (
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg,#6366f1,#4f46e5)', borderRadius: 8, padding: '6px 16px', marginBottom: 16 }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
@@ -8572,7 +8516,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                       const phone = (selected.telefone || '').replace(/\D/g, '');
                       const br = phone.startsWith('55') ? phone : `55${phone}`;
                       const msg = encodeURIComponent(
-`🎖️ *Carteirinha ACCBM — Capoeira Barão de Mauá*\n\nOlá, *${selected.nome_completo}*! Sua carteirinha de associado está disponível. Toque no link abaixo para visualizar e imprimir:\n\n🔗 ${url}\n\n_Associação Cultural de Capoeira Barão de Mauá_`
+`🎖️ *Carteirinha CCLN — Portal Aluno*\n\nOlá, *${selected.nome_completo}*! Sua carteirinha de associado está disponível. Toque no link abaixo para visualizar e imprimir:\n\n🔗 ${url}\n\n_Portal Aluno_`
                       );
                       window.open(phone.length >= 10 ? `https://api.whatsapp.com/send?phone=${br}&text=${msg}` : `https://api.whatsapp.com/send?text=${msg}`, '_blank');
                     }}
@@ -9293,7 +9237,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                   const nome = (r.nome_completo || 'Aluno').split(' ')[0];
                   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://inscri-o-capoeira-bar-o-de-mau.vercel.app';
                   const msg = encodeURIComponent(
-                    `Olá ${nome}! 👋\n\nIdentificamos que seu cadastro na *Associação Cultural de Capoeira Barão de Mauá* está incompleto.\n\n📋 *Dados que ainda faltam:*\n${pendentes.map((p: string) => `• ${p}`).join('\n')}\n\nPor favor, acesse o link abaixo para completar seu cadastro:\n${appUrl}\n\nQualquer dúvida, entre em contato com seu núcleo. 🥋`
+                    `Olá ${nome}! 👋\n\nIdentificamos que seu cadastro na *Portal Aluno* está incompleto.\n\n📋 *Dados que ainda faltam:*\n${pendentes.map((p: string) => `• ${p}`).join('\n')}\n\nPor favor, acesse o link abaixo para completar seu cadastro:\n${appUrl}\n\nQualquer dúvida, entre em contato com seu núcleo. 🥋`
                   );
                   return (
                     <div key={r.id} style={{ background: 'var(--bg-card)', border: '2px solid rgba(220,38,38,0.15)', borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -10033,16 +9977,20 @@ _Associação Cultural de Capoeira Barão de Mauá_`
       {/* ===== ABAS ESTATUTO / REGIMENTO / BIBLIOGRAFIA — uploader direto via /api/docs ===== */}
       {(activeTab === 'estatuto' || activeTab === 'regimento' || activeTab === 'bibliografia') && (() => {
         const docConfigs: Record<string, Array<{ key: string; label: string; color: string; icon: string }>> = {
-          estatuto:    [{ key: 'accbm_estatuto',    label: 'Estatuto Social',          color: '#dc2626', icon: '📄' }],
-          regimento:   [{ key: 'accbm_regimento',   label: 'Regimento Interno',        color: '#1d4ed8', icon: '📝' }],
-          bibliografia:[
-            { key: 'accbm_bio_frazao', label: 'Mestre Márcio Frazão — Portfólio', color: '#dc2626', icon: '🥋' },
-            { key: 'accbm_bio_naldo',  label: 'Mestre Naldo Magrinho — Portfólio', color: '#16a34a', icon: '🥋' },
-          ],
+          estatuto:    [{ key: 'pa_estatuto',    label: 'Estatuto Social',          color: '#dc2626', icon: '📄' }],
+          regimento:   [{ key: 'pa_regimento',   label: 'Regimento Interno',        color: '#1d4ed8', icon: '📝' }],
+          bibliografia: bibliografiaMestres.length > 0
+            ? bibliografiaMestres.map((m, i) => ({
+                key: `pa_bio_mestre_${m.id}`,
+                label: `${m.nome} — Portfólio`,
+                color: ['#dc2626', '#16a34a', '#1d4ed8', '#7c3aed', '#ea580c', '#0891b2'][i % 6],
+                icon: '🥋',
+              }))
+            : [{ key: 'pa_bio_mestres', label: 'Portfólios dos Mestres', color: '#16a34a', icon: '🥋' }],
         };
         const docs = docConfigs[activeTab] || [];
         const tabTitle = activeTab === 'estatuto' ? '📄 Estatuto Social' : activeTab === 'regimento' ? '📝 Regimento Interno' : '📚 Bibliografia dos Mestres';
-        const tabSub   = activeTab === 'estatuto' ? 'Estatuto Social da Associação Cultural de Capoeira Barão de Mauá' : activeTab === 'regimento' ? 'Regimento Interno' : 'Portfólios e referências bibliográficas dos mestres';
+        const tabSub   = activeTab === 'estatuto' ? 'Estatuto Social do Portal Aluno' : activeTab === 'regimento' ? 'Regimento Interno' : 'Portfólios e referências bibliográficas dos mestres';
         return (
           <div>
             <div style={{ marginBottom: 20 }}>
@@ -10236,7 +10184,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                   placeholder="re_xxxxxxxxxxxxxxxxxxxx (API Key do Resend)"
                   style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', fontSize: '0.85rem', fontFamily: 'monospace' }} />
                 <input value={emailCfg.resend_from || ''} onChange={e => setEmailCfg(prev => ({ ...prev, resend_from: e.target.value }))}
-                  placeholder="ACCBM <noreply@accbm.com.br> (remetente)"
+                  placeholder="CCLN <noreply@portalaluno.app> (remetente)"
                   style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
               </div>
             )}
@@ -10261,7 +10209,7 @@ _Associação Cultural de Capoeira Barão de Mauá_`
                   placeholder="Senha de App (16 caracteres — ex: xxxx xxxx xxxx xxxx)"
                   style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
                 <input value={emailCfg.smtp_from || ''} onChange={e => setEmailCfg(prev => ({ ...prev, smtp_from: e.target.value }))}
-                  placeholder="ACCBM <seuemail@gmail.com> (opcional, usa o usuário se vazio)"
+                  placeholder="CCLN <seuemail@gmail.com> (opcional, usa o usuário se vazio)"
                   style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
               </div>
             )}
@@ -10594,7 +10542,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                     <div style={{ background: ev.finalizado ? 'linear-gradient(135deg,#166534,#15803d)' : 'linear-gradient(135deg,#0c4a6e,#0ea5e9)', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                       <div>
                         <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem' }}>
-                          {ev.tipo === 'batizado' ? '🥋' : '🎓'} {ev.nome || (ev.tipo === 'batizado' ? 'Batizado' : 'Troca de Graduação')}
+                          {ev.tipo === 'batizado' ? '🥋' : ev.tipo === 'troca' ? '🎓' : '✨'} {ev.nome || (ev.tipo === 'batizado' ? 'Batizado' : ev.tipo === 'troca' ? 'Troca de Graduação' : 'Evento')}
                         </div>
                         <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.75rem', marginTop: 2 }}>
                           {ev.tipo === 'batizado' ? t('admin_event_batizado') : t('admin_event_troca')}
@@ -10748,10 +10696,10 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                           </style></head>
                           <body>
                           <div class="header">
-                            <img src="${origin}/logo-portal-aluno.png" alt="ACCBM" onerror="this.src='${origin}/logo-portal-aluno.png'"/>
+                            <img src="${origin}/logo-portal-aluno.png" alt="CCLN" onerror="this.src='${origin}/logo-portal-aluno.png'"/>
                             <div class="header-text">
-                              <div class="assoc-name">Associação Cultural de Capoeira Barão de Mauá</div>
-                              <div class="badge">${ev.tipo === 'batizado' ? 'Batizado' : 'Troca de Graduação'}</div>
+                              <div class="assoc-name">Portal Aluno</div>
+                              <div class="badge">${ev.tipo === 'batizado' ? 'Batizado' : ev.tipo === 'troca' ? 'Troca de Graduação' : 'Evento'}</div>
                               <div class="event-title">${ev.nome}</div>
                             </div>
                           </div>
@@ -10857,9 +10805,9 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                   @media print{body{padding:12px 14px};@page{size:landscape;margin:1cm}}
                 </style></head><body>
                 <div class="header">
-                  <img src="${glOrigin}/logo-portal-aluno.png" alt="ACCBM" onerror="this.src='${glOrigin}/logo-portal-aluno.png'"/>
+                  <img src="${glOrigin}/logo-portal-aluno.png" alt="CCLN" onerror="this.src='${glOrigin}/logo-portal-aluno.png'"/>
                   <div>
-                    <div class="assoc-name">Associação Cultural de Capoeira Barão de Mauá</div>
+                    <div class="assoc-name">Portal Aluno</div>
                     <h1>📋 Lista Geral de Participantes${filtroLabel}</h1>
                     <p class="sub">Batizados e Trocas de Graduação · Emissão: ${new Date().toLocaleDateString('pt-BR')}</p>
                   </div>
@@ -10968,7 +10916,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                   {eventoEditId ? t('admin_event_edit_title') : t('admin_event_new_title')}
                 </div>
                 <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.75rem', marginTop: 2 }}>
-                  {eventoForm.tipo === 'batizado' ? t('admin_event_batizado') : t('admin_event_troca')}
+                  {eventoForm.tipo === 'batizado' ? t('admin_event_batizado') : eventoForm.tipo === 'troca' ? t('admin_event_troca') : 'Evento personalizado'}
                 </div>
               </div>
               <button onClick={() => setShowEventoForm(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
@@ -10977,8 +10925,8 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
             {/* Tipo selector */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('admin_event_type_label')}</label>
-              <div style={{ display: 'flex', gap: 10 }}>
-                {[{ v: 'batizado', label: `🥋 ${t('admin_event_batizado')}` }, { v: 'troca', label: `🎓 ${t('admin_event_troca')}` }].map(opt => (
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {[{ v: 'batizado', label: `🥋 ${t('admin_event_batizado')}` }, { v: 'troca', label: `🎓 ${t('admin_event_troca')}` }, { v: 'outros', label: '✨ Outros' }].map(opt => (
                   <button key={opt.v} onClick={() => setEventoForm((f: any) => ({ ...f, tipo: opt.v }))}
                     style={{ flex: 1, padding: '9px 14px', border: `2px solid ${eventoForm.tipo === opt.v ? '#0ea5e9' : 'var(--border)'}`, borderRadius: 10, background: eventoForm.tipo === opt.v ? 'rgba(14,165,233,0.12)' : 'var(--bg)', color: eventoForm.tipo === opt.v ? '#38bdf8' : 'var(--text-secondary)', fontWeight: eventoForm.tipo === opt.v ? 700 : 500, cursor: 'pointer', fontSize: '0.85rem', transition: 'all 0.15s' }}>
                     {opt.label}
@@ -10992,7 +10940,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
               <div style={{ gridColumn: '1/-1' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4 }}>{t('admin_event_name_label')} *</label>
                 <input value={eventoForm.nome || ''} onChange={e => setEventoForm((f: any) => ({ ...f, nome: e.target.value }))}
-                  placeholder={eventoForm.tipo === 'batizado' ? 'Ex: Batizado 2025 — ACCBM' : 'Ex: Troca de Cordas — Março 2025'}
+                  placeholder={eventoForm.tipo === 'batizado' ? 'Ex: Batizado 2025' : eventoForm.tipo === 'troca' ? 'Ex: Troca de Cordas — Março 2025' : 'Ex: Encontro de Mestres 2025'}
                   style={{ width: '100%', padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-primary)', fontSize: '0.9rem', boxSizing: 'border-box' }} />
               </div>
               <div>
@@ -11199,16 +11147,16 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                       @media print{body{padding:14px};@page{size:landscape;margin:1cm}}</style></head>
                       <body>
                       <div class="header">
-                        <img src="${origin}/logo-portal-aluno.png" alt="ACCBM" onerror="this.src='${origin}/logo-portal-aluno.png'"/>
-                        <div><div class="assoc">Associação Cultural de Capoeira Barão de Mauá</div>
-                        <div class="title">${eventoForm.tipo==='batizado'?'Batizado':'Troca de Graduação'}: ${eventoForm.nome||'—'}</div>
+                        <img src="${origin}/logo-portal-aluno.png" alt="CCLN" onerror="this.src='${origin}/logo-portal-aluno.png'"/>
+                        <div><div class="assoc">Portal Aluno</div>
+                        <div class="title">${eventoForm.tipo==='batizado'?'Batizado':eventoForm.tipo==='troca'?'Troca de Graduação':'Evento'}: ${eventoForm.nome||'—'}</div>
                         <div style="font-size:0.82rem;color:#64748b">Data: <strong>${dataFmt}</strong>${eventoForm.hora?` &nbsp;|&nbsp; Horário: <strong>${eventoForm.hora}</strong>`:''}${eventoForm.local?` &nbsp;|&nbsp; Local: <strong>${eventoForm.local}</strong>`:''} &nbsp;|&nbsp; Participantes: <strong>${(eventoForm.participantes||[]).length}</strong></div></div>
                       </div>
                       <table><thead><tr><td>#</td><td>Nome Completo</td><td>Núcleo</td><td>Graduação Atual</td><td></td><td>Nova Graduação</td><td>Assinatura</td></tr></thead>
                       <tbody>${rows}</tbody></table>
                       <div class="footer">
                         <div class="sig"><div class="sig-line">Responsável / Mestre</div></div>
-                        <div style="text-align:center;font-size:0.65rem;color:#94a3b8">Gerado em ${new Date().toLocaleString('pt-BR')}<br/><strong>ACCBM — Associação Cultural de Capoeira Barão de Mauá</strong></div>
+                        <div style="text-align:center;font-size:0.65rem;color:#94a3b8">Gerado em ${new Date().toLocaleString('pt-BR')}<br/><strong>Portal Aluno</strong></div>
                         <div class="sig"><div class="sig-line">Secretário(a)</div></div>
                       </div></body></html>`;
                       const w = window.open('', '_blank');
@@ -11690,7 +11638,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
           {/* Create account */}
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
             <h3 style={{ margin: '0 0 4px', fontSize: '0.95rem', color: 'var(--text-primary)' }}>➕ Criar conta para aluno</h3>
-            <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Login gerado automaticamente: nome + ID sequencial ACCBM. Senha informada aqui é a senha inicial do aluno.</p>
+            <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Login gerado automaticamente: nome + ID sequencial CCLN. Senha informada aqui é a senha inicial do aluno.</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12, marginBottom: 14 }}>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Nome Completo do Aluno *</label>
@@ -11781,7 +11729,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
             <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '14px 16px', fontSize: '0.82rem', color: '#14532d', lineHeight: 1.7, fontFamily: 'monospace', whiteSpace: 'pre-wrap', userSelect: 'text' }}>
 {`Olá! Tudo bem? 👋🏽
 
-Somos da Associação Cultural de Capoeira Barão de Mauá.
+Somos da Portal Aluno.
 
 Para finalizar seu cadastro e liberar seu acesso à área do aluno, precisamos que você nos informe um *e-mail válido*.
 
@@ -11789,7 +11737,7 @@ Assim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍�
             </div>
             <button
               onClick={() => {
-                const template = `Olá! Tudo bem? 👋🏽\n\nSomos da Associação Cultural de Capoeira Barão de Mauá.\n\nPara finalizar seu cadastro e liberar seu acesso à área do aluno, precisamos que você nos informe um *e-mail válido*.\n\nAssim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍🏽`;
+                const template = `Olá! Tudo bem? 👋🏽\n\nSomos da Portal Aluno.\n\nPara finalizar seu cadastro e liberar seu acesso à área do aluno, precisamos que você nos informe um *e-mail válido*.\n\nAssim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍🏽`;
                 navigator.clipboard.writeText(template).then(() => {
                   setContasMsg('✅ Texto copiado para a área de transferência!');
                   setTimeout(() => setContasMsg(''), 3000);
@@ -12050,9 +11998,9 @@ Assim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍�
                                 const bulkMsg = encodeURIComponent(
 `Olá! Tudo bem? 👋🏽
 
-Somos da Associação Cultural de Capoeira Barão de Mauá. Precisamos que você crie sua conta na área do aluno para ter acesso completo à plataforma.
+Somos da Portal Aluno. Precisamos que você crie sua conta na área do aluno para ter acesso completo à plataforma.
 
-Acesse agora: ${process.env.NEXT_PUBLIC_APP_URL || 'https://accbm.vercel.app'}/aluno
+Acesse agora: ${process.env.NEXT_PUBLIC_APP_URL || 'https://portal-aluno.vercel.app'}/aluno
 
 Com sua conta você poderá:
 ✅ Registrar sua presença nos treinos
@@ -12063,7 +12011,7 @@ Com sua conta você poderá:
 A criação da conta é necessária para participar do batizado e troca de graduação.
 
 Atenciosamente,
-Associação Cultural de Capoeira Barão de Mauá 🥋`
+Portal Aluno 🥋`
                                 );
                                 let i = 0;
                                 const openNext = () => {
@@ -12095,9 +12043,9 @@ Associação Cultural de Capoeira Barão de Mauá 🥋`
                             const msg = encodeURIComponent(
 `Olá! Tudo bem? 👋🏽
 
-Somos da Associação Cultural de Capoeira Barão de Mauá. Precisamos que você crie sua conta na área do aluno para ter acesso completo à plataforma.
+Somos da Portal Aluno. Precisamos que você crie sua conta na área do aluno para ter acesso completo à plataforma.
 
-Acesse agora: ${process.env.NEXT_PUBLIC_APP_URL || 'https://accbm.vercel.app'}/aluno
+Acesse agora: ${process.env.NEXT_PUBLIC_APP_URL || 'https://portal-aluno.vercel.app'}/aluno
 
 Com sua conta você poderá:
 ✅ Registrar sua presença nos treinos
@@ -12108,7 +12056,7 @@ Com sua conta você poderá:
 A criação da conta é necessária para participar do batizado e troca de graduação.
 
 Atenciosamente,
-Associação Cultural de Capoeira Barão de Mauá 🥋`
+Portal Aluno 🥋`
                             );
                             return (
                               <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '3px 6px 3px 10px' }}>
@@ -12272,7 +12220,7 @@ Associação Cultural de Capoeira Barão de Mauá 🥋`
                         const msg = encodeURIComponent(
 `Olá! 👋
 
-Somos da Associa��ão Cultural de Capoeira Barão de Mauá.
+Somos da Associa��ão Cultural de Portal Aluno.
 
 Precisamos que você acesse a área do aluno, crie sua conta e, em seguida, entre novamente com essa conta para finalizar o seu cadastro.
 
@@ -12661,19 +12609,19 @@ Suporte Ginga Gestão.`
                         style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem' }} />
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Nome da Organizacao</label>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Nome do Grupo / Organização</label>
                       <input value={systemConfig.organization_name || ''} onChange={e => setSystemConfig({ ...systemConfig, organization_name: e.target.value })}
-                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem' }} />
+                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem' }} placeholder="Ex: Associação Cultural de Capoeira ..." />
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Sigla (para IDs)</label>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Sigla (aparece na carteirinha e IDs)</label>
                       <input value={systemConfig.organization_short || ''} onChange={e => setSystemConfig({ ...systemConfig, organization_short: e.target.value.toUpperCase() })}
-                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem' }} placeholder="CCLN-000" />
+                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem' }} placeholder="CCLN" />
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Prefixo do ID</label>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Prefixo do ID (ex: CCLN-001)</label>
                       <input value={systemConfig.id_prefix || ''} onChange={e => setSystemConfig({ ...systemConfig, id_prefix: e.target.value.toUpperCase() })}
-                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem' }} placeholder="CCLN-000" />
+                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem' }} placeholder="CCLN" />
                     </div>
                     {/* Logos e Imagens */}
                     <div style={{ marginTop: 8, padding: 12, background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 10 }}>
@@ -12696,6 +12644,63 @@ Suporte Ginga Gestão.`
                             style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.8rem' }} placeholder="/assinatura.png ou https://..." />
                         </div>
                       </div>
+                    </div>
+                    {/* Mestres — bibliografia dinâmica */}
+                    <div style={{ marginTop: 8, padding: 12, background: 'rgba(22,163,74,0.05)', border: '1px solid rgba(22,163,74,0.2)', borderRadius: 10 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#16a34a', marginBottom: 4 }}>📚 Bibliografia dos Mestres</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 10 }}>
+                        Cada mestre cadastrado ganha um slot próprio de portfólio na aba Bibliografia e no menu de documentos.
+                      </div>
+                      {bibliografiaMestres.length === 0 ? (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: 10 }}>Nenhum mestre cadastrado ainda.</div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                          {bibliografiaMestres.map(m => (
+                            <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px' }}>
+                              <span style={{ fontSize: '0.85rem' }}>🥋</span>
+                              <input
+                                value={m.nome}
+                                onChange={e => setBibliografiaMestres(prev => prev.map(x => x.id === m.id ? { ...x, nome: e.target.value } : x))}
+                                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: '0.82rem', fontWeight: 600 }}
+                              />
+                              <button
+                                onClick={async () => {
+                                  const nova = bibliografiaMestres.filter(x => x.id !== m.id);
+                                  setBibliografiaMestres(nova);
+                                  try { await fetch('/api/admin/mestres', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mestres: nova }) }); setMestresMsg('Mestre removido.'); setTimeout(() => setMestresMsg(''), 2500); } catch {}
+                                }}
+                                style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: '#ef4444', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700 }}
+                                aria-label={`Remover ${m.nome}`}
+                              >🗑</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                          value={novoMestreNome}
+                          onChange={e => { setNovoMestreNome(e.target.value); setMestresMsg(''); }}
+                          placeholder="Nome do mestre (ex: Mestre João da Silva)"
+                          onKeyDown={async e => {
+                            if (e.key === 'Enter' && novoMestreNome.trim().length >= 3) {
+                              const nova = [...bibliografiaMestres, { id: `mestre_${Date.now()}`, nome: novoMestreNome.trim() }];
+                              setBibliografiaMestres(nova); setNovoMestreNome('');
+                              try { await fetch('/api/admin/mestres', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mestres: nova }) }); setMestresMsg('✓ Mestre adicionado — faça o upload do portfólio na aba Bibliografia.'); setTimeout(() => setMestresMsg(''), 4000); } catch {}
+                            }
+                          }}
+                          style={{ flex: 1, padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                        />
+                        <button
+                          disabled={novoMestreNome.trim().length < 3}
+                          onClick={async () => {
+                            const nova = [...bibliografiaMestres, { id: `mestre_${Date.now()}`, nome: novoMestreNome.trim() }];
+                            setBibliografiaMestres(nova); setNovoMestreNome('');
+                            try { await fetch('/api/admin/mestres', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mestres: nova }) }); setMestresMsg('✓ Mestre adicionado — faça o upload do portfólio na aba Bibliografia.'); setTimeout(() => setMestresMsg(''), 4000); } catch {}
+                          }}
+                          style={{ padding: '8px 14px', background: novoMestreNome.trim().length < 3 ? 'var(--bg-input)' : 'linear-gradient(135deg,#16a34a,#15803d)', border: '1px solid rgba(22,163,74,0.3)', color: novoMestreNome.trim().length < 3 ? 'var(--text-secondary)' : '#fff', borderRadius: 6, cursor: novoMestreNome.trim().length < 3 ? 'not-allowed' : 'pointer', fontSize: '0.78rem', fontWeight: 700 }}
+                        >➕ Adicionar</button>
+                      </div>
+                      {mestresMsg && <div style={{ marginTop: 8, fontSize: '0.75rem', color: mestresMsg.startsWith('✓') || mestresMsg === 'Mestre removido.' ? '#22c55e' : '#ef4444', fontWeight: 600 }}>{mestresMsg}</div>}
                     </div>
                   </div>
                 </div>
@@ -12802,6 +12807,8 @@ Suporte Ginga Gestão.`
                         setSystemConfigMsg('Configuracoes salvas com sucesso!');
                         setSystemConfig(data.config);
                         invalidateConfigCache(); // Invalida cache para atualizar em toda a plataforma
+                        // Sincroniza também com a tabela lida pelas páginas públicas
+                        fetch('/api/admin/sync-system-config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config: data.config }) }).catch(() => {});
                       } else {
                         setSystemConfigMsg('Erro: ' + (data.error || 'Falha ao salvar'));
                       }
@@ -12912,21 +12919,23 @@ Suporte Ginga Gestão.`
                   </div>
                 )}
 
-                {/* Criar conta avulsa para um núcleo sem conta */}
+                {/* Criar conta avulsa para um núcleo — permite vários admins por núcleo */}
                 {(() => {
                   const contasNucleos = new Set(respUsers.map((u: any) => u.nucleo));
                   const nucleosSemConta = dynamicNucleos.filter(n => !contasNucleos.has(n.slug));
+                  const nucleosOrdenados = [...nucleosSemConta, ...dynamicNucleos.filter(n => contasNucleos.has(n.slug))];
                   return (
                     <div style={{ borderTop: '1px solid var(--border)', paddingTop: 18 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', marginBottom: 12 }}>➕ Criar Conta para um Núcleo</div>
+                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', marginBottom: 4 }}>➕ Adicionar Admin a um Núcleo</div>
+                      <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', marginBottom: 12 }}>Um núcleo pode ter vários admins — cada um com seu próprio login e senha.</div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
                         <div>
                           <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Núcleo</div>
                           <select value={respNewNucleo} onChange={e => { setRespNewNucleo(e.target.value); setRespCreateMsg(''); }}
                             style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none' }}>
-                            <option value="">{nucleosSemConta.length === 0 ? 'Todos os núcleos já têm conta' : 'Selecione o núcleo'}</option>
-                            {nucleosSemConta.map(n => (
-                              <option key={n.slug} value={n.slug}>{n.nome}</option>
+                            <option value="">{dynamicNucleos.length === 0 ? 'Nenhum núcleo cadastrado' : 'Selecione o núcleo'}</option>
+                            {nucleosOrdenados.map(n => (
+                              <option key={n.slug} value={n.slug}>{n.nome}{contasNucleos.has(n.slug) ? ' · já tem admin' : ''}</option>
                             ))}
                           </select>
                         </div>
@@ -12958,7 +12967,7 @@ Suporte Ginga Gestão.`
                         if (respNewCpf.length < 3) { setRespCreateMsg('Login deve ter pelo menos 3 caracteres.'); return; }
                         if (respNewPass && respNewPass.length < 6) { setRespCreateMsg('Senha deve ter pelo menos 6 caracteres.'); return; }
                         setRespCreating(true);
-                        const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create-user', admin_username: loginUser.trim(), admin_password: respAdminPass, login: respNewCpf, nome: respNewNome, new_password: respNewPass, nucleo_key: respNewNucleo }) });
+                        const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create-user', admin_username: loginUser.trim(), admin_password: respAdminPass, login: respNewCpf, nome: respNewNome, new_password: respNewPass || undefined, nucleo_key: respNewNucleo }) });
                         const d = await res.json();
                         if (res.ok) {
                           setRespCreateMsg(`✅ Conta criada! Login "${respNewCpf}" vinculado ao núcleo. Senha: ${respNewPass || '(padrão = nome do núcleo)'}`);

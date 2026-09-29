@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { appendAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -26,7 +27,7 @@ export interface EventoParticipant {
 
 export interface Evento {
   id: string;
-  tipo: 'batizado' | 'troca';
+  tipo: 'batizado' | 'troca' | 'outros';
   nome: string;
   data: string;
   hora: string;
@@ -36,6 +37,12 @@ export interface Evento {
   finalizado: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export function eventoTipoLabel(tipo: string, nome?: string): string {
+  if (tipo === 'batizado') return 'Batizado';
+  if (tipo === 'troca') return 'Troca de Graduação';
+  return nome || 'Evento';
 }
 
 // Read bypassing ALL caches — direct HTTP with no-store
@@ -85,7 +92,9 @@ export async function POST(req: NextRequest) {
 
   // ── Delete ──────────────────────────────────────────────────────────────────
   if (body._delete) {
+    const del = list.find(e => e.id === body._delete);
     await saveAll(list.filter(e => e.id !== body._delete));
+    await appendAudit({ actor: 'admin', actor_type: 'admin', action: 'evento_excluido', target_id: String(body._delete), target_name: del?.nome, details: { tipo: del?.tipo } });
     return NextResponse.json({ ok: true });
   }
 
@@ -117,7 +126,7 @@ export async function POST(req: NextRequest) {
           id: `ev_${Date.now()}_${p.student_id}`,
           data_graduacao: ev.data || new Date().toISOString().split('T')[0],
           graduacao_recebida: p.nova_graduacao,
-          evento: ev.nome || (ev.tipo === 'batizado' ? 'Batizado' : 'Troca de Graduação'),
+          evento: ev.nome || eventoTipoLabel(ev.tipo),
           professor_responsavel: '',
           observacoes: `Evento: ${ev.nome}${ev.local ? ` — ${ev.local}` : ''}`,
           criado_em: new Date().toISOString(),
@@ -131,6 +140,15 @@ export async function POST(req: NextRequest) {
       list.map(e => e.id === ev.id ? { ...e, finalizado: true, updated_at: new Date().toISOString() } : e)
     );
 
+    await appendAudit({
+      actor: 'admin',
+      actor_type: 'admin',
+      action: 'evento_finalizado',
+      target_id: ev.id,
+      target_name: ev.nome,
+      details: { tipo: ev.tipo, participantes_afetados: ev.participantes.length, graduacoes_alteradas: ev.participantes.filter(p => p.nova_graduacao && p.nova_graduacao !== p.graduacao_atual).length, errors },
+    });
+
     if (errors.length > 0) return NextResponse.json({ ok: false, errors });
     return NextResponse.json({ ok: true, applied: ev.participantes.length });
   }
@@ -141,6 +159,7 @@ export async function POST(req: NextRequest) {
 
   if (existing) {
     await saveAll(list.map(e => e.id === body.id ? { ...e, ...body, updated_at: now } : e));
+    await appendAudit({ actor: 'admin', actor_type: 'admin', action: 'evento_atualizado', target_id: String(body.id), target_name: body.nome || existing.nome, details: { tipo: body.tipo || existing.tipo } });
     return NextResponse.json({ ok: true, id: body.id });
   }
 
@@ -159,5 +178,6 @@ export async function POST(req: NextRequest) {
   };
 
   await saveAll([...list, novo]);
+  await appendAudit({ actor: 'admin', actor_type: 'admin', action: 'evento_criado', target_id: novo.id, target_name: novo.nome, details: { tipo: novo.tipo, participantes: novo.participantes.length } });
   return NextResponse.json({ ok: true, id: novo.id });
 }

@@ -36,7 +36,7 @@ export async function registerCheckin(student: {
   local_map_url?: string | null;
   lat?: number | null;
   lng?: number | null;
-}): Promise<{ success: boolean; alreadyRegistered: boolean }> {
+}): Promise<{ success: boolean; alreadyRegistered: boolean; fora_do_dia?: boolean }> {
   try {
     const res = await fetch('/api/checkins', {
       method: 'POST',

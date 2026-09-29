@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { appendAudit } from '@/lib/audit';
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
@@ -79,6 +80,27 @@ export async function POST(req: Request) {
     }
   }
 
+  // ── Validação do dia de treino do núcleo ──────────────────────────────────
+  // Registra em qualquer dia (aviso só na UI), mas sinaliza quando o aluno
+  // registra fora dos dias de treino definidos no núcleo dele.
+  let foraDoDiaTreino = false;
+  try {
+    const nomeNucleo = String(student.nucleo || '').trim();
+    if (nomeNucleo && nomeNucleo !== 'Sem núcleo') {
+      const { data: tenantRow } = await admin
+        .from('tenants')
+        .select('slug, dias_treino')
+        .or(`nome.eq.${nomeNucleo},slug.eq.${nomeNucleo}`)
+        .maybeSingle();
+      const dias: string[] = Array.isArray(tenantRow?.dias_treino) ? tenantRow.dias_treino : [];
+      if (dias.length > 0) {
+        const semana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+        const diaHoje = semana[brDate.getDay()];
+        foraDoDiaTreino = !dias.includes(diaHoje);
+      }
+    }
+  } catch { /* validação é best-effort; nunca bloqueia o registro */ }
+
   // Build fallback Google Maps URL from GPS coords if no venue URL was provided
   const lat = student.lat ?? null;
   const lng = student.lng ?? null;
@@ -112,5 +134,22 @@ export async function POST(req: Request) {
     console.error('[checkins POST] upload error:', error);
     return NextResponse.json({ success: false, alreadyRegistered: false, error: error.message });
   }
-  return NextResponse.json({ success: true, alreadyRegistered: false, record });
+
+  // Auditoria: registro de presença (inclui flag de dia fora do treino)
+  await appendAudit({
+    actor: student.id,
+    actor_type: 'student',
+    action: foraDoDiaTreino ? 'presenca_fora_do_dia' : 'presenca_registrada',
+    target_id: student.id,
+    target_name: student.nome_completo,
+    details: {
+      nucleo: student.nucleo || 'Sem núcleo',
+      local: student.local_nome || null,
+      hora,
+      data: today,
+      fora_do_dia_de_treino: foraDoDiaTreino,
+    },
+  });
+
+  return NextResponse.json({ success: true, alreadyRegistered: false, fora_do_dia: foraDoDiaTreino, record });
 }

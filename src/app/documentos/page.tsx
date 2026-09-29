@@ -24,7 +24,7 @@ export default function DocumentosPage() {
           <button onClick={() => window.history.length > 1 ? window.history.back() : window.location.href = '/aluno'} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1, padding: 0 }}>←</button>
           <div>
             <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#fff' }}>📚 Documentos Históricos</div>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Associação Cultural de Capoeira Barão de Mauá</div>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Portal Aluno</div>
           </div>
         </div>
 

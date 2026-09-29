@@ -9,8 +9,6 @@ import {
 // ── Storage keys ──────────────────────────────────────────────────────────────
 const KEY_ESTATUTO   = 'demo_estatuto';
 const KEY_REGIMENTO  = 'demo_regimento';
-const KEY_BIO_FRAZAO = 'demo_bio_frazao';
-const KEY_BIO_NALDO  = 'demo_bio_naldo';
 const INFO_KEY = (n: NucleoTab) => `demo_info_${n}`;
 const SESSION_KEY   = 'demo_doc_admin_ok';
 
@@ -51,7 +49,7 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
     if (adminAlwaysUnlocked) return true;
     try { return sessionStorage.getItem(SESSION_KEY) === '1'; } catch { return false; }
   });
-  const [pendingAction, setPendingAction] = useState<null|'estatuto'|'regimento'|'info'|'bio_frazao'|'bio_naldo'>(null);
+  const [pendingAction, setPendingAction] = useState<null|'estatuto'|'regimento'|'info'|string>(null);
   const [cpfInput, setCpfInput]     = useState('');
   const [cpfError, setCpfError]     = useState('');
   const [showCpfModal, setShowCpfModal] = useState(false);
@@ -63,19 +61,15 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
   const [regName,  setRegName]  = useState<string|null>(() => getCachedFileName(KEY_REGIMENTO));
   const [estSize,  setEstSize]  = useState<number|null>(null);
   const [regSize,  setRegSize]  = useState<number|null>(null);
-  const [uploading, setUploading] = useState<'estatuto'|'regimento'|'bio_frazao'|'bio_naldo'|null>(null);
-  const [upOk,      setUpOk]     = useState<'estatuto'|'regimento'|'bio_frazao'|'bio_naldo'|null>(null);
+  const [uploading, setUploading] = useState<string|null>(null);
+  const [upOk,      setUpOk]     = useState<string|null>(null);
   const [upErr,     setUpErr]    = useState<string|null>(null);
-  const [downloading, setDownloading] = useState<'estatuto'|'regimento'|'bio_frazao'|'bio_naldo'|null>(null);
+  const [downloading, setDownloading] = useState<string|null>(null);
 
-  // ── Bibliografia dos Mestres state ────────────────────────────────────────
+  // ── Bibliografia dos Mestres state (dinâmica via /api/admin/mestres) ──────
   const [showBio,    setShowBio]    = useState(false);
-  const [bioFrazaoName, setBioFrazaoName] = useState<string|null>(() => getCachedFileName(KEY_BIO_FRAZAO));
-  const [bioNaldoName,  setBioNaldoName]  = useState<string|null>(() => getCachedFileName(KEY_BIO_NALDO));
-  const [bioFrazaoSize, setBioFrazaoSize] = useState<number|null>(null);
-  const [bioNaldoSize,  setBioNaldoSize]  = useState<number|null>(null);
-  const bioFrazaoRef = useRef<HTMLInputElement>(null);
-  const bioNaldoRef  = useRef<HTMLInputElement>(null);
+  const [mestres,    setMestres]    = useState<Array<{ id: string; nome: string }>>([]);
+  const [bioNames,   setBioNames]   = useState<Record<string, string | null>>({});
 
   // ── Info state ────────────────────────────────────────────────────────────
   const [showInfo,   setShowInfo]   = useState(false);
@@ -97,11 +91,19 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
     getDocMeta(KEY_REGIMENTO).then(m => {
       if (m) { setRegName(m.name); setRegSize(m.size); cacheFileName(KEY_REGIMENTO, m.name); }
     }).catch(() => {});
-    getDocMeta(KEY_BIO_FRAZAO).then(m => {
-      if (m) { setBioFrazaoName(m.name); setBioFrazaoSize(m.size); cacheFileName(KEY_BIO_FRAZAO, m.name); }
-    }).catch(() => {});
-    getDocMeta(KEY_BIO_NALDO).then(m => {
-      if (m) { setBioNaldoName(m.name); setBioNaldoSize(m.size); cacheFileName(KEY_BIO_NALDO, m.name); }
+    // Mestres dinâmicos + nomes dos portfólios em cache
+    fetch('/api/admin/mestres').then(r => r.json()).then(d => {
+      const lista: Array<{ id: string; nome: string }> = d.mestres || [];
+      setMestres(lista);
+      const names: Record<string, string | null> = {};
+      lista.forEach(m => { const k = `pa_bio_mestre_${m.id}`; names[k] = getCachedFileName(k); });
+      setBioNames(names);
+      lista.forEach(m => {
+        const k = `pa_bio_mestre_${m.id}`;
+        getDocMeta(k).then(meta => {
+          if (meta) { cacheFileName(k, meta.name); setBioNames(p => ({ ...p, [k]: meta.name })); }
+        }).catch(() => {});
+      });
     }).catch(() => {});
     const t: Record<NucleoTab,string> = { geral:'', maua:'', saracuruna:'' };
     (['geral','maua','saracuruna'] as NucleoTab[]).forEach(n => { try { t[n]=localStorage.getItem(INFO_KEY(n))||''; } catch {} });
@@ -109,12 +111,10 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
   }, []);
 
   // ── CPF modal flow ────────────────────────────────────────────────────────
-  const requireUpload = (which: 'estatuto'|'regimento'|'bio_frazao'|'bio_naldo') => {
+  const requireUpload = (which: 'estatuto'|'regimento'|'info'|string) => {
     if (unlocked) {
       if (which === 'estatuto') estRef.current?.click();
       else if (which === 'regimento') regRef.current?.click();
-      else if (which === 'bio_frazao') bioFrazaoRef.current?.click();
-      else if (which === 'bio_naldo') bioNaldoRef.current?.click();
     } else {
       setPendingAction(which);
       setCpfInput(''); setCpfError('');
@@ -131,8 +131,10 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
       setTimeout(() => {
         if (pendingAction === 'estatuto') estRef.current?.click();
         if (pendingAction === 'regimento') regRef.current?.click();
-        if (pendingAction === 'bio_frazao') bioFrazaoRef.current?.click();
-        if (pendingAction === 'bio_naldo') bioNaldoRef.current?.click();
+        if (typeof pendingAction === 'string' && pendingAction.startsWith('pa_bio_mestre_')) {
+          const inp = document.querySelector<HTMLInputElement>(`input[data-doc-key="${pendingAction}"]`);
+          inp?.click();
+        }
         if (pendingAction === 'info') { setDraft(texts[infoTab]); setEditing(false); setShowInfo(true); }
       }, 50);
       setPendingAction(null); setCpfInput('');
@@ -143,19 +145,19 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
   };
 
   // ── Upload handler ────────────────────────────────────────────────────────
-  const doUpload = async (key: string, file: File, setName:(s:string)=>void, setSize:(n:number)=>void, which:'estatuto'|'regimento'|'bio_frazao'|'bio_naldo') => {
-    setUploading(which); setUpErr(null);
+  const doUpload = async (key: string, file: File, setName?:(s:string|null)=>void, setSize?:(n:number|null)=>void) => {
+    setUploading(key); setUpErr(null);
     try {
       await saveDocFile(key, file);
-      setName(file.name); setSize(file.size);
-      setUpOk(which); setTimeout(()=>setUpOk(null), 3000);
+      setName?.(file.name); setSize?.(file.size);
+      setUpOk(key); setTimeout(()=>setUpOk(null), 3000);
     } catch(e:unknown) { setUpErr(e instanceof Error ? e.message : 'Erro ao salvar arquivo.'); }
     setUploading(null);
   };
 
   // ── Download handler (from Supabase — works for ALL users) ───────────────
-  const doDownload = async (key: string, which: 'estatuto'|'regimento'|'bio_frazao'|'bio_naldo') => {
-    setDownloading(which);
+  const doDownload = async (key: string) => {
+    setDownloading(key);
     try {
       await downloadDocFile(key);
     } catch (e: unknown) {
@@ -230,20 +232,20 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
         <div style={{ flex:1, minWidth:145, display:'flex', flexDirection:'column', gap:4 }}>
           <button
             onClick={()=>setShowBio(v=>!v)}
-            style={mainBtn(showBio ? '#7c3aed' : '#8b5cf6', !!(bioFrazaoName||bioNaldoName))}
+            style={mainBtn(showBio ? '#7c3aed' : '#8b5cf6', mestres.some(m => bioNames[`pa_bio_mestre_${m.id}`]))}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 8v4l3 3"/></svg>
             Bibliografia dos Mestres
           </button>
           <div style={{fontSize:'0.62rem',color:'var(--text-secondary)',textAlign:'center'}}>
-            {[bioFrazaoName&&'M. Frazão', bioNaldoName&&'M. Naldo'].filter(Boolean).join(' · ') || 'Portfólio dos mestres'}
+            {mestres.filter(m => bioNames[`pa_bio_mestre_${m.id}`]).map(m => m.nome.split(' ').slice(0, 2).join(' ')).join(' · ') || 'Portfólio dos mestres'}
           </div>
         </div>
 
         {/* ── Estatuto Social ──────────────────────────────────────────────── */}
         <div style={{ flex:1, minWidth:145, display:'flex', flexDirection:'column', gap:4 }}>
           <button
-            onClick={()=>doDownload(KEY_ESTATUTO,'estatuto')}
+            onClick={()=>doDownload(KEY_ESTATUTO)}
             disabled={downloading==='estatuto'}
             style={mainBtn('#dc2626', !!estName, downloading==='estatuto')}
           >
@@ -255,7 +257,7 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
           {!readOnly && (
             <>
               <input ref={estRef} id="inp-est" type="file" accept=".pdf,.doc,.docx,image/*" style={{display:'none'}}
-                onChange={e=>{const f=e.target.files?.[0];if(f)doUpload(KEY_ESTATUTO,f,setEstName,setEstSize,'estatuto');e.target.value='';}} />
+                onChange={e=>{const f=e.target.files?.[0];if(f)doUpload(KEY_ESTATUTO,f,setEstName,setEstSize);e.target.value='';}} />
               {unlocked ? (
                 <label htmlFor={uploading==='estatuto'?undefined:'inp-est'} style={{...upBtn('#dc2626',uploading==='estatuto',upOk==='estatuto'),cursor:uploading==='estatuto'?'wait':'pointer',userSelect:'none',display:'flex',alignItems:'center',justifyContent:'center',gap:5}}>
                   {uploading==='estatuto' ? <><span style={{display:'inline-block',animation:'spin .7s linear infinite'}}>⏳</span> Salvando...</>
@@ -277,7 +279,7 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
         {/* ── Regimento Interno ────────────────────────────────────────────── */}
         <div style={{ flex:1, minWidth:145, display:'flex', flexDirection:'column', gap:4 }}>
           <button
-            onClick={()=>doDownload(KEY_REGIMENTO,'regimento')}
+            onClick={()=>doDownload(KEY_REGIMENTO)}
             disabled={downloading==='regimento'}
             style={mainBtn('#1d4ed8', !!regName, downloading==='regimento')}
           >
@@ -289,7 +291,7 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
           {!readOnly && (
             <>
               <input ref={regRef} id="inp-reg" type="file" accept=".pdf,.doc,.docx,image/*" style={{display:'none'}}
-                onChange={e=>{const f=e.target.files?.[0];if(f)doUpload(KEY_REGIMENTO,f,setRegName,setRegSize,'regimento');e.target.value='';}} />
+                onChange={e=>{const f=e.target.files?.[0];if(f)doUpload(KEY_REGIMENTO,f,setRegName,setRegSize);e.target.value='';}} />
               {unlocked ? (
                 <label htmlFor={uploading==='regimento'?undefined:'inp-reg'} style={{...upBtn('#1d4ed8',uploading==='regimento',upOk==='regimento'),cursor:uploading==='regimento'?'wait':'pointer',userSelect:'none',display:'flex',alignItems:'center',justifyContent:'center',gap:5}}>
                   {uploading==='regimento' ? <><span style={{display:'inline-block',animation:'spin .7s linear infinite'}}>⏳</span> Salvando...</>
@@ -327,7 +329,7 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
       {showInfo && (
         <div style={{ marginTop:10, background:'var(--bg-card)', border:'1.5px solid rgba(22,163,74,0.35)', borderRadius:12, overflow:'hidden', boxShadow:'0 4px 20px rgba(0,0,0,0.1)' }}>
           <div style={{ background:'linear-gradient(90deg,#16a34a,#15803d)', padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-            <span style={{color:'#fff',fontWeight:800,fontSize:'0.88rem'}}>ℹ️ Informações Gerais — ACCBM</span>
+            <span style={{color:'#fff',fontWeight:800,fontSize:'0.88rem'}}>ℹ️ Informações Gerais — CCLN</span>
             <button onClick={()=>{setShowInfo(false);setEditing(false);}} style={{background:'rgba(255,255,255,0.2)',border:'none',color:'#fff',width:26,height:26,borderRadius:6,cursor:'pointer',fontWeight:700}}>✕</button>
           </div>
           {/* Núcleo tabs */}
@@ -378,80 +380,56 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
       {showBio && (
         <div style={{ marginTop:10, background:'var(--bg-card)', border:'1.5px solid rgba(139,92,246,0.35)', borderRadius:12, overflow:'hidden', boxShadow:'0 4px 20px rgba(0,0,0,0.1)' }}>
           <div style={{ background:'linear-gradient(90deg,#7c3aed,#6d28d9)', padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-            <span style={{color:'#fff',fontWeight:800,fontSize:'0.88rem'}}>📚 Bibliografia dos Mestres — ACCBM</span>
+            <span style={{color:'#fff',fontWeight:800,fontSize:'0.88rem'}}>📚 Bibliografia dos Mestres — CCLN</span>
             <button onClick={()=>setShowBio(false)} style={{background:'rgba(255,255,255,0.2)',border:'none',color:'#fff',width:26,height:26,borderRadius:6,cursor:'pointer',fontWeight:700}}>✕</button>
           </div>
           <div style={{padding:'14px 16px', display:'flex', flexDirection:'column', gap:12}}>
 
-            {/* ── Mestre Márcio Frazão ── */}
-            <div style={{background:'var(--bg-input)',border:'1px solid rgba(220,38,38,0.2)',borderRadius:10,padding:'12px 14px'}}>
-              <div style={{fontWeight:800,fontSize:'0.88rem',color:'#dc2626',marginBottom:8,display:'flex',alignItems:'center',gap:7}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a6 6 0 0112 0v2"/></svg>
-                Mestre Márcio Frazão
+            {mestres.length === 0 && (
+              <div style={{ textAlign:'center', color:'var(--text-secondary)', fontSize:'0.82rem', padding:'12px 0' }}>
+                Nenhum mestre cadastrado. O responsável pode cadastrar em <strong>Config. Sistema</strong> no painel.
               </div>
-              <button
-                onClick={()=>doDownload(KEY_BIO_FRAZAO,'bio_frazao')}
-                disabled={downloading==='bio_frazao'}
-                style={{...mainBtn('#dc2626',!!bioFrazaoName,downloading==='bio_frazao'), marginBottom:6}}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                {downloading==='bio_frazao' ? 'Baixando...' : bioFrazaoName ? 'Ver Portfólio' : 'Portfólio não inserido'}
-                {downloading!=='bio_frazao' && bioFrazaoName && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}
-              </button>
-              {!readOnly && (
-                <>
-                  <input ref={bioFrazaoRef} id="inp-bio-frazao" type="file" accept=".pdf,.doc,.docx,image/*" style={{display:'none'}}
-                    onChange={e=>{const f=e.target.files?.[0];if(f)doUpload(KEY_BIO_FRAZAO,f,setBioFrazaoName,setBioFrazaoSize,'bio_frazao');e.target.value='';}} />
-                  {unlocked ? (
-                    <label htmlFor={uploading==='bio_frazao'?undefined:'inp-bio-frazao'} style={{...upBtn('#dc2626',uploading==='bio_frazao',upOk==='bio_frazao'),cursor:uploading==='bio_frazao'?'wait':'pointer',userSelect:'none',display:'flex',alignItems:'center',justifyContent:'center',gap:5}}>
-                      {uploading==='bio_frazao' ? <><span style={{display:'inline-block',animation:'spin .7s linear infinite'}}>⏳</span> Salvando...</>
-                        : upOk==='bio_frazao' ? <>✓ Arquivo salvo!</>
-                        : <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>{bioFrazaoName?'✓ Substituir':'⬆ Inserir arquivo'}</>}
-                    </label>
-                  ) : (
-                    <button onClick={()=>requireUpload('bio_frazao')} style={upBtn('#dc2626',false,false)}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>🔒 Inserir arquivo
-                    </button>
+            )}
+            {mestres.map((m, idx) => {
+              const bioKey = `pa_bio_mestre_${m.id}`;
+              const cor = ['#dc2626', '#16a34a', '#1d4ed8', '#7c3aed', '#ea580c', '#0891b2'][idx % 6];
+              const nome = bioNames[bioKey] || null;
+              return (
+                <div key={m.id} style={{background:'var(--bg-input)',border:`1px solid ${cor}33`,borderRadius:10,padding:'12px 14px'}}>
+                  <div style={{fontWeight:800,fontSize:'0.88rem',color:cor,marginBottom:8,display:'flex',alignItems:'center',gap:7}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a6 6 0 0112 0v2"/></svg>
+                    {m.nome}
+                  </div>
+                  <button
+                    onClick={()=>doDownload(bioKey)}
+                    disabled={downloading===bioKey}
+                    style={{...mainBtn(cor, !!nome, downloading===bioKey), marginBottom:6}}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    {downloading===bioKey ? 'Baixando...' : nome ? 'Ver Portfólio' : 'Portfólio não inserido'}
+                    {downloading!==bioKey && nome && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}
+                  </button>
+                  {!readOnly && (
+                    <>
+                      {unlocked ? (
+                        <label style={{...upBtn(cor, uploading===bioKey, upOk===bioKey),cursor:uploading===bioKey?'wait':'pointer',userSelect:'none',display:'flex',alignItems:'center',justifyContent:'center',gap:5}}>
+                          {uploading===bioKey ? <><span style={{display:'inline-block',animation:'spin .7s linear infinite'}}>⏳</span> Salvando...</>
+                            : upOk===bioKey ? <>✓ Arquivo salvo!</>
+                            : <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>{nome?'✓ Substituir':'⬆ Inserir arquivo'}</>}
+                          <input data-doc-key={bioKey} type="file" accept=".pdf,.doc,.docx,image/*" style={{display:'none'}}
+                            onChange={async e=>{const f=e.target.files?.[0];if(f){ setUploading(bioKey); try { await saveDocFile(bioKey,f); setBioNames(p=>({...p,[bioKey]:f.name})); setUpOk(bioKey); setTimeout(()=>setUpOk(null),3000);} catch(err){ setUpErr(err instanceof Error ? err.message : 'Erro ao salvar.'); } setUploading(null);} e.target.value=''; }} />
+                        </label>
+                      ) : (
+                        <button onClick={()=>requireUpload(bioKey)} style={upBtn(cor,false,false)}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>🔒 Inserir arquivo
+                        </button>
+                      )}
+                    </>
                   )}
-                </>
-              )}
-              {bioFrazaoName && <div style={{fontSize:'0.62rem',color:'#dc262688',marginTop:4,textAlign:'center'}}>📄 {bioFrazaoName}{bioFrazaoSize?` · ${fmt(bioFrazaoSize)}`:''}</div>}
-            </div>
-
-            {/* ── Mestre Naldo Magrinho ── */}
-            <div style={{background:'var(--bg-input)',border:'1px solid rgba(22,163,74,0.2)',borderRadius:10,padding:'12px 14px'}}>
-              <div style={{fontWeight:800,fontSize:'0.88rem',color:'#16a34a',marginBottom:8,display:'flex',alignItems:'center',gap:7}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a6 6 0 0112 0v2"/></svg>
-                Mestre Naldo Magrinho
-              </div>
-              <button
-                onClick={()=>doDownload(KEY_BIO_NALDO,'bio_naldo')}
-                disabled={downloading==='bio_naldo'}
-                style={{...mainBtn('#16a34a',!!bioNaldoName,downloading==='bio_naldo'), marginBottom:6}}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                {downloading==='bio_naldo' ? 'Baixando...' : bioNaldoName ? 'Ver Portfólio' : 'Portfólio não inserido'}
-                {downloading!=='bio_naldo' && bioNaldoName && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}
-              </button>
-              {!readOnly && (
-                <>
-                  <input ref={bioNaldoRef} id="inp-bio-naldo" type="file" accept=".pdf,.doc,.docx,image/*" style={{display:'none'}}
-                    onChange={e=>{const f=e.target.files?.[0];if(f)doUpload(KEY_BIO_NALDO,f,setBioNaldoName,setBioNaldoSize,'bio_naldo');e.target.value='';}} />
-                  {unlocked ? (
-                    <label htmlFor={uploading==='bio_naldo'?undefined:'inp-bio-naldo'} style={{...upBtn('#16a34a',uploading==='bio_naldo',upOk==='bio_naldo'),cursor:uploading==='bio_naldo'?'wait':'pointer',userSelect:'none',display:'flex',alignItems:'center',justifyContent:'center',gap:5}}>
-                      {uploading==='bio_naldo' ? <><span style={{display:'inline-block',animation:'spin .7s linear infinite'}}>⏳</span> Salvando...</>
-                        : upOk==='bio_naldo' ? <>✓ Arquivo salvo!</>
-                        : <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>{bioNaldoName?'✓ Substituir':'⬆ Inserir arquivo'}</>}
-                    </label>
-                  ) : (
-                    <button onClick={()=>requireUpload('bio_naldo')} style={upBtn('#16a34a',false,false)}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>🔒 Inserir arquivo
-                    </button>
-                  )}
-                </>
-              )}
-              {bioNaldoName && <div style={{fontSize:'0.62rem',color:'#16a34a88',marginTop:4,textAlign:'center'}}>📄 {bioNaldoName}{bioNaldoSize?` · ${fmt(bioNaldoSize)}`:''}</div>}
-            </div>
+                  {nome && <div style={{fontSize:'0.62rem',color:`${cor}88`,marginTop:4,textAlign:'center'}}>📄 {nome}</div>}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

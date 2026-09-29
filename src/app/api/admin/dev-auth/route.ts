@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     // Lê a env dentro da função para sempre pegar o valor atual (sem cache de módulo)
-    const DEV_PASSWORD = process.env.DEV_PASSWORD || 'accbm@dev2025';
+    const DEV_PASSWORD = process.env.DEV_PASSWORD || 'portalaluno@dev2025';
 
     const { password } = await req.json();
     if (!password || typeof password !== 'string') {

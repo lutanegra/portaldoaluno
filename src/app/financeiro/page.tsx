@@ -380,7 +380,7 @@ export default function FinanceiroPage() {
         <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#dc2626,#1d4ed8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>💰</div>
         <div>
           <div style={{ fontWeight: 900, fontSize: '1.05rem', letterSpacing: '0.02em' }}>{t('financial_title')}</div>
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Associação Cultural de Capoeira Barão de Mauá</div>
+          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Portal Aluno</div>
         </div>
         {step === 'sheet' && (
           <button onClick={() => { setStep('login'); setStudent(null); setFicha(null); setCpfInput(''); }}

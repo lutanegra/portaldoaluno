@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { appendAudit } from '@/lib/audit';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
@@ -50,8 +51,30 @@ function generateId(): string {
 
 export async function GET() {
   const logs = await readLogs();
+  // Une com a auditoria estruturada (src/lib/audit.ts) para exibição unificada
+  let auditEntries: AdminLogEntry[] = [];
+  try {
+    const { data } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .createSignedUrl('config/audit_logs.json', 10);
+    if (data?.signedUrl) {
+      const res = await fetch(data.signedUrl, { cache: 'no-store' });
+      if (res.ok) {
+        const raw: Array<{ timestamp: string; actor: string; action: string; target_name?: string; details?: Record<string, unknown> }> = await res.json();
+        auditEntries = raw.map(e => ({
+          id: `audit_${e.timestamp}_${Math.random().toString(36).slice(2, 8)}`,
+          action: e.action,
+          user: e.actor,
+          nucleo: typeof e.details?.nucleo === 'string' ? e.details.nucleo : '—',
+          timestamp: e.timestamp,
+          details: e.target_name ? `${e.target_name}${e.details ? ` · ${JSON.stringify(e.details).slice(0, 200)}` : ''}` : e.details ? JSON.stringify(e.details).slice(0, 240) : undefined,
+        }));
+      }
+    }
+  } catch { /* segue só com os logs antigos */ }
+  const all = [...logs, ...auditEntries];
   // Return most recent first, capped at RETURN_LIMIT
-  const sorted = [...logs].sort(
+  const sorted = [...all].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
   return NextResponse.json(sorted.slice(0, RETURN_LIMIT));
@@ -75,6 +98,16 @@ export async function POST(req: NextRequest) {
     timestamp: new Date().toISOString(),
     ...(body.details !== undefined ? { details: body.details } : {}),
   };
+
+  // Auditoria estruturada paralela (fonte canônica em config/audit_logs.json)
+  try {
+    await appendAudit({
+      actor: body.user,
+      actor_type: 'admin',
+      action: body.action,
+      details: { nucleo: body.nucleo, detalhes: body.details },
+    }).catch(() => {});
+  } catch { /* best-effort */ }
 
   const logs = await readLogs();
   logs.push(entry);

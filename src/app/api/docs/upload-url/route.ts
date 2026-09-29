@@ -12,7 +12,7 @@ const BUCKET = 'photos';
 const DOC_PREFIX = 'docs';
 
 function toPath(key: string): string {
-  return `${DOC_PREFIX}/${key.replace('accbm_', '')}`;
+  return `${DOC_PREFIX}/${key.replace('pa_', '')}`;
 }
 
 /**

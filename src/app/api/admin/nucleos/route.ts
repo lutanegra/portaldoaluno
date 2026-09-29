@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { hashPassword, verifyPassword, defaultPasswordForSlug, sanitizeDiasTreino, pickColorForSlug } from '@/lib/panelCredentials';
+import { appendAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -197,6 +198,15 @@ export async function POST(req: NextRequest) {
     const blob = new Blob([JSON.stringify(creds)], { type: 'application/json' });
     await supabaseAdmin.storage.from(BUCKET).upload(CREDS_KEY, blob, { upsert: true });
 
+    await appendAudit({
+      actor: auth.owner ? 'owner' : 'admin-geral',
+      actor_type: 'admin',
+      action: 'nucleo_criado',
+      target_id: String(data.id),
+      target_name: nome,
+      details: { slug, admin_login: adminLogin, senha_padrao: !senhaInformada, dias_treino: dias },
+    });
+
     return NextResponse.json({
       success: true,
       nucleo: data,
@@ -253,6 +263,14 @@ export async function DELETE(req: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    await appendAudit({
+      actor: auth.owner ? 'owner' : 'admin-geral',
+      actor_type: 'admin',
+      action: 'nucleo_excluido',
+      target_id: String(id),
+      details: { slug: tenant?.slug, admin_login_removido: tenant?.admin_login || null },
+    });
 
     if (tenant?.admin_login) {
       const creds = await loadCreds();
@@ -336,6 +354,15 @@ export async function PATCH(req: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    await appendAudit({
+      actor: auth.owner ? 'owner' : 'admin-geral',
+      actor_type: 'admin',
+      action: 'nucleo_atualizado',
+      target_id: String(id),
+      target_name: String(data.nome || ''),
+      details: { campos: Object.keys(updates) },
+    });
 
     return NextResponse.json({ success: true, nucleo: data });
   } catch (err) {

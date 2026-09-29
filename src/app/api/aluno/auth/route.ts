@@ -772,8 +772,8 @@ export async function POST(req: NextRequest) {
 
       // Send welcome message via WhatsApp
       if (studentPhone) {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://accbm.vercel.app';
-        const welcomeMsg = `Olá, *${studentName.split(' ')[0]}*! 👋\n\nSua conta foi criada com sucesso! Já liberamos seu acesso à área do aluno ✅\n\nAgora você pode entrar na plataforma, registrar sua presença e utilizar todas as funcionalidades disponíveis.\n\n🔗 *${appUrl}/aluno*\n\n👤 Usuário: *${username}*\n🔑 Senha: *${password}*\n\nSeja bem-vindo(a) e bons treinos! 💪🔥\n\n_Associação Cultural de Capoeira Barão de Mauá_`;
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://portal-aluno.vercel.app';
+        const welcomeMsg = `Olá, *${studentName.split(' ')[0]}*! 👋\n\nSua conta foi criada com sucesso! Já liberamos seu acesso à área do aluno ✅\n\nAgora você pode entrar na plataforma, registrar sua presença e utilizar todas as funcionalidades disponíveis.\n\n🔗 *${appUrl}/aluno*\n\n👤 Usuário: *${username}*\n🔑 Senha: *${password}*\n\nSeja bem-vindo(a) e bons treinos! 💪🔥\n\n_Portal Aluno_`;
         void sendWhatsAppMessage(studentPhone, welcomeMsg);
       }
 
@@ -1027,7 +1027,7 @@ async function sendWhatsAppOTP(phone: string, otp: string, name: string, isReset
 
   const message = isReset
     ? `Olá ${name}! Seu código de recuperação de senha é: *${otp}*. Válido por 15 minutos. Se não foi você, ignore esta mensagem.`
-    : `Olá ${name}! Bem-vindo(a) à ACCBM! Seu código de ativação é: *${otp}*. Válido por 10 minutos. Digite este código para ativar sua conta.`;
+    : `Olá ${name}! Bem-vindo(a) à CCLN! Seu código de ativação é: *${otp}*. Válido por 10 minutos. Digite este código para ativar sua conta.`;
 
   // Try Z-API first
   const zapiInstance = process.env.ZAPI_INSTANCE_ID;

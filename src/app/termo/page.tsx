@@ -136,10 +136,10 @@ function TermoContent() {
 
         {/* Cabeçalho */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <img src="/logo-portal-aluno.png" alt="Logo Barão de Mauá" style={{ width: 110, height: 110, objectFit: 'contain', marginBottom: 14, display: 'block', margin: '0 auto 14px' }} />
+          <img src="/logo-portal-aluno.png" alt="Logo Portal Aluno" style={{ width: 110, height: 110, objectFit: 'contain', marginBottom: 14, display: 'block', margin: '0 auto 14px' }} />
           <h1 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: 4 }}>Termo de Autorização</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-            Associação Cultural de Capoeira Barão de Mauá
+            Portal Aluno
           </p>
         </div>
 
@@ -174,7 +174,7 @@ function TermoContent() {
             {/* Texto do termo */}
             <p style={{ textAlign: 'justify', lineHeight: 1.9, marginBottom: 28, fontSize: '0.93rem' }}>
               Eu, responsável legal pelo menor inscrito, autorizo sua participação nas atividades de capoeira
-              realizadas pela <strong>Associação Cultural de Capoeira Barão de Mauá</strong>, estando ciente
+              realizadas pela <strong>Portal Aluno</strong>, estando ciente
               das atividades físicas envolvidas.
             </p>
 

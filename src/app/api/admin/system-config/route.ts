@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { appendAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -133,7 +134,13 @@ export async function POST(req: NextRequest) {
     };
     
     await saveConfig(newConfig);
-    
+    await appendAudit({
+      actor: updated_by || 'owner',
+      actor_type: 'admin',
+      action: 'config_sistema_atualizada',
+      details: { campos: Object.keys(updates).slice(0, 40) },
+    });
+
     return NextResponse.json({ ok: true, config: newConfig });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

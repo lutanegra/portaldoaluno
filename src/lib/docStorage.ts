@@ -88,10 +88,10 @@ export async function downloadDocFile(key: string, fallbackName = 'documento'): 
 /** Tiny localStorage fallback just for file *names* (for fast UI rendering) */
 export function cacheFileName(key: string, name: string | null) {
   try {
-    if (name) localStorage.setItem(`accbm_fname_${key}`, name);
-    else localStorage.removeItem(`accbm_fname_${key}`);
+    if (name) localStorage.setItem(`pa_fname_${key}`, name);
+    else localStorage.removeItem(`pa_fname_${key}`);
   } catch {}
 }
 export function getCachedFileName(key: string): string | null {
-  try { return localStorage.getItem(`accbm_fname_${key}`); } catch { return null; }
+  try { return localStorage.getItem(`pa_fname_${key}`); } catch { return null; }
 }

@@ -14,11 +14,11 @@ const BUCKET = 'photos';
 const DOC_PREFIX = 'docs';
 
 function toPath(key: string): string {
-  const slug = key.replace('accbm_', '');
+  const slug = key.replace('pa_', '');
   return `${DOC_PREFIX}/${slug}`;
 }
 
-// GET /api/docs?key=accbm_estatuto — returns signed URL + metadata
+// GET /api/docs?key=pa_estatuto — returns signed URL + metadata
 export async function GET(req: NextRequest) {
   const key = req.nextUrl.searchParams.get('key');
   if (!key) return NextResponse.json({ error: 'key required' }, { status: 400 });
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, ...meta });
 }
 
-// DELETE /api/docs?key=accbm_estatuto — removes file + meta
+// DELETE /api/docs?key=pa_estatuto — removes file + meta
 export async function DELETE(req: NextRequest) {
   const key = req.nextUrl.searchParams.get('key');
   if (!key) return NextResponse.json({ error: 'key required' }, { status: 400 });

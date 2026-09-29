@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Carteirinha from '@/components/Carteirinha';
 import DocumentsBar from '@/components/DocumentsBar';
-import { graduacoes as GRADUACOES_ALL, nomenclaturaGraduacao } from '@/lib/graduacoes';
+import { graduacoes as GRADUACOES_ALL, nomenclaturaGraduacao, getCordaColors } from '@/lib/graduacoes';
 
 type Student = {
   id: string;
@@ -239,7 +239,7 @@ export default function AlunoPage() {
       // Check for admin preview mode via URL param + localStorage token
       const params = new URLSearchParams(window.location.search);
       if (params.get('admin_preview') === '1') {
-        const tokenRaw = localStorage.getItem('accbm_admin_preview');
+        const tokenRaw = localStorage.getItem('pa_admin_preview');
         if (tokenRaw) {
           const token = JSON.parse(tokenRaw);
           if (token?.student_id && token.expires > Date.now()) {
@@ -602,6 +602,7 @@ export default function AlunoPage() {
   // M = blue (#1d4ed8), F = red (#dc2626), others fallback to nucleo color
   const genderColor = student?.sexo === 'M' ? '#1d4ed8' : student?.sexo === 'F' ? '#dc2626' : null;
   const nucleoColor = genderColor || (student ? getNucleoColor(student.nucleo || '') : '#1d4ed8');
+  const cordaColors = getCordaColors(student?.graduacao || '');
 
   // Cadastro incompleto — só avalia depois que student foi carregado do servidor (studentLoaded é one-way: false→true, nunca volta)
   const cadastroIncompleto = studentLoaded && student !== null && (
@@ -1077,7 +1078,14 @@ export default function AlunoPage() {
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 12px' }}>
                   <div style={{ fontSize: '0.62rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Graduação</div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 700 }}>{student?.graduacao || 'Não informada'}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ display: 'inline-flex', height: 12, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.55)', flexShrink: 0, minWidth: 28 }}>
+                      {cordaColors.map((c: string, i: number) => (
+                        <span key={i} style={{ flex: 1, background: c === '#FFFFFF' ? '#e5e7eb' : c }} />
+                      ))}
+                    </span>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>{student?.graduacao || 'Não informada'}</span>
+                  </div>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 12px' }}>
                   <div style={{ fontSize: '0.62rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Núcleo</div>
@@ -2688,7 +2696,7 @@ export default function AlunoPage() {
                     <input value={dadosForm.numeracao_unica} onChange={e => setDadosForm(p => ({ ...p, numeracao_unica: e.target.value }))}
                       style={fs}
                       placeholder="Ex: 0042 (exclusivo por aluno)" maxLength={20} />
-                    <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 2 }}>Identificador único no sistema ACCBM</div>
+                    <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 2 }}>Identificador único no sistema Portal Aluno</div>
                   </div>
                   <div>
                     <label style={ls}>Telefone / WhatsApp</label>
@@ -2989,7 +2997,7 @@ export default function AlunoPage() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                       <div style={{ fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
-                        Assinatura digital via sistema ACCBM<br />
+                        Assinatura digital via sistema Portal Aluno<br />
                         <span style={{ fontSize: '0.7rem' }}>{hoje}</span>
                       </div>
                     </div>

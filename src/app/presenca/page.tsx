@@ -29,6 +29,7 @@ export default function PresencaPage() {
   const [offlineQueue, setOfflineQueue] = useState<Array<{ student: Student; date: string; hora: string; localNome: string | null; lat: number | null; lng: number | null; localEndereco: string | null; localMapUrl: string | null }>>([]);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ ok: number; fail: number } | null>(null);
+  const [foraDoDia, setForaDoDia] = useState(false);
 
   // Localização
   const [localDetectado, setLocalDetectado] = useState<LocalDetectado | null>(null);
@@ -276,6 +277,7 @@ export default function PresencaPage() {
       setSearch('');
       setFiltered([]);
       setSuccess({ student, hora, data: dataStr, localDetectado: local, coords });
+      setForaDoDia(false);
       return;
     }
 
@@ -303,6 +305,7 @@ export default function PresencaPage() {
       setSearch('');
       setFiltered([]);
       setSuccess({ student, hora, data: dataStr, localDetectado: local, coords });
+      setForaDoDia(!!result.fora_do_dia);
     } else {
       alert('Erro ao registrar presença. Tente novamente.');
     }
@@ -335,7 +338,7 @@ export default function PresencaPage() {
 
     const msg = encodeURIComponent(
 `✅ *Presença Registrada!*
-Associação Cultural de Capoeira Barão de Mauá
+Portal Aluno
 
 👤 *Aluno:* ${s.student.nome_completo}
 🥋 *Graduação:* ${s.student.graduacao}
@@ -350,7 +353,7 @@ _Axé! 🤸_`
 
   const buildEmailLink = (s: typeof success) => {
     if (!s) return '';
-    const subject = encodeURIComponent('Comprovante de Presença — Capoeira Barão de Mauá');
+    const subject = encodeURIComponent('Comprovante de Presença — Portal Aluno');
     const loc = s.localDetectado?.local ?? null;
     let localInfo = '';
     if (loc) {
@@ -363,7 +366,7 @@ _Axé! 🤸_`
     }
     const body = encodeURIComponent(
 `Presença Registrada!
-Associação Cultural de Capoeira Barão de Mauá
+Portal Aluno
 
 Aluno: ${s.student.nome_completo}
 Graduação: ${s.student.graduacao}
@@ -446,7 +449,7 @@ Axé!`
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           {t('common_back')}
         </button>
-        <img src="/logo-portal-aluno.png" alt="Logo Barão de Mauá" style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 10, display: 'block', margin: '0 auto 10px' }} />
+        <img src="/logo-portal-aluno.png" alt="Logo Portal Aluno" style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 10, display: 'block', margin: '0 auto 10px' }} />
         <h1 style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{t('attendance_title')}</h1>
         <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', marginTop: 6 }}>{hoje}</p>
       </div>
@@ -501,7 +504,7 @@ Axé!`
         {/* Locais disponíveis */}
         <div className="form-section" style={{ marginBottom: 16 }}>
           <div style={{ textAlign: 'center', marginBottom: 14 }}>
-            <img src="/logo-portal-aluno.png" alt="Logo Barão de Mauá" style={{ width: 72, height: 72, objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+            <img src="/logo-portal-aluno.png" alt="Logo Portal Aluno" style={{ width: 72, height: 72, objectFit: 'contain', display: 'block', margin: '0 auto' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <h2 className="form-section-title" style={{ margin: 0 }}>Locais de Treino</h2>
@@ -661,13 +664,18 @@ Axé!`
 
       {/* Modal comprovante */}
       {success && (
-        <div className="modal-overlay" onClick={() => setSuccess(null)}>
+        <div className="modal-overlay" onClick={() => { setSuccess(null); setForaDoDia(false); }}>
           <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 440, textAlign: 'center' }}>
             <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#16a34a,#15803d)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
             </div>
             <h2 style={{ fontSize: '1.25rem', marginBottom: 4, display: 'block', WebkitTextFillColor: 'var(--text-primary)' }}>Presença Registrada!</h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: !isOnline ? 8 : 20 }}>Comprovante de Treino</p>
+            {foraDoDia && (
+              <div style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.45)', borderRadius: 8, padding: '8px 12px', marginBottom: 16, fontSize: '0.8rem', color: '#b45309', fontWeight: 600 }}>
+                ⚠ Hoje não é dia de treino do seu núcleo — a presença foi registrada mesmo assim e ficará sinalizada para os admins.
+              </div>
+            )}
             {!isOnline && (
               <div style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(255,146,0,0.4)', borderRadius: 8, padding: '7px 12px', marginBottom: 16, fontSize: '0.78rem', color: '#b45309', fontWeight: 600 }}>
                 📶 Salva offline — será sincronizada automaticamente quando a internet retornar
@@ -754,7 +762,7 @@ Axé!`
               })()}
 
               <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                Associação Cultural de Capoeira Barão de Mauá · Axé!
+                Portal Aluno · Axé!
               </div>
             </div>
 

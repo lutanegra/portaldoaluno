@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
     status: 200,
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="alunos-accbm${suffix}-${dateStr}.csv"`,
+      'Content-Disposition': `attachment; filename="alunos-portalaluno${suffix}-${dateStr}.csv"`,
       'Cache-Control': 'no-store',
     },
   });

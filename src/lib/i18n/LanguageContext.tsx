@@ -15,7 +15,7 @@ const LanguageContext = createContext<LanguageContextValue>({
   t: (key) => key,
 });
 
-const STORAGE_KEY = 'accbm_language';
+const STORAGE_KEY = 'pa_language';
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Language>('pt');

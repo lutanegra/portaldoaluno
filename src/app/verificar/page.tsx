@@ -174,7 +174,7 @@ function VerificarContent() {
                     Assoc. Cultural de Capoeira
                   </div>
                   <div style={{ color: '#fbbf24', fontSize: '0.9rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Barão de Mauá
+                    Portal Aluno
                   </div>
                   <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.45rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                     Credencial de Associado

@@ -5,7 +5,7 @@ import type { EnvioRecord, FilaData } from '@/app/api/whatsapp-fila/route';
 
 const MSG = `Olá! 👋
 
-Somos da Associação Cultural de Capoeira Barão de Mauá.
+Somos da Portal Aluno.
 
 Precisamos que você acesse a área do aluno, crie sua conta e, em seguida, entre novamente com essa conta para finalizar o seu cadastro.
 
