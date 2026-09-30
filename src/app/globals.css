@@ -1028,3 +1028,31 @@ html, body {
   .pa-splash-bar i,
   .pa-splash-name { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* ── Área logada do aluno (.pa-app): formulários e seletores no tema escuro ── */
+.pa-app input[type="text"],
+.pa-app input[type="email"],
+.pa-app input[type="tel"],
+.pa-app input[type="date"],
+.pa-app input[type="number"],
+.pa-app input[type="password"],
+.pa-app input:not([type]),
+.pa-app select,
+.pa-app textarea {
+  background: #111111;
+  color: #f5f5f4;
+  border: 1.5px solid #2e2e2e;
+}
+.pa-app input:focus,
+.pa-app select:focus,
+.pa-app textarea:focus {
+  border-color: #FF9200;
+}
+.pa-app input::placeholder,
+.pa-app textarea::placeholder {
+  color: #6f6f6f;
+}
+.pa-app select option {
+  background: #141414;
+  color: #f5f5f4;
+}

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { readPanelSession } from '@/lib/panelSession';
-import { loadCreds } from '@/lib/panelCredentials';
+import { loadCreds, accIsGeral, accNucleos } from '@/lib/panelCredentials';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,16 +51,23 @@ export async function GET(req: NextRequest) {
   const all = await loadJustificativas();
 
   if (admin) {
-    // Admin de núcleo (sessão em cookie) é forçado ao próprio núcleo,
+    // Admin de núcleo (sessão em cookie) é forçado aos próprios núcleos,
     // mesmo que peça outro valor na URL. Owner/Admin Geral veem tudo.
     const sess = readPanelSession(req);
     if (sess) {
       const creds = await loadCreds();
       const acc = creds[sess.u];
-      if (acc && acc.nucleo !== 'geral') {
-        const { data: tenant } = await supabaseAdmin.from('tenants').select('nome').eq('slug', acc.nucleo).maybeSingle();
-        const nomeNucleo = tenant?.nome || acc.nucleo;
-        return NextResponse.json(all.filter(j => j.nucleo === nomeNucleo || j.nucleo === acc.nucleo));
+      if (acc && !accIsGeral(acc)) {
+        const nucleosAdmin = accNucleos(acc);
+        if (nucleosAdmin.length > 0) {
+          const { data: tenants } = await supabaseAdmin.from('tenants').select('slug, nome').in('slug', nucleosAdmin);
+          const permitidos = new Set<string>(nucleosAdmin.map(s => s.toLowerCase()));
+          for (const t of tenants || []) {
+            const nome = String((t as { nome?: string }).nome || '').trim().toLowerCase();
+            if (nome) permitidos.add(nome);
+          }
+          return NextResponse.json(all.filter(j => permitidos.has(String(j.nucleo || '').trim().toLowerCase())));
+        }
       }
     }
     const filtered = nucleo ? all.filter(j => j.nucleo === nucleo) : all;

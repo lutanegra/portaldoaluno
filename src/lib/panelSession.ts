@@ -13,8 +13,9 @@ export type PanelRole = 'owner' | 'admin_geral' | 'admin_nucleo';
 
 export type PanelSession = {
   u: string;      // login (key) da conta
-  n: string;      // núcleo: slug ou 'geral'
+  n: string;      // núcleo principal: slug ou 'geral'
   r: PanelRole;
+  ns?: string[];  // slugs adicionais gerenciados (admin de núcleo com múltiplos núcleos)
   iat: number;
   exp: number;
   v: 1;
@@ -34,9 +35,10 @@ function sign(payload: string): string {
   return crypto.createHmac('sha256', panelSecret()).update(payload).digest('base64url');
 }
 
-export function createPanelSession(username: string, nucleo: string, role: PanelRole): PanelSession {
+export function createPanelSession(username: string, nucleo: string, role: PanelRole, nucleos?: string[]): PanelSession {
   const now = Date.now();
-  return { u: username, n: nucleo, r: role, iat: now, exp: now + SESSION_TTL_HOURS * 60 * 60 * 1000, v: 1 };
+  const extra = Array.isArray(nucleos) && nucleos.length > 0 ? nucleos.slice() : undefined;
+  return { u: username, n: nucleo, r: role, ns: extra, iat: now, exp: now + SESSION_TTL_HOURS * 60 * 60 * 1000, v: 1 };
 }
 
 export function serializePanelSession(session: PanelSession): string {

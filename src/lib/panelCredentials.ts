@@ -17,7 +17,8 @@ export const CREDS_KEY = 'config/panel-credentials.json';
 export const OWNER_KEY = 'owner';
 
 export interface PanelAccount {
-  nucleo: string;          // slug do núcleo ou 'geral'
+  nucleo: string;          // slug do núcleo principal ou 'geral'
+  nucleos?: string[];      // slugs adicionais: admin de núcleo pode gerenciar vários
   label: string;
   color: string;
   password: string;        // hash scrypt ou legado em texto simples
@@ -69,6 +70,42 @@ export const DEFAULT_CREDS: CredsMap = {
   owner: { nucleo: 'geral', label: 'Owner (Desenvolvedor)', color: '#7c3aed', password: 'Mp27032013@', first_login: false },
   admin: { nucleo: 'geral', label: 'Admin Geral', color: '#1d4ed8', password: 'Scoralick0405@', first_login: false },
 };
+
+export const GERAL_KEY = 'geral';
+
+/** Conta é de gestão (owner/admin geral) — enxerga tudo. */
+export function accIsGeral(acc: PanelAccount | undefined): boolean {
+  if (!acc) return false;
+  return acc.nucleo === GERAL_KEY;
+}
+
+/** Lista normalizada de núcleos que a conta gerencia (slugs; vazio = gestão geral). */
+export function accNucleos(acc: PanelAccount | undefined): string[] {
+  if (!acc || accIsGeral(acc)) return [];
+  const primary = (acc.nucleo || '').trim();
+  const list = Array.isArray(acc.nucleos) ? acc.nucleos.map(s => String(s).trim()) : [];
+  const all = [primary, ...list].filter(s => s && s !== GERAL_KEY);
+  return Array.from(new Set(all));
+}
+
+/**
+ * Verifica se um núcleo (por slug ou nome) pertence à lista permitida.
+ * `tenantNames` mapeia slug → nome, permitindo conferir registros gravados com o nome.
+ */
+export function accHasNucleo(
+  acc: PanelAccount | undefined,
+  slugOrNome: string,
+  tenantNames?: Record<string, string>,
+): boolean {
+  const alvo = (slugOrNome || '').trim().toLowerCase();
+  if (!alvo || accIsGeral(acc)) return false;
+  const nomes = tenantNames || {};
+  return accNucleos(acc).some(slug => {
+    if (slug.toLowerCase() === alvo) return true;
+    const nome = (nomes[slug] || '').trim().toLowerCase();
+    return !!nome && nome === alvo;
+  });
+}
 
 export async function loadCreds(): Promise<CredsMap> {
   try {
@@ -153,6 +190,7 @@ export function publicAccount(username: string, acc: PanelAccount, nucleoNome?: 
     username,
     label: acc.label,
     nucleo: acc.nucleo,
+    nucleos: accNucleos(acc),
     nucleo_nome: nucleoNome ?? null,
     color: acc.color,
     nome: acc.nome || '',
@@ -160,7 +198,17 @@ export function publicAccount(username: string, acc: PanelAccount, nucleoNome?: 
     cpf: acc.cpf || '',
     first_login: acc.first_login === true,
     is_owner: username === OWNER_KEY,
+    is_geral: accIsGeral(acc),
   };
+}
+
+/** Normaliza lista de slugs de núcleos vinda de payload: strings, dedupe, sem 'geral'. */
+export function sanitizeNucleoSlugs(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  const list = input
+    .map(s => String(s || '').trim())
+    .filter(s => s && s !== GERAL_KEY);
+  return Array.from(new Set(list));
 }
 
 /** Senha padrão do admin de um núcleo: o próprio nome do núcleo. */

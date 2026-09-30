@@ -770,10 +770,21 @@ export default function AdminPage() {
     const ownerStored = sessionStorage.getItem('admin_is_owner');
     if (ownerStored === 'true') setIsOwner(true);
     
-    // Carregar nucleos dinamicos do banco
+    // Carregar nucleos dinamicos do banco (admin de núcleo vê somente os seus)
     fetch('/api/admin/nucleos', { headers: { 'x-admin-auth': 'geral' } })
       .then(r => r.json())
-      .then(d => { if (d.nucleos) setDynamicNucleos(d.nucleos.filter((n: { ativo: boolean }) => n.ativo)); })
+      .then(d => {
+        if (!d.nucleos) return;
+        let lista = d.nucleos.filter((n: { ativo: boolean }) => n.ativo);
+        const armazenados = (() => {
+          try { return JSON.parse(sessionStorage.getItem('admin_auth_nucleos') || '[]') as string[]; } catch { return []; }
+        })();
+        if (stored !== 'geral' && Array.isArray(armazenados) && armazenados.length > 0) {
+          const permitidos = new Set(armazenados.map((s: string) => String(s).toLowerCase()));
+          lista = lista.filter((n: { slug: string }) => permitidos.has(String(n.slug).toLowerCase()));
+        }
+        setDynamicNucleos(lista);
+      })
       .catch(() => {});
 
     // Tenta restaurar lista de núcleos da sessão
@@ -785,36 +796,22 @@ export default function AdminPage() {
       }
     } catch {}
 
-    // Se não há lista salva (sessão antiga), busca da API para detectar múltiplos núcleos
+    // Se não há lista salva (sessão antiga), pergunta ao servidor quais núcleos a conta gerencia
     if (stored !== 'geral') {
-      fetch('/api/admin/responsaveis')
+      fetch('/api/admin/panel-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'me' }),
+      })
         .then(r => r.json())
-        .then(cfg => {
-          // Descobre o CPF do responsável logado buscando qual nucleo_key bate com stored
-          const allResp = cfg.responsaveis || [];
-          // Para cada responsável, verifica se ele está no nucleo_key guardado
-          // e coleta todos os nucleos onde ele aparece
-          const nucleoEntry = allResp.find((r: any) => r.nucleo_key === stored);
-          if (!nucleoEntry) return;
-          // Pega o CPF do responsável atual (pode ser cpf ou cpf2)
-          // Como não temos o CPF logado, busca todos os núcleos que têm o mesmo nome
-          const nome1 = nucleoEntry.nome?.trim();
-          const nome2 = nucleoEntry.nome2?.trim();
-          const cpf1 = nucleoEntry.cpf?.trim();
-          const cpf2 = nucleoEntry.cpf2?.trim();
-          // Encontra todos os núcleos que compartilham qualquer desses cpfs
-          const found: NucleoKey[] = allResp
-            .filter((r: any) =>
-              (cpf1 && (r.cpf === cpf1 || r.cpf2 === cpf1)) ||
-              (cpf2 && (r.cpf === cpf2 || r.cpf2 === cpf2)) ||
-              (nome1 && (r.nome === nome1 || r.nome2 === nome1)) ||
-              (nome2 && (r.nome === nome2 || r.nome2 === nome2))
-            )
-            .map((r: any) => r.nucleo_key as NucleoKey);
-          const unique = [...new Set(found)];
-          if (unique.length > 1) {
-            setAvailableNucleos(unique);
-            sessionStorage.setItem('admin_auth_nucleos', JSON.stringify(unique));
+        .then(d => {
+          if (!d?.authenticated) return;
+          const nucleosList: NucleoKey[] = (d.role === 'owner' || d.role === 'admin_geral' || d.is_owner)
+            ? ['geral']
+            : (Array.isArray(d.nucleos) && d.nucleos.length > 0 ? d.nucleos as NucleoKey[] : [d.nucleo as NucleoKey]);
+          if (nucleosList.length > 1) {
+            setAvailableNucleos(nucleosList);
+            sessionStorage.setItem('admin_auth_nucleos', JSON.stringify(nucleosList));
           }
         })
         .catch(() => {});
@@ -847,8 +844,10 @@ export default function AdminPage() {
         sessionStorage.setItem('admin_auth', nk);
         sessionStorage.setItem('admin_user', loginKey);
         sessionStorage.setItem('admin_is_owner', data.isOwner ? 'true' : 'false');
-        // Nucleos serao carregados dinamicamente do banco
-        const nucleosList = data.isGeral ? ['geral'] : [nk];
+        // Núcleos da conta: geral para gestão; senão lista completa (principal + vinculados)
+        const nucleosList: NucleoKey[] = data.isGeral
+          ? ['geral']
+          : (Array.isArray(data.nucleos) && data.nucleos.length > 0 ? data.nucleos as NucleoKey[] : [nk]);
         sessionStorage.setItem('admin_auth_nucleos', JSON.stringify(nucleosList));
         setAuthed(true);
         setActiveNucleo(nk);
@@ -922,6 +921,7 @@ export default function AdminPage() {
   const [respNewLogin, setRespNewLogin] = useState('');
   const [respNewPass, setRespNewPass] = useState('');
   const [respNewNucleo, setRespNewNucleo] = useState('');
+  const [respNewNucleosExtras, setRespNewNucleosExtras] = useState<string[]>([]);
   const [respCreateMsg, setRespCreateMsg] = useState('');
   const [respCreating, setRespCreating] = useState(false);
   const [respShowPass, setRespShowPass] = useState(false);
@@ -942,7 +942,7 @@ export default function AdminPage() {
   const [respNewNome, setRespNewNome] = useState('');
   const [respNewEmail, setRespNewEmail] = useState('');
   const [respNewCpfNum, setRespNewCpfNum] = useState('');
-  const [editAccountData, setEditAccountData] = useState<{ username: string; nome: string; email: string; cpf: string } | null>(null);
+  const [editAccountData, setEditAccountData] = useState<{ username: string; nome: string; email: string; cpf: string; nucleo: string; nucleos: string[] } | null>(null);
   const [editAccountSaving, setEditAccountSaving] = useState(false);
   const [editAccountMsg, setEditAccountMsg] = useState('');
   const [myAccountNome, setMyAccountNome] = useState('');
@@ -12412,9 +12412,14 @@ Suporte Ginga Gestão.`
                             {(u as any).email ? <>✉️ {(u as any).email}</> : <span style={{ color: '#b45309' }}>⚠ sem e-mail de recuperação</span>}
                             {(u as any).cpf ? <> · 🪪 CPF {(u as any).cpf}</> : null}
                           </div>
+                          {Array.isArray((u as any).nucleos) && (u as any).nucleos.length > 1 && (
+                            <div style={{ fontSize: '0.7rem', color: '#0ea5e9', marginTop: 2 }}>
+                              🔗 Gerencia {(u as any).nucleos.length} núcleos: {(u as any).nucleos.map((s: string) => dynamicNucleos.find(n => n.slug === s)?.nome || s).join(', ')}
+                            </div>
+                          )}
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                          <button onClick={() => { setEditAccountData({ username: u.username, nome: (u as any).nome || '', email: (u as any).email || '', cpf: (u as any).cpf || '' }); setEditAccountMsg(''); }}
+                          <button onClick={() => { setEditAccountData({ username: u.username, nome: (u as any).nome || '', email: (u as any).email || '', cpf: (u as any).cpf || '', nucleo: (u as any).nucleo || '', nucleos: Array.isArray((u as any).nucleos) ? (u as any).nucleos as string[] : [(u as any).nucleo || ''] }); setEditAccountMsg(''); }}
                             style={{ background: 'rgba(255,146,0,0.12)', border: '1px solid rgba(255,146,0,0.35)', color: '#FF9200', borderRadius: 7, padding: '4px 10px', fontSize: '0.73rem', cursor: 'pointer', fontWeight: 600 }}>
                             ✏️ Editar
                           </button>
@@ -12482,6 +12487,26 @@ Suporte Ginga Gestão.`
                           <div style={{ fontSize: '0.66rem', color: 'var(--text-secondary)', marginTop: 3 }}>Ex.: núcleo "CIEP 229" → senha padrão "ciep229"</div>
                         </div>
                       </div>
+                      <div style={{ marginTop: 12 }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Núcleos adicionais gerenciados (opcional)</div>
+                        {dynamicNucleos.filter(n => n.slug !== respNewNucleo).length === 0 ? (
+                          <div style={{ fontSize: '0.73rem', color: 'var(--text-tertiary)' }}>Crie mais núcleos para poder vinculá-los à mesma conta.</div>
+                        ) : (
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {dynamicNucleos.filter(n => n.slug !== respNewNucleo).map(n => {
+                              const ativo = respNewNucleosExtras.includes(n.slug);
+                              return (
+                                <button key={n.slug} type="button"
+                                  onClick={() => { setRespNewNucleosExtras(ativo ? respNewNucleosExtras.filter(s => s !== n.slug) : [...respNewNucleosExtras, n.slug]); setRespCreateMsg(''); }}
+                                  style={{ padding: '5px 12px', borderRadius: 20, cursor: 'pointer', fontWeight: 600, fontSize: '0.73rem', background: ativo ? 'rgba(14,165,233,0.18)' : 'var(--bg-input)', border: `1px solid ${ativo ? 'rgba(14,165,233,0.55)' : 'var(--border)'}`, color: ativo ? '#0ea5e9' : 'var(--text-secondary)' }}>
+                                  {ativo ? '✓ ' : '+ '}{n.nome}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <div style={{ fontSize: '0.66rem', color: 'var(--text-secondary)', marginTop: 4 }}>A mesma pessoa pode gerenciar vários núcleos com um único login.</div>
+                      </div>
                       {respCreateMsg && (
                         <div style={{ marginTop: 10, borderRadius: 8, padding: '7px 12px', background: respCreateMsg.startsWith('✓') ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${respCreateMsg.startsWith('✓') ? 'rgba(22,163,74,0.3)' : 'rgba(220,38,38,0.25)'}`, color: respCreateMsg.startsWith('✓') ? '#22c55e' : '#ef4444', fontSize: '0.78rem', fontWeight: 600 }}>
                           {respCreateMsg}
@@ -12494,11 +12519,11 @@ Suporte Ginga Gestão.`
                         if (respNewEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(respNewEmail)) { setRespCreateMsg('E-mail inválido.'); return; }
                         if (respNewCpfNum && respNewCpfNum.length !== 11) { setRespCreateMsg('CPF deve ter 11 dígitos.'); return; }
                         setRespCreating(true);
-                        const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create-user', admin_username: sessionUser(), admin_password: respAdminPass, login: respNewCpf, nome: respNewNome, email: respNewEmail || undefined, cpf: respNewCpfNum || undefined, new_password: respNewPass || undefined, nucleo_key: respNewNucleo }) });
+                        const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create-user', admin_username: sessionUser(), admin_password: respAdminPass, login: respNewCpf, nome: respNewNome, email: respNewEmail || undefined, cpf: respNewCpfNum || undefined, new_password: respNewPass || undefined, nucleo_key: respNewNucleo, nucleos: respNewNucleosExtras }) });
                         const d = await res.json();
                         if (res.ok) {
                           setRespCreateMsg(`✅ Conta criada! Login "${respNewCpf}" vinculado ao núcleo. Senha: ${respNewPass || '(padrão = nome do núcleo)'}`);
-                          setRespNewCpf(''); setRespNewNome(''); setRespNewPass(''); setRespNewNucleo(''); setRespNewEmail(''); setRespNewCpfNum('');
+                          setRespNewCpf(''); setRespNewNome(''); setRespNewPass(''); setRespNewNucleo(''); setRespNewEmail(''); setRespNewCpfNum(''); setRespNewNucleosExtras([]);
                           const lr = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list-users', admin_username: sessionUser(), admin_password: respAdminPass }) });
                           const ld = await lr.json();
                           if (Array.isArray(ld)) { setRespUsers(ld.filter((u: any) => u.nucleo !== 'geral')); setRespGeralUsers(ld.filter((u: any) => u.nucleo === 'geral')); }
@@ -12516,6 +12541,7 @@ Suporte Ginga Gestão.`
               {editAccountData && (
                 <EditAccountModal
                   data={editAccountData}
+                  allNucleos={dynamicNucleos.map(n => ({ slug: n.slug, nome: n.nome }))}
                   saving={editAccountSaving}
                   msg={editAccountMsg}
                   onClose={() => setEditAccountData(null)}
@@ -12523,7 +12549,7 @@ Suporte Ginga Gestão.`
                     setEditAccountSaving(true);
                     setEditAccountMsg('');
                     try {
-                      const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update-user', admin_username: sessionUser(), admin_password: respAdminPass, target_username: editAccountData.username, login: payload.login, nome: payload.nome, email: payload.email, cpf: payload.cpf, new_password: payload.new_password }) });
+                      const res = await fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update-user', admin_username: sessionUser(), admin_password: respAdminPass, target_username: editAccountData.username, login: payload.login, nome: payload.nome, email: payload.email, cpf: payload.cpf, new_password: payload.new_password, nucleos: payload.nucleos }) });
                       const d = await res.json();
                       if (res.ok) {
                         setEditAccountMsg('✓ Conta atualizada!');

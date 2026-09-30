@@ -53,32 +53,21 @@ type RegistroGraduacao = {
 
 type Tab = 'dashboard' | 'carteirinha' | 'presenca' | 'financeiro' | 'graduacao' | 'justificativas' | 'fotos' | 'playlist' | 'conta' | 'evolucao' | 'dados' | 'termo' | 'docs';
 
-// Cores dinâmicas baseadas no nome do núcleo
-const NUCLEO_COLORS_DEFAULT = ['#dc2626', '#ea580c', '#16a34a', '#9333ea', '#0891b2', '#059669', '#1d4ed8'];
-function getNucleoColorDynamic(nucleo: string): string {
-  if (!nucleo) return '#1d4ed8';
-  const hash = nucleo.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return NUCLEO_COLORS_DEFAULT[hash % NUCLEO_COLORS_DEFAULT.length];
-}
-
+// Cores de graduação adaptadas ao tema escuro: fundo translúcido, texto claro
 const GRAD_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  'Cru': { bg: '#f8f8f8', text: '#374151', border: '#d1d5db' },
-  'Amarela': { bg: '#fef9c3', text: '#854d0e', border: '#fde047' },
-  'Laranja': { bg: '#fff7ed', text: '#9a3412', border: '#fb923c' },
-  'Azul': { bg: '#eff6ff', text: '#1e40af', border: '#60a5fa' },
-  'Vermelha': { bg: '#fef2f2', text: '#991b1b', border: '#f87171' },
-  'Verde': { bg: '#f0fdf4', text: '#166534', border: '#4ade80' },
-  'Roxa': { bg: '#faf5ff', text: '#6b21a8', border: '#c084fc' },
-  'Marrom': { bg: '#fdf4dc', text: '#78350f', border: '#d97706' },
-  'Preta': { bg: '#1f2937', text: '#f9fafb', border: '#4b5563' },
+  'Cru': { bg: 'rgba(229,231,235,0.10)', text: '#e5e7eb', border: '#e5e7eb' },
+  'Amarela': { bg: 'rgba(250,204,21,0.10)', text: '#fde047', border: '#fde047' },
+  'Laranja': { bg: 'rgba(255,146,0,0.12)', text: '#fb923c', border: '#fb923c' },
+  'Azul': { bg: 'rgba(59,130,246,0.10)', text: '#93c5fd', border: '#60a5fa' },
+  'Vermelha': { bg: 'rgba(239,68,68,0.10)', text: '#fca5a5', border: '#f87171' },
+  'Verde': { bg: 'rgba(34,197,94,0.10)', text: '#86efac', border: '#4ade80' },
+  'Roxa': { bg: 'rgba(192,132,252,0.10)', text: '#d8b4fe', border: '#c084fc' },
+  'Marrom': { bg: 'rgba(217,119,6,0.12)', text: '#fbbf24', border: '#d97706' },
+  'Preta': { bg: 'rgba(120,120,120,0.14)', text: '#e5e7eb', border: '#9ca3af' },
 };
 
 function getGradColor(grad: string) {
-  return GRAD_COLORS[grad] || { bg: '#f0f9ff', text: '#0369a1', border: '#7dd3fc' };
-}
-
-function getNucleoColor(nucleo: string): string {
-  return getNucleoColorDynamic(nucleo);
+  return GRAD_COLORS[grad] || { bg: 'rgba(255,146,0,0.10)', text: '#fb923c', border: '#fb923c' };
 }
 
 export default function AlunoPage() {
@@ -96,6 +85,9 @@ export default function AlunoPage() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [lockedUntil, setLockedUntil] = useState(0);
+
+  // Gaveta "Mais" (navegação inferior)
+  const [showMore, setShowMore] = useState(false);
 
   // ── Register ──────────────────────────────────────────────────────────────
   const [showRegister, setShowRegister] = useState(false);
@@ -607,8 +599,7 @@ export default function AlunoPage() {
 
   // Gender-based theme: M=green, F=red, otherwise nucleo color
   // M = blue (#1d4ed8), F = red (#dc2626), others fallback to nucleo color
-  const genderColor = student?.sexo === 'M' ? '#1d4ed8' : student?.sexo === 'F' ? '#dc2626' : null;
-  const nucleoColor = genderColor || (student ? getNucleoColor(student.nucleo || '') : '#1d4ed8');
+  const nucleoColor = '#FF9200';
   const cordaColors = getCordaColors(student?.graduacao || '');
 
   // Cadastro incompleto — só avalia depois que student foi carregado do servidor (studentLoaded é one-way: false→true, nunca volta)
@@ -824,18 +815,18 @@ export default function AlunoPage() {
 
   // ── FORGOT PASSWORD ───────────────────────────────────────────────────────
   if (showForgot) {
-    const inpStyle = { width: '100%', borderColor: '#e5e7eb', borderStyle: 'solid' as const, borderWidth: 1.5, borderRadius: 10, padding: '11px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' as const };
-    const lblStyle = { display: 'block', fontSize: '0.8rem', fontWeight: 600 as const, color: '#374151', marginBottom: 5 };
+    const inpStyle = { width: '100%', background: '#111111', color: '#f5f5f4', borderColor: '#2e2e2e', borderStyle: 'solid' as const, borderWidth: 1.5, borderRadius: 10, padding: '11px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' as const };
+    const lblStyle = { display: 'block', fontSize: '0.8rem', fontWeight: 600 as const, color: '#d4d4d4', marginBottom: 5 };
 
     return (
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#0f172a,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-        <div style={{ background: '#fff', borderRadius: 20, padding: '32px 28px', width: '100%', maxWidth: 400, boxShadow: '0 25px 60px rgba(0,0,0,0.4)' }}>
+        <div style={{ background: '#161616', borderRadius: 20, padding: '32px 28px', width: '100%', maxWidth: 400, boxShadow: '0 25px 60px rgba(0,0,0,0.4)' }}>
 
           {forgotStep === 'done' ? (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '3.5rem', marginBottom: 12 }}>✅</div>
-              <h2 style={{ margin: '0 0 8px', fontSize: '1.2rem', fontWeight: 800, color: '#111827' }}>Senha redefinida!</h2>
-              <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: 20 }}>Sua nova senha foi salva com sucesso. Você já pode fazer login.</p>
+              <h2 style={{ margin: '0 0 8px', fontSize: '1.2rem', fontWeight: 800, color: '#f5f5f4' }}>Senha redefinida!</h2>
+              <p style={{ fontSize: '0.85rem', color: '#a3a3a3', marginBottom: 20 }}>Sua nova senha foi salva com sucesso. Você já pode fazer login.</p>
               <button onClick={() => { setShowForgot(false); setForgotStep('lookup'); setForgotInput(''); setForgotMsg(''); setResetMsg(''); setResetPassword(''); setResetConfirmPassword(''); setResetOtp(''); }}
                 style={{ background: 'linear-gradient(135deg,#FF9200,#c86a00)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 32px', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
                 Entrar agora
@@ -846,9 +837,9 @@ export default function AlunoPage() {
               <div style={{ textAlign: 'center', marginBottom: 22 }}>
                 <div style={{ fontSize: 38, marginBottom: 6 }}>📨</div>
                 <h2 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 700 }}>Digite o código</h2>
-                <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>Enviamos um código de 6 dígitos para os canais vinculados à sua conta. Ele expira em 15 minutos.</p>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: '#a3a3a3' }}>Enviamos um código de 6 dígitos para os canais vinculados à sua conta. Ele expira em 15 minutos.</p>
               </div>
-              {resetMsg && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: '0.83rem' }}>{resetMsg}</div>}
+              {resetMsg && <div style={{ background: 'rgba(239,68,68,0.09)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: '0.83rem' }}>{resetMsg}</div>}
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 if (resetOtp.replace(/\D/g, '').length !== 6) { setResetMsg('Digite o código de 6 dígitos que você recebeu.'); return; }
@@ -885,20 +876,20 @@ export default function AlunoPage() {
                 <div>
                   <label style={lblStyle}>Nova Senha <span style={{ color: '#ef4444' }}>*</span></label>
                   <input type="password" value={resetPassword} onChange={e => setResetPassword(e.target.value)}
-                    style={{ ...inpStyle, borderColor: resetPassword && resetPassword.length < 6 ? '#fca5a5' : '#e5e7eb' }}
+                    style={{ ...inpStyle, borderColor: resetPassword && resetPassword.length < 6 ? '#fca5a5' : '#2e2e2e' }}
                     placeholder="Mínimo 6 caracteres" minLength={6} required autoFocus />
                   {resetPassword && resetPassword.length < 6 && <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#ef4444' }}>Mínimo 6 caracteres</p>}
                 </div>
                 <div>
                   <label style={lblStyle}>Confirmar Nova Senha <span style={{ color: '#ef4444' }}>*</span></label>
                   <input type="password" value={resetConfirmPassword} onChange={e => setResetConfirmPassword(e.target.value)}
-                    style={{ ...inpStyle, borderColor: resetConfirmPassword && resetConfirmPassword !== resetPassword ? '#fca5a5' : resetConfirmPassword && resetConfirmPassword === resetPassword ? '#86efac' : '#e5e7eb' }}
+                    style={{ ...inpStyle, borderColor: resetConfirmPassword && resetConfirmPassword !== resetPassword ? '#fca5a5' : resetConfirmPassword && resetConfirmPassword === resetPassword ? '#86efac' : '#2e2e2e' }}
                     placeholder="Repita a nova senha" minLength={6} required />
                   {resetConfirmPassword && resetConfirmPassword !== resetPassword && <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#ef4444' }}>As senhas não coincidem</p>}
-                  {resetConfirmPassword && resetConfirmPassword === resetPassword && <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#16a34a' }}>✓ Senhas coincidem</p>}
+                  {resetConfirmPassword && resetConfirmPassword === resetPassword && <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#4ade80' }}>✓ Senhas coincidem</p>}
                 </div>
                 <button type="submit" disabled={forgotLoading || resetPassword.length < 6 || resetPassword !== resetConfirmPassword || resetOtp.replace(/\D/g, '').length !== 6}
-                  style={{ background: (resetPassword.length >= 6 && resetPassword === resetConfirmPassword && resetOtp.replace(/\D/g, '').length === 6) ? 'linear-gradient(135deg,#FF9200,#c86a00)' : '#e5e7eb', color: (resetPassword.length >= 6 && resetPassword === resetConfirmPassword && resetOtp.replace(/\D/g, '').length === 6) ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: 13, fontWeight: 700, fontSize: '0.95rem', cursor: forgotLoading ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
+                  style={{ background: (resetPassword.length >= 6 && resetPassword === resetConfirmPassword && resetOtp.replace(/\D/g, '').length === 6) ? 'linear-gradient(135deg,#FF9200,#c86a00)' : '#2e2e2e', color: (resetPassword.length >= 6 && resetPassword === resetConfirmPassword && resetOtp.replace(/\D/g, '').length === 6) ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: 13, fontWeight: 700, fontSize: '0.95rem', cursor: forgotLoading ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
                   {forgotLoading ? '⏳ Salvando...' : '✅ Salvar Nova Senha'}
                 </button>
               </form>
@@ -914,17 +905,17 @@ export default function AlunoPage() {
                   const data = await res.json();
                   if (data.send_failed) { setResetMsg('Não foi possível reenviar agora. Procure o admin do seu núcleo.'); }
                 } catch { /* mantém na tela */ } finally { setForgotLoading(false); }
-              }} style={{ width: '100%', marginTop: 10, background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.82rem' }}>Reenviar código</button>
-              <button onClick={() => { setForgotStep('lookup'); setResetMsg(''); }} style={{ width: '100%', marginTop: 6, background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.82rem' }}>← Usar outro e-mail</button>
+              }} style={{ width: '100%', marginTop: 10, background: 'none', border: 'none', color: '#8f8f8f', cursor: 'pointer', fontSize: '0.82rem' }}>Reenviar código</button>
+              <button onClick={() => { setForgotStep('lookup'); setResetMsg(''); }} style={{ width: '100%', marginTop: 6, background: 'none', border: 'none', color: '#8f8f8f', cursor: 'pointer', fontSize: '0.82rem' }}>← Usar outro e-mail</button>
             </>
           ) : (
             <>
               <div style={{ textAlign: 'center', marginBottom: 22 }}>
                 <div style={{ fontSize: 38, marginBottom: 6 }}>🔑</div>
                 <h2 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 700 }}>Recuperar Senha</h2>
-                <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>Informe seu e-mail ou usuário para localizar sua conta.</p>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: '#a3a3a3' }}>Informe seu e-mail ou usuário para localizar sua conta.</p>
               </div>
-              {forgotMsg && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: '0.83rem' }}>{forgotMsg}</div>}
+              {forgotMsg && <div style={{ background: 'rgba(239,68,68,0.09)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: '0.83rem' }}>{forgotMsg}</div>}
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 setForgotLoading(true); setForgotMsg('');
@@ -955,16 +946,16 @@ export default function AlunoPage() {
                   <label style={lblStyle}>E-mail ou usuário da conta</label>
                   <input type="text" value={forgotInput} onChange={e => setForgotInput(e.target.value)}
                     style={inpStyle} placeholder="seu@email.com ou nome de usuário" required autoFocus />
-                  <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: '#6b7280' }}>
+                  <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: '#a3a3a3' }}>
                     Enviaremos um código de verificação para os canais vinculados à sua conta.
                   </p>
                 </div>
                 <button type="submit" disabled={forgotLoading || !forgotInput.trim()}
-                  style={{ background: forgotInput.trim() ? 'linear-gradient(135deg,#FF9200,#c86a00)' : '#e5e7eb', color: forgotInput.trim() ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: 13, fontWeight: 700, fontSize: '0.95rem', cursor: forgotLoading ? 'not-allowed' : 'pointer' }}>
+                  style={{ background: forgotInput.trim() ? 'linear-gradient(135deg,#FF9200,#c86a00)' : '#2e2e2e', color: forgotInput.trim() ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: 13, fontWeight: 700, fontSize: '0.95rem', cursor: forgotLoading ? 'not-allowed' : 'pointer' }}>
                   {forgotLoading ? '⏳ Enviando código...' : '📨 Enviar código de verificação'}
                 </button>
               </form>
-              <button onClick={() => { setShowForgot(false); setForgotMsg(''); setForgotInput(''); }} style={{ width: '100%', marginTop: 12, background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.82rem' }}>← Voltar ao login</button>
+              <button onClick={() => { setShowForgot(false); setForgotMsg(''); setForgotInput(''); }} style={{ width: '100%', marginTop: 12, background: 'none', border: 'none', color: '#8f8f8f', cursor: 'pointer', fontSize: '0.82rem' }}>← Voltar ao login</button>
             </>
           )}
         </div>
@@ -1002,6 +993,9 @@ export default function AlunoPage() {
     { id: 'playlist',       icon: '🎵', label: 'Playlist' },
     { id: 'conta',          icon: '⚙️', label: 'Conta' },
   ];
+  // Barra inferior: as 4 seções mais usadas + gaveta "Mais" com o restante
+  const primaryTabIds: Tab[] = ['dashboard', 'carteirinha', 'presenca', 'financeiro'];
+  const primaryTabs = primaryTabIds.map(id => tabs.find(t => t.id === id)!).filter(Boolean);
 
   // ── DASHBOARD (LOGGED IN) ─────────────────────────────────────────────────
   const displayName = student?.apelido || student?.nome_social || student?.nome_completo?.split(' ')[0] || 'Aluno';
@@ -1012,76 +1006,71 @@ export default function AlunoPage() {
     : `Seja bem-vindo(a), ${displayName}! 👋`;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div className="pa-app" style={{ minHeight: '100vh', background: '#0a0a0a', fontFamily: 'var(--font-sans), system-ui, -apple-system, sans-serif' }}>
 
       {/* Admin preview banner */}
       {isAdminPreview && (
-        <div style={{ background: '#1d4ed8', color: '#fff', fontSize: '0.75rem', padding: '6px 20px', textAlign: 'center', fontWeight: 600, letterSpacing: '0.01em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <div style={{ background: '#b45309', color: '#fff', fontSize: '0.75rem', padding: '6px 20px', textAlign: 'center', fontWeight: 600, letterSpacing: '0.01em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           Modo visualização admin — você está vendo a área do aluno como <strong style={{ marginLeft: 4 }}>{student?.nome_completo || '...'}</strong>
         </div>
       )}
 
-      {/* Header */}
-      <header style={{ color: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.15)', backgroundColor: nucleoColor }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      {/* Header do app — preto com detalhes laranja */}
+      <header style={{
+        color: '#fff',
+        background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
+        borderBottom: '1px solid #262626',
+        position: 'sticky', top: 0, zIndex: 60,
+      }}>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
             {student?.foto_url ? (
-              <img src={student.foto_url} alt={displayName} style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.4)' }} />
+              <span style={{ display: 'inline-flex', flexShrink: 0, padding: 2, borderRadius: '50%', background: 'linear-gradient(135deg, #FF9200, #b45309)' }}>
+                <img src={student.foto_url} alt={displayName} style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', border: '2px solid #0a0a0a', display: 'block' }} />
+              </span>
             ) : (
-              <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ display: 'inline-flex', flexShrink: 0, width: 46, height: 46, borderRadius: '50%', background: 'linear-gradient(135deg, #FF9200, #b45309)', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="26" height="26" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="32" cy="10" r="7" fill="rgba(255,255,255,0.9)"/>
-                  <path d="M32 17 C26 20 22 28 24 36 L20 54" stroke="rgba(255,255,255,0.9)" strokeWidth="3.5" strokeLinecap="round"/>
-                  <path d="M32 17 C38 20 42 28 40 36 L44 54" stroke="rgba(255,255,255,0.9)" strokeWidth="3.5" strokeLinecap="round"/>
-                  <path d="M24 36 L14 44" stroke="rgba(255,255,255,0.9)" strokeWidth="3.5" strokeLinecap="round"/>
-                  <path d="M40 36 L50 32" stroke="rgba(255,255,255,0.9)" strokeWidth="3.5" strokeLinecap="round"/>
+                  <circle cx="32" cy="10" r="7" fill="#0a0a0a" />
+                  <path d="M32 17 C26 20 22 28 24 36 L20 54" stroke="#0a0a0a" strokeWidth="3.5" strokeLinecap="round" />
+                  <path placeholder-color="#0a0a0a" d="M32 17 C38 20 42 28 40 36 L44 54" stroke="#0a0a0a" strokeWidth="3.5" strokeLinecap="round" />
+                  <path d="M24 36 L14 44" stroke="#0a0a0a" strokeWidth="3.5" strokeLinecap="round" />
+                  <path d="M40 36 L50 32" stroke="#0a0a0a" strokeWidth="3.5" strokeLinecap="round" />
                 </svg>
-              </div>
+              </span>
             )}
-            <div>
-              <div style={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.2 }}>{displayName}</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
               {student?.apelido && student.apelido !== student.nome_completo?.split(' ')[0] && (
-                <div style={{ fontSize: '0.68rem', opacity: 0.7, lineHeight: 1.2 }}>{student.nome_completo}</div>
+                <div style={{ fontSize: '0.68rem', color: '#8f8f8f', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{student.nome_completo}</div>
               )}
-              <div style={{ fontSize: '0.75rem', opacity: 0.8, marginTop: 1 }}>{student?.nucleo || 'CCLN'} • {student?.graduacao || 'Aluno'}</div>
+              <div style={{ fontSize: '0.72rem', color: '#FF9200', fontWeight: 600, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {student?.graduacao || 'Aluno'} {student?.nucleo ? `· ${student.nucleo}` : ''}
+              </div>
             </div>
           </div>
           {isAdminPreview ? (
-            <span style={{ background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8, padding: '6px 14px', color: '#fff', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.02em' }}>🔭 Visualização</span>
+            <span style={{ flexShrink: 0, background: 'rgba(255,146,0,0.15)', border: '1px solid rgba(255,146,0,0.4)', borderRadius: 8, padding: '6px 12px', color: '#FF9200', fontSize: '0.75rem', fontWeight: 700 }}>🔭 Visualização</span>
           ) : (
-            <button onClick={handleLogout} style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, padding: '6px 14px', color: '#fff', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>Sair</button>
+            <button onClick={handleLogout} style={{ flexShrink: 0, background: '#161616', border: '1px solid #2e2e2e', borderRadius: 10, padding: '8px 14px', color: '#d4d4d4', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>Sair</button>
           )}
         </div>
       </header>
 
-      {/* Bottom nav (mobile) */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: '#fff', borderBottom: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 8px', display: 'flex', overflowX: 'auto', gap: 2 }}>
-          {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 10px', border: 'none', background: 'none', cursor: 'pointer', borderBottom: activeTab === tab.id ? `2.5px solid ${nucleoColor}` : '2.5px solid transparent', color: activeTab === tab.id ? nucleoColor : '#6b7280', fontWeight: activeTab === tab.id ? 700 : 500, fontSize: '0.7rem', whiteSpace: 'nowrap', transition: 'all 0.15s', minWidth: 60 }}>
-              <span style={{ fontSize: '1.15rem', lineHeight: 1 }}>{tab.icon}</span>
-              {tab.label}
-              {tab.badge && <span style={{ position: 'absolute', top: 4, right: 6, width: 7, height: 7, borderRadius: '50%', background: '#ef4444', border: '1.5px solid #fff' }} />}
-            </button>
-          ))}
-        </div>
-      </nav>
-
       {/* Content */}
-      <main style={{ maxWidth: 720, margin: '0 auto', padding: '20px 16px 40px' }}>
+      <main style={{ maxWidth: 560, margin: '0 auto', padding: '18px 16px 96px' }}>
 
         {/* ── DASHBOARD ── */}
         {activeTab === 'dashboard' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             {student && (student.menor_de_idade as boolean) && !student.assinatura_responsavel && (
-              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{ background: 'rgba(239,68,68,0.09)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <div style={{ fontSize: '1.4rem', flexShrink: 0, marginTop: 1 }}>📄</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#991b1b', marginBottom: 3 }}>Termo de Responsabilidade pendente</div>
-                  <div style={{ fontSize: '0.8rem', color: '#7f1d1d', lineHeight: 1.5, marginBottom: 10 }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fca5a5', marginBottom: 3 }}>Termo de Responsabilidade pendente</div>
+                  <div style={{ fontSize: '0.8rem', color: '#fca5a5', lineHeight: 1.5, marginBottom: 10 }}>
                     Como aluno menor de idade, o termo de autorização ainda não foi assinado.
                   </div>
                   <button onClick={() => setActiveTab('termo')}
@@ -1092,13 +1081,14 @@ export default function AlunoPage() {
               </div>
             )}
 
-            {/* Welcome card */}
-            <div style={{ background: `linear-gradient(135deg, ${nucleoColor}, ${nucleoColor}cc)`, borderRadius: 18, padding: '22px 22px', color: '#fff', boxShadow: `0 8px 24px ${nucleoColor}40` }}>
+            {/* Welcome card — identidade Portal Aluno */}
+            <div style={{ background: 'linear-gradient(150deg, #1d1d1d 0%, #111111 100%)', borderRadius: 20, padding: '22px 22px', color: '#fff', border: '1px solid #2a2a2a', boxShadow: '0 10px 30px rgba(0,0,0,0.45)', position: 'relative', overflow: 'hidden' }}>
+              <div aria-hidden="true" style={{ position: 'absolute', top: -70, right: -70, width: 190, height: 190, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,146,0,0.22) 0%, rgba(255,146,0,0) 70%)', pointerEvents: 'none' }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
                 {student?.foto_url ? (
                   <img src={student.foto_url} alt={displayName} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.5)', flexShrink: 0 }} />
                 ) : (
-                  <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,146,0,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <svg width="38" height="38" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <circle cx="32" cy="10" r="7" fill="rgba(255,255,255,0.9)"/>
                       <path d="M32 17 C26 20 22 28 24 36 L20 54" stroke="rgba(255,255,255,0.9)" strokeWidth="3.5" strokeLinecap="round"/>
@@ -1109,7 +1099,7 @@ export default function AlunoPage() {
                   </div>
                 )}
                 <div>
-                  <div style={{ fontSize: '0.72rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Area do Aluno - Portal Aluno</div>
+                  <div style={{ fontSize: '0.7rem', color: '#FF9200', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Portal Aluno</div>
                   <div style={{ fontSize: '1.2rem', fontWeight: 800, lineHeight: 1.3 }}>{welcomeGreeting}</div>
                   {student?.apelido && student.nome_completo && student.apelido !== student.nome_completo.split(' ')[0] && (
                     <div style={{ fontSize: '0.78rem', opacity: 0.75, marginTop: 2 }}>{student.nome_completo}</div>
@@ -1118,15 +1108,15 @@ export default function AlunoPage() {
               </div>
               {/* Identity strip */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 12px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '8px 12px' }}>
                   <div style={{ fontSize: '0.62rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Nome Completo</div>
                   <div style={{ fontSize: '0.82rem', fontWeight: 700, lineHeight: 1.2 }}>{student?.nome_completo || '—'}</div>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 12px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '8px 12px' }}>
                   <div style={{ fontSize: '0.62rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Meu ID</div>
                   <div style={{ fontSize: '0.82rem', fontWeight: 800, letterSpacing: '0.08em' }}>{alunoInscricaoNum != null ? `CCLN-${String(alunoInscricaoNum).padStart(3, '0')}` : '—'}</div>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 12px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '8px 12px' }}>
                   <div style={{ fontSize: '0.62rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Graduação</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                     <span style={{ display: 'inline-flex', height: 12, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.55)', flexShrink: 0, minWidth: 28 }}>
@@ -1137,14 +1127,14 @@ export default function AlunoPage() {
                     <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>{student?.graduacao || 'Não informada'}</span>
                   </div>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 12px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '8px 12px' }}>
                   <div style={{ fontSize: '0.62rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Núcleo</div>
                   <div style={{ fontSize: '0.82rem', fontWeight: 700 }}>{student?.nucleo || 'CCLN'}</div>
                 </div>
               </div>
               {/* ── Banner cadastro incompleto DENTRO do card verde ── */}
               {cadastroIncompleto && (
-                <div style={{ marginTop: 14, borderRadius: 14, overflow: 'hidden', border: '2px solid rgba(255,255,255,0.5)', boxShadow: '0 4px 18px rgba(0,0,0,0.25)', animation: 'pulseCard 1.6s ease-in-out infinite' }}>
+                <div style={{ marginTop: 14, borderRadius: 14, overflow: 'hidden', border: '2px solid rgba(239,68,68,0.55)', boxShadow: '0 4px 18px rgba(0,0,0,0.4)', animation: 'pulseCard 1.6s ease-in-out infinite' }}>
                   <style>{`
                     @keyframes pulseCard { 0%,100%{box-shadow:0 4px 18px rgba(0,0,0,0.25),0 0 0 0 rgba(255,255,255,0.4)} 50%{box-shadow:0 4px 28px rgba(0,0,0,0.35),0 0 0 6px rgba(255,255,255,0)} }
                     @keyframes sirenBlink { 0%,100%{opacity:1} 50%{opacity:0.2} }
@@ -1157,12 +1147,12 @@ export default function AlunoPage() {
                     <span style={{ animation: 'sirenBlink 0.7s ease-in-out infinite 0.35s', fontSize: '1rem' }}>🚨</span>
                   </div>
                   {/* Corpo branco */}
-                  <div style={{ background: '#fff', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ background: '#161616', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#111827', marginBottom: 3 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#f5f5f4', marginBottom: 3 }}>
                         Seus dados estão incompletos!
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280', lineHeight: 1.5 }}>
+                      <div style={{ fontSize: '0.75rem', color: '#a3a3a3', lineHeight: 1.5 }}>
                         Preencha os dados obrigatórios: núcleo, graduação, data de nascimento, telefone, e-mail, sexo e autorização de uso de imagem.
                       </div>
                     </div>
@@ -1182,12 +1172,12 @@ export default function AlunoPage() {
             {/* Quick actions grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
               {([
-                { tab: 'carteirinha'    as Tab, icon: '🪪', label: 'Carteirinha',   color: '#eff6ff', iconBg: '#dbeafe', textColor: '#1e40af' },
-                { tab: 'presenca'       as Tab, icon: '📍', label: 'Presença',      color: '#f0fdf4', iconBg: '#dcfce7', textColor: '#15803d' },
-                { tab: 'financeiro'     as Tab, icon: '💰', label: 'Financeiro',    color: '#fef9c3', iconBg: '#fef08a', textColor: '#854d0e' },
-                { tab: 'graduacao'      as Tab, icon: '🎖️', label: 'Graduação',     color: '#faf5ff', iconBg: '#e9d5ff', textColor: '#7e22ce' },
-                { tab: 'fotos'          as Tab, icon: '📸', label: 'Fotos/Vídeos', color: '#fdf2f8', iconBg: '#f5d0fe', textColor: '#86198f' },
-                { tab: 'justificativas' as Tab, icon: '📝', label: 'Justificativas',color: '#fff7ed', iconBg: '#fed7aa', textColor: '#9a3412' },
+                { tab: 'carteirinha'    as Tab, icon: '🪪', label: 'Carteirinha',   color: 'rgba(59,130,246,0.10)', iconBg: 'rgba(59,130,246,0.22)', textColor: '#93c5fd' },
+                { tab: 'presenca'       as Tab, icon: '📍', label: 'Presença',      color: 'rgba(34,197,94,0.08)', iconBg: 'rgba(34,197,94,0.22)', textColor: '#86efac' },
+                { tab: 'financeiro'     as Tab, icon: '💰', label: 'Financeiro',    color: '#fef9c3', iconBg: 'rgba(250,204,21,0.22)', textColor: '#fde047' },
+                { tab: 'graduacao'      as Tab, icon: '🎖️', label: 'Graduação',     color: 'rgba(168,85,247,0.10)', iconBg: 'rgba(168,85,247,0.22)', textColor: '#d8b4fe' },
+                { tab: 'fotos'          as Tab, icon: '📸', label: 'Fotos/Vídeos', color: 'rgba(236,72,153,0.10)', iconBg: 'rgba(236,72,153,0.22)', textColor: '#f9a8d4' },
+                { tab: 'justificativas' as Tab, icon: '📝', label: 'Justificativas',color: 'rgba(255,146,0,0.10)', iconBg: 'rgba(255,146,0,0.22)', textColor: '#fdba74' },
               ] as { tab: Tab; icon: string; label: string; color: string; iconBg: string; textColor: string }[]).map(item => (
                 <button key={item.tab} onClick={() => setActiveTab(item.tab)}
                   style={{ background: item.color, borderRadius: 14, padding: '14px 10px', border: 'none', cursor: 'pointer', textAlign: 'center', transition: 'transform 0.15s, box-shadow 0.15s' }}>
@@ -1200,38 +1190,38 @@ export default function AlunoPage() {
             {/* Próximos eventos */}
             {eventos.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Próximos Eventos</div>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Próximos Eventos</div>
                 {eventos.slice(0, 3).map((ev: any) => (
-                  <div key={ev.id} style={{ background: '#fff', borderRadius: 14, padding: '14px 16px', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 42, height: 42, borderRadius: 10, background: ev.tipo === 'batizado' ? '#fef3c7' : '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>
+                  <div key={ev.id} style={{ background: '#161616', borderRadius: 14, padding: '14px 16px', border: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 42, height: 42, borderRadius: 10, background: ev.tipo === 'batizado' ? 'rgba(250,204,21,0.12)' : 'rgba(168,85,247,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>
                       {ev.tipo === 'batizado' ? '🥋' : '🎖️'}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.nome}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f5f5f4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.nome}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#a3a3a3', marginTop: 2 }}>
                         {ev.data ? new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                         {ev.hora ? ` · ${ev.hora}` : ''}
                         {ev.local ? ` · ${ev.local}` : ''}
                       </div>
                     </div>
-                    <span style={{ flexShrink: 0, background: ev.tipo === 'batizado' ? '#fef3c7' : '#ede9fe', color: ev.tipo === 'batizado' ? '#92400e' : '#5b21b6', borderRadius: 8, padding: '3px 9px', fontSize: '0.7rem', fontWeight: 700 }}>
+                    <span style={{ flexShrink: 0, background: ev.tipo === 'batizado' ? 'rgba(250,204,21,0.12)' : 'rgba(168,85,247,0.12)', color: ev.tipo === 'batizado' ? '#92400e' : '#5b21b6', borderRadius: 8, padding: '3px 9px', fontSize: '0.7rem', fontWeight: 700 }}>
                       {ev.tipo === 'batizado' ? 'Batizado' : 'Troca'}
                     </span>
                   </div>
                 ))}
                 {eventos.length > 3 && (
-                  <div style={{ textAlign: 'center', fontSize: '0.75rem', color: '#9ca3af' }}>+{eventos.length - 3} evento(s) — veja na aba Graduação</div>
+                  <div style={{ textAlign: 'center', fontSize: '0.75rem', color: '#8f8f8f' }}>+{eventos.length - 3} evento(s) — veja na aba Graduação</div>
                 )}
               </div>
             )}
 
             {/* Links institucionais */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>CCLN</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>CCLN</div>
               {([
-                { href: '/hierarquia', icon: '🥋', label: 'Hierarquia', color: '#fef2f2', iconBg: '#fecaca', textColor: '#991b1b' },
-                { href: '/organograma', icon: '🏛️', label: 'Organograma', color: '#eff6ff', iconBg: '#bfdbfe', textColor: '#1e40af' },
-                { href: '/documentos', icon: '📚', label: 'Documentos Históricos da Capoeira', color: '#f0fdf4', iconBg: '#bbf7d0', textColor: '#166534' },
+                { href: '/hierarquia', icon: '🥋', label: 'Hierarquia', color: 'rgba(239,68,68,0.09)', iconBg: 'rgba(239,68,68,0.22)', textColor: '#fca5a5' },
+                { href: '/organograma', icon: '🏛️', label: 'Organograma', color: 'rgba(59,130,246,0.10)', iconBg: 'rgba(59,130,246,0.18)', textColor: '#93c5fd' },
+                { href: '/documentos', icon: '📚', label: 'Documentos Históricos da Capoeira', color: 'rgba(34,197,94,0.08)', iconBg: 'rgba(34,197,94,0.18)', textColor: '#86efac' },
               ]).map(item => (
                 <a key={item.href} href={item.href}
                   style={{ display: 'flex', alignItems: 'center', gap: 12, background: item.color, borderRadius: 12, padding: '12px 14px', textDecoration: 'none', border: `1px solid ${item.iconBg}` }}>
@@ -1244,14 +1234,14 @@ export default function AlunoPage() {
 
             {/* Documentos institucionais — bibliografia, estatuto, regimento, informações */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Documentos da Associação</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Documentos da Associação</div>
               <DocumentsBar readOnly studentPhone={student?.telefone} studentName={student?.nome_completo} />
             </div>
 
             {/* Student info card */}
             {student && (
-              <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#374151', marginBottom: 12 }}>Meus Dados</div>
+              <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#d4d4d4', marginBottom: 12 }}>Meus Dados</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {[
                     { label: 'Graduação', value: student.graduacao },
@@ -1260,8 +1250,8 @@ export default function AlunoPage() {
                     { label: 'E-mail', value: student.email as string },
                   ].map(({ label, value }) => value ? (
                     <div key={label}>
-                      <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(value)}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#8f8f8f', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f5f5f4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(value)}</div>
                     </div>
                   ) : null)}
                 </div>
@@ -1273,7 +1263,7 @@ export default function AlunoPage() {
         {/* ── CARTEIRINHA ── */}
         {activeTab === 'carteirinha' && cartData && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>🪪 Minha Carteirinha</h2>
+            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>🪪 Minha Carteirinha</h2>
             <div ref={carteirinhaRef} style={{ display: 'flex', justifyContent: 'center' }}>
               <Carteirinha data={cartData} />
             </div>
@@ -1310,7 +1300,7 @@ export default function AlunoPage() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
               Compartilhar via WhatsApp
             </button>
-            <div style={{ background: '#f0f9ff', borderRadius: 12, padding: '12px 16px', border: '1px solid #bae6fd', fontSize: '0.78rem', color: '#0369a1' }}>
+            <div style={{ background: 'rgba(14,165,233,0.10)', borderRadius: 12, padding: '12px 16px', border: '1px solid rgba(14,165,233,0.35)', fontSize: '0.78rem', color: '#7dd3fc' }}>
               💡 Use esta carteirinha para identificação nas aulas. Você pode imprimir ou salvar como PDF.
             </div>
           </div>
@@ -1319,12 +1309,12 @@ export default function AlunoPage() {
         {/* ── PRESENÇA ── */}
         {activeTab === 'presenca' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>📍 Registrar Presença</h2>
+            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>📍 Registrar Presença</h2>
 
-            <div style={{ background: '#fff', borderRadius: 16, padding: '24px 20px', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+            <div style={{ background: '#161616', borderRadius: 16, padding: '24px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.05)', textAlign: 'center' }}>
               <div style={{ fontSize: 56, marginBottom: 12 }}>📍</div>
-              <h3 style={{ margin: '0 0 8px', fontSize: '1rem', fontWeight: 700, color: '#111827' }}>Presença do dia de hoje</h3>
-              <p style={{ margin: '0 0 20px', fontSize: '0.83rem', color: '#6b7280', lineHeight: 1.5 }}>
+              <h3 style={{ margin: '0 0 8px', fontSize: '1rem', fontWeight: 700, color: '#f5f5f4' }}>Presença do dia de hoje</h3>
+              <p style={{ margin: '0 0 20px', fontSize: '0.83rem', color: '#a3a3a3', lineHeight: 1.5 }}>
                 Sua presença será registrada automaticamente ao clicar no botão abaixo.<br />
                 Você precisa estar no local de treino (raio de 200m).
               </p>
@@ -1332,21 +1322,21 @@ export default function AlunoPage() {
               {/* Local de treino */}
               {student?.nucleo && (
                 <div style={{ textAlign: 'left', marginBottom: 18 }}>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: 6 }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#d4d4d4', marginBottom: 6 }}>
                     🏫 Seu Núcleo
                   </label>
-                  <div style={{ background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', color: '#111827', fontWeight: 600 }}>
+                  <div style={{ background: '#141414', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', color: '#f5f5f4', fontWeight: 600 }}>
                     📍 {student.nucleo}
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 4, fontWeight: 400 }}>
+                  <div style={{ fontSize: '0.72rem', color: '#a3a3a3', marginTop: 4, fontWeight: 400 }}>
                     A presença é registrada sempre no seu núcleo de cadastro.
                   </div>
                 </div>
               )}
 
               {!student?.nucleo && (
-                <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 12, padding: '14px 16px', marginBottom: 18, textAlign: 'left' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#991b1b', marginBottom: 4 }}>🚫 Presença bloqueada</div>
+                <div style={{ background: 'rgba(239,68,68,0.09)', border: '1.5px solid #fecaca', borderRadius: 12, padding: '14px 16px', marginBottom: 18, textAlign: 'left' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fca5a5', marginBottom: 4 }}>🚫 Presença bloqueada</div>
                   <div style={{ fontSize: '0.78rem', color: '#b91c1c', lineHeight: 1.5 }}>
                     Você ainda não está vinculado a um núcleo. Escolha seu núcleo na aba <strong>Meus Dados</strong> para destravar o registro de presença.
                   </div>
@@ -1360,16 +1350,16 @@ export default function AlunoPage() {
               )}
 
               <button onClick={handlePresenca} disabled={presencaLoading}
-                style={{ background: presencaLoading ? '#9ca3af' : `linear-gradient(135deg, ${nucleoColor}, ${nucleoColor}cc)`, color: '#fff', border: 'none', borderRadius: 14, padding: '16px 32px', fontWeight: 800, fontSize: '1rem', cursor: presencaLoading ? 'not-allowed' : 'pointer', boxShadow: presencaLoading ? 'none' : `0 6px 20px ${nucleoColor}40`, transition: 'all 0.2s' }}>
+                style={{ background: presencaLoading ? '#3a3a3a' : 'linear-gradient(135deg, #FF9200, #d97706)', color: '#fff', border: 'none', borderRadius: 14, padding: '16px 32px', fontWeight: 800, fontSize: '1rem', cursor: presencaLoading ? 'not-allowed' : 'pointer', boxShadow: presencaLoading ? 'none' : '0 6px 20px rgba(255,146,0,0.35)', transition: 'all 0.2s' }}>
                 {presencaLoading ? '📍 Obtendo localização...' : '📍 Registrar Presença Agora'}
               </button>
 
-              <p style={{ margin: '14px 0 0', fontSize: '0.72rem', color: '#9ca3af' }}>
+              <p style={{ margin: '14px 0 0', fontSize: '0.72rem', color: '#8f8f8f' }}>
                 A localização é usada apenas para confirmar que você está no local de treino e não é armazenada.
               </p>
             </div>
 
-            <div style={{ background: '#fffbeb', borderRadius: 12, padding: '12px 16px', border: '1px solid #fde68a', fontSize: '0.8rem', color: '#92400e' }}>
+            <div style={{ background: 'rgba(234,179,8,0.10)', borderRadius: 12, padding: '12px 16px', border: '1px solid rgba(234,179,8,0.35)', fontSize: '0.8rem', color: '#fcd34d' }}>
               ⚠️ O registro de presença só pode ser feito no dia atual. Se precisar justificar uma falta, use a aba <strong>Justificativas</strong>.
             </div>
           </div>
@@ -1379,39 +1369,39 @@ export default function AlunoPage() {
         {activeTab === 'financeiro' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>💰 Ficha Financeira</h2>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>💰 Ficha Financeira</h2>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => { if (!session) return; setFichaFinLoading(true); fetch(`/api/financeiro?student_id=${session.student_id}`).then(r=>r.json()).then(d=>{setFichaFin(d);setFichaFinLoading(false);}).catch(()=>setFichaFinLoading(false)); }}
-                  style={{ background: 'none', border: `1px solid ${nucleoColor}`, color: nucleoColor, borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>🔄 Atualizar</button>
+                  style={{ background: 'none', border: '1px solid rgba(255,146,0,0.45)', color: '#FF9200', borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>🔄 Atualizar</button>
                 <a href={`/financeiro?student_id=${session?.student_id}`} target="_blank" rel="noreferrer"
                   style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff', textDecoration: 'none', borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600 }}>↗ Portal completo</a>
               </div>
             </div>
 
-            {fichaFinLoading && <div style={{ textAlign: 'center', padding: '32px 0', color: '#9ca3af' }}>Carregando...</div>}
+            {fichaFinLoading && <div style={{ textAlign: 'center', padding: '32px 0', color: '#8f8f8f' }}>Carregando...</div>}
 
             {/* ── Ações: Solicitar Batizado / Uniforme ── */}
             {!fichaFinLoading && (
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 {/* Solicitar Batizado — só se ainda não tem modalidade */}
                 {(!fichaFin || (fichaFin as any)?.batizado?.modalidade === 'nao_definido' || !(fichaFin as any)?.batizado) && (
-                  <div style={{ background: '#fff', border: `1.5px solid ${showSolBatizado ? '#7c3aed' : '#e5e7eb'}`, borderRadius: 14, padding: '14px 16px', flex: 1, minWidth: 240 }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#7c3aed', marginBottom: showSolBatizado ? 12 : 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <div style={{ background: '#161616', border: `1.5px solid ${showSolBatizado ? '#7c3aed' : '#2e2e2e'}`, borderRadius: 14, padding: '14px 16px', flex: 1, minWidth: 240 }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#c4b5fd', marginBottom: showSolBatizado ? 12 : 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                       <span>🥋 Solicitar Batizado</span>
                       <button onClick={() => { setShowSolBatizado(v=>!v); setSolBatizadoMsg(''); }}
-                        style={{ background: showSolBatizado ? 'rgba(124,58,237,0.12)' : 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.3)', color: '#7c3aed', borderRadius: 8, padding: '3px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
+                        style={{ background: showSolBatizado ? 'rgba(124,58,237,0.12)' : 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.3)', color: '#c4b5fd', borderRadius: 8, padding: '3px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
                         {showSolBatizado ? '✕ Fechar' : '+ Solicitar'}
                       </button>
                     </div>
-                    {!showSolBatizado && <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: 4 }}>Participe do próximo batizado/troca de graduação.</div>}
+                    {!showSolBatizado && <div style={{ fontSize: '0.78rem', color: '#8f8f8f', marginTop: 4 }}>Participe do próximo batizado/troca de graduação.</div>}
                     {showSolBatizado && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', color: '#374151', fontWeight: 600, marginBottom: 4 }}>Forma de pagamento</label>
+                          <label style={{ display: 'block', fontSize: '0.75rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 4 }}>Forma de pagamento</label>
                           <div style={{ display: 'flex', gap: 8 }}>
                             {(['integral','parcelado'] as const).map(m => (
                               <button key={m} onClick={() => setSolBatizadoModalidade(m)}
-                                style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: `1.5px solid ${solBatizadoModalidade === m ? '#7c3aed' : '#e5e7eb'}`, background: solBatizadoModalidade === m ? 'rgba(124,58,237,0.08)' : '#f9fafb', color: solBatizadoModalidade === m ? '#7c3aed' : '#6b7280', fontWeight: solBatizadoModalidade === m ? 700 : 500, cursor: 'pointer', fontSize: '0.8rem' }}>
+                                style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: `1.5px solid ${solBatizadoModalidade === m ? '#7c3aed' : '#2e2e2e'}`, background: solBatizadoModalidade === m ? 'rgba(124,58,237,0.08)' : '#141414', color: solBatizadoModalidade === m ? '#7c3aed' : '#6b7280', fontWeight: solBatizadoModalidade === m ? 700 : 500, cursor: 'pointer', fontSize: '0.8rem' }}>
                                 {m === 'integral' ? '💳 À vista' : '📅 Parcelado'}
                               </button>
                             ))}
@@ -1419,9 +1409,9 @@ export default function AlunoPage() {
                         </div>
                         {solBatizadoModalidade === 'parcelado' && (
                           <div>
-                            <label style={{ display: 'block', fontSize: '0.75rem', color: '#374151', fontWeight: 600, marginBottom: 4 }}>Número de parcelas</label>
+                            <label style={{ display: 'block', fontSize: '0.75rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 4 }}>Número de parcelas</label>
                             <input type="number" min={2} max={12} value={solBatizadoParcelas} onChange={e => setSolBatizadoParcelas(Math.max(2, Math.min(12, parseInt(e.target.value)||2)))}
-                              style={{ width: '100%', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 10px', fontSize: '0.85rem', outline: 'none' }} />
+                              style={{ width: '100%', background: '#141414', border: '1px solid #2a2a2a', borderRadius: 8, padding: '6px 10px', fontSize: '0.85rem', outline: 'none' }} />
                           </div>
                         )}
                         {solBatizadoMsg && <div style={{ fontSize: '0.78rem', color: solBatizadoMsg.startsWith('✅') ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{solBatizadoMsg}</div>}
@@ -1447,7 +1437,7 @@ export default function AlunoPage() {
                             setShowSolBatizado(false);
                           } catch { setSolBatizadoMsg('Erro ao enviar solicitação. Tente novamente.'); }
                           setSolBatizadoSaving(false);
-                        }} style={{ padding: '8px 0', background: solBatizadoSaving ? '#e5e7eb' : 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: solBatizadoSaving ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}>
+                        }} style={{ padding: '8px 0', background: solBatizadoSaving ? '#2e2e2e' : 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: solBatizadoSaving ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}>
                           {solBatizadoSaving ? '⏳ Enviando...' : '🥋 Enviar Solicitação'}
                         </button>
                       </div>
@@ -1456,34 +1446,34 @@ export default function AlunoPage() {
                 )}
 
                 {/* Solicitar Uniforme */}
-                <div style={{ background: '#fff', border: `1.5px solid ${showSolUniforme ? '#d97706' : '#e5e7eb'}`, borderRadius: 14, padding: '14px 16px', flex: 1, minWidth: 240 }}>
-                  <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#d97706', marginBottom: showSolUniforme ? 12 : 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ background: '#161616', border: `1.5px solid ${showSolUniforme ? '#d97706' : '#2e2e2e'}`, borderRadius: 14, padding: '14px 16px', flex: 1, minWidth: 240 }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fb923c', marginBottom: showSolUniforme ? 12 : 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <span>👕 Solicitar Uniforme</span>
                     <button onClick={() => { setShowSolUniforme(v=>!v); setSolUnifMsg(''); }}
-                      style={{ background: showSolUniforme ? 'rgba(217,119,6,0.12)' : 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.3)', color: '#d97706', borderRadius: 8, padding: '3px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
+                      style={{ background: showSolUniforme ? 'rgba(217,119,6,0.12)' : 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.3)', color: '#fb923c', borderRadius: 8, padding: '3px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
                       {showSolUniforme ? '✕ Fechar' : '+ Solicitar'}
                     </button>
                   </div>
-                  {!showSolUniforme && <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: 4 }}>Solicite camisetas, bermudas e outros itens.</div>}
+                  {!showSolUniforme && <div style={{ fontSize: '0.78rem', color: '#8f8f8f', marginTop: 4 }}>Solicite camisetas, bermudas e outros itens.</div>}
                   {showSolUniforme && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#374151', fontWeight: 600, marginBottom: 4 }}>Item</label>
+                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 4 }}>Item</label>
                         <input value={solUnifItem} onChange={e => setSolUnifItem(e.target.value)} placeholder="Ex: Camiseta, Bermuda..."
-                          style={{ width: '100%', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 10px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }} />
+                          style={{ width: '100%', background: '#141414', border: '1px solid #2a2a2a', borderRadius: 8, padding: '6px 10px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }} />
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <div style={{ flex: 1 }}>
-                          <label style={{ display: 'block', fontSize: '0.75rem', color: '#374151', fontWeight: 600, marginBottom: 4 }}>Tamanho</label>
+                          <label style={{ display: 'block', fontSize: '0.75rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 4 }}>Tamanho</label>
                           <select value={solUnifTam} onChange={e => setSolUnifTam(e.target.value)}
-                            style={{ width: '100%', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 8px', fontSize: '0.85rem', outline: 'none' }}>
+                            style={{ width: '100%', background: '#141414', border: '1px solid #2a2a2a', borderRadius: 8, padding: '6px 8px', fontSize: '0.85rem', outline: 'none' }}>
                             {['PP','P','M','G','GG','XGG'].map(t => <option key={t} value={t}>{t}</option>)}
                           </select>
                         </div>
                         <div style={{ width: 80 }}>
-                          <label style={{ display: 'block', fontSize: '0.75rem', color: '#374151', fontWeight: 600, marginBottom: 4 }}>Qtd.</label>
+                          <label style={{ display: 'block', fontSize: '0.75rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 4 }}>Qtd.</label>
                           <input type="number" min={1} max={10} value={solUnifQtd} onChange={e => setSolUnifQtd(Math.max(1, parseInt(e.target.value)||1))}
-                            style={{ width: '100%', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 8px', fontSize: '0.85rem', outline: 'none' }} />
+                            style={{ width: '100%', background: '#141414', border: '1px solid #2a2a2a', borderRadius: 8, padding: '6px 8px', fontSize: '0.85rem', outline: 'none' }} />
                         </div>
                       </div>
                       {solUnifMsg && <div style={{ fontSize: '0.78rem', color: solUnifMsg.startsWith('✅') ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{solUnifMsg}</div>}
@@ -1505,7 +1495,7 @@ export default function AlunoPage() {
                           setShowSolUniforme(false);
                         } catch { setSolUnifMsg('Erro ao enviar solicitação. Tente novamente.'); }
                         setSolUnifSaving(false);
-                      }} style={{ padding: '8px 0', background: (solUnifSaving || !solUnifItem.trim()) ? '#e5e7eb' : 'linear-gradient(135deg,#d97706,#b45309)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: (solUnifSaving || !solUnifItem.trim()) ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}>
+                      }} style={{ padding: '8px 0', background: (solUnifSaving || !solUnifItem.trim()) ? '#2e2e2e' : 'linear-gradient(135deg,#d97706,#b45309)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: (solUnifSaving || !solUnifItem.trim()) ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}>
                         {solUnifSaving ? '⏳ Enviando...' : '👕 Enviar Solicitação'}
                       </button>
                     </div>
@@ -1515,10 +1505,10 @@ export default function AlunoPage() {
             )}
 
             {!fichaFinLoading && !fichaFin && (
-              <div style={{ background: '#fff', borderRadius: 14, padding: '28px 20px', border: '1px solid #e5e7eb', textAlign: 'center' }}>
+              <div style={{ background: '#161616', borderRadius: 14, padding: '28px 20px', border: '1px solid #2a2a2a', textAlign: 'center' }}>
                 <div style={{ fontSize: 36, marginBottom: 8 }}>📋</div>
-                <div style={{ fontWeight: 700, color: '#374151', marginBottom: 4 }}>Nenhuma informação financeira registrada</div>
-                <div style={{ fontSize: '0.8rem', color: '#9ca3af' }}>O administrador ainda não configurou sua ficha financeira.</div>
+                <div style={{ fontWeight: 700, color: '#d4d4d4', marginBottom: 4 }}>Nenhuma informação financeira registrada</div>
+                <div style={{ fontSize: '0.8rem', color: '#8f8f8f' }}>O administrador ainda não configurou sua ficha financeira.</div>
               </div>
             )}
 
@@ -1531,17 +1521,17 @@ export default function AlunoPage() {
 
                   {/* ── Batizado ── */}
                   {fin.batizado && fin.batizado.modalidade !== 'nao_definido' && (
-                    <div style={{ background: '#fff', borderRadius: 14, padding: '16px 18px', border: '1px solid #e5e7eb' }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#111827', marginBottom: 10 }}>🥋 Batizado / Troca de Graduação</div>
+                    <div style={{ background: '#161616', borderRadius: 14, padding: '16px 18px', border: '1px solid #2a2a2a' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 10 }}>🥋 Batizado / Troca de Graduação</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: '0.78rem', background: '#f3f4f6', borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>Modalidade: {fin.batizado.modalidade === 'integral' ? 'À vista' : 'Parcelado'}</span>
-                        <span style={{ fontSize: '0.78rem', background: '#f3f4f6', borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>Total: R$ {Number(fin.batizado.valor_total || 0).toFixed(2)}</span>
+                        <span style={{ fontSize: '0.78rem', background: '#1c1c1c', borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>Modalidade: {fin.batizado.modalidade === 'integral' ? 'À vista' : 'Parcelado'}</span>
+                        <span style={{ fontSize: '0.78rem', background: '#1c1c1c', borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>Total: R$ {Number(fin.batizado.valor_total || 0).toFixed(2)}</span>
                         <span style={{ fontSize: '0.78rem', background: statusColor(fin.batizado.status_geral) + '22', color: statusColor(fin.batizado.status_geral), borderRadius: 6, padding: '3px 10px', fontWeight: 700 }}>{statusLabel(fin.batizado.status_geral)}</span>
                       </div>
                       {fin.batizado.parcelas?.length > 0 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           {fin.batizado.parcelas.map((p: any, i: number) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', padding: '5px 8px', borderRadius: 6, background: '#f9fafb' }}>
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', padding: '5px 8px', borderRadius: 6, background: '#141414' }}>
                               <span>Parcela {p.numero} — R$ {Number(p.valor).toFixed(2)}</span>
                               <span style={{ color: statusColor(p.status), fontWeight: 700 }}>{statusLabel(p.status)}</span>
                             </div>
@@ -1553,14 +1543,14 @@ export default function AlunoPage() {
 
                   {/* ── Mensalidades ── */}
                   {fin.mensalidades?.length > 0 && (
-                    <div style={{ background: '#fff', borderRadius: 14, padding: '16px 18px', border: '1px solid #e5e7eb' }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#111827', marginBottom: 10 }}>📅 Mensalidades</div>
+                    <div style={{ background: '#161616', borderRadius: 14, padding: '16px 18px', border: '1px solid #2a2a2a' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 10 }}>📅 Mensalidades</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {(fin.mensalidades as any[]).slice().reverse().map((m: any, i: number) => {
                           const [yr, mo] = (m.mes || '').split('-');
                           const label = yr && mo ? new Date(Number(yr), Number(mo)-1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : m.mes;
                           return (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', padding: '6px 8px', borderRadius: 6, background: '#f9fafb' }}>
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', padding: '6px 8px', borderRadius: 6, background: '#141414' }}>
                               <span style={{ textTransform: 'capitalize' }}>{label} — R$ {Number(m.valor).toFixed(2)}</span>
                               <span style={{ color: statusColor(m.status), fontWeight: 700 }}>{statusLabel(m.status)}</span>
                             </div>
@@ -1572,16 +1562,16 @@ export default function AlunoPage() {
 
                   {/* ── Contribuição mensal ── */}
                   {fin.contribuicao?.ativa && (
-                    <div style={{ background: '#fff', borderRadius: 14, padding: '16px 18px', border: '1px solid #e5e7eb' }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#111827', marginBottom: 8 }}>🤝 Contribuição Mensal</div>
-                      <div style={{ fontSize: '0.82rem', color: '#374151' }}>Valor mensal: <strong>R$ {Number(fin.contribuicao.valor_mensal || 0).toFixed(2)}</strong></div>
+                    <div style={{ background: '#161616', borderRadius: 14, padding: '16px 18px', border: '1px solid #2a2a2a' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 8 }}>🤝 Contribuição Mensal</div>
+                      <div style={{ fontSize: '0.82rem', color: '#d4d4d4' }}>Valor mensal: <strong>R$ {Number(fin.contribuicao.valor_mensal || 0).toFixed(2)}</strong></div>
                       {fin.contribuicao.historico?.length > 0 && (
                         <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
                           {(fin.contribuicao.historico as any[]).slice().reverse().slice(0, 6).map((h: any, i: number) => {
                             const [yr, mo] = (h.mes || '').split('-');
                             const label = yr && mo ? new Date(Number(yr), Number(mo)-1).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : h.mes;
                             return (
-                              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', padding: '4px 8px', borderRadius: 6, background: '#f9fafb' }}>
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', padding: '4px 8px', borderRadius: 6, background: '#141414' }}>
                                 <span style={{ textTransform: 'capitalize' }}>{label}</span>
                                 <span style={{ color: statusColor(h.status), fontWeight: 700 }}>{statusLabel(h.status)}</span>
                               </div>
@@ -1594,11 +1584,11 @@ export default function AlunoPage() {
 
                   {/* ── Uniformes ── */}
                   {fin.uniformes?.length > 0 && (
-                    <div style={{ background: '#fff', borderRadius: 14, padding: '16px 18px', border: '1px solid #e5e7eb' }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#111827', marginBottom: 8 }}>👕 Uniformes</div>
+                    <div style={{ background: '#161616', borderRadius: 14, padding: '16px 18px', border: '1px solid #2a2a2a' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 8 }}>👕 Uniformes</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {(fin.uniformes as any[]).map((u: any, i: number) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', padding: '6px 8px', borderRadius: 6, background: '#f9fafb' }}>
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', padding: '6px 8px', borderRadius: 6, background: '#141414' }}>
                             <span>{u.descricao}{u.tamanho ? ` (${u.tamanho})` : ''} × {u.quantidade}</span>
                             <span style={{ color: u.status === 'entregue' ? '#16a34a' : u.status === 'cancelado' ? '#dc2626' : '#f59e0b', fontWeight: 700 }}>
                               {u.status === 'entregue' ? '✅ Entregue' : u.status === 'confirmado' ? '✓ Confirmado' : u.status === 'cancelado' ? '✕ Cancelado' : '⏳ Solicitado'}
@@ -1611,10 +1601,10 @@ export default function AlunoPage() {
 
                   {/* empty state */}
                   {!fin.batizado?.valor_total && !fin.mensalidades?.length && !fin.contribuicao?.ativa && !fin.uniformes?.length && (
-                    <div style={{ background: '#fff', borderRadius: 14, padding: '28px 20px', border: '1px solid #e5e7eb', textAlign: 'center' }}>
+                    <div style={{ background: '#161616', borderRadius: 14, padding: '28px 20px', border: '1px solid #2a2a2a', textAlign: 'center' }}>
                       <div style={{ fontSize: 36, marginBottom: 8 }}>📋</div>
-                      <div style={{ fontWeight: 700, color: '#374151', marginBottom: 4 }}>Nenhuma informação financeira registrada</div>
-                      <div style={{ fontSize: '0.8rem', color: '#9ca3af' }}>O administrador ainda não configurou sua ficha financeira.</div>
+                      <div style={{ fontWeight: 700, color: '#d4d4d4', marginBottom: 4 }}>Nenhuma informação financeira registrada</div>
+                      <div style={{ fontSize: '0.8rem', color: '#8f8f8f' }}>O administrador ainda não configurou sua ficha financeira.</div>
                     </div>
                   )}
                 </div>
@@ -1627,43 +1617,43 @@ export default function AlunoPage() {
         {activeTab === 'graduacao' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>🎖️ Histórico de Graduação</h2>
-              <button onClick={() => student && loadHistorico(student.id)} style={{ background: 'none', border: `1px solid ${nucleoColor}`, color: nucleoColor, borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>🔄 Atualizar</button>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>🎖️ Histórico de Graduação</h2>
+              <button onClick={() => student && loadHistorico(student.id)} style={{ background: 'none', border: '1px solid rgba(255,146,0,0.45)', color: '#FF9200', borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>🔄 Atualizar</button>
             </div>
 
             {/* Próximos eventos */}
             {(eventosLoading || eventos.length > 0) && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Próximos Eventos</div>
-                {eventosLoading && <div style={{ textAlign: 'center', padding: '12px 0', color: '#9ca3af', fontSize: '0.82rem' }}>Carregando...</div>}
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Próximos Eventos</div>
+                {eventosLoading && <div style={{ textAlign: 'center', padding: '12px 0', color: '#8f8f8f', fontSize: '0.82rem' }}>Carregando...</div>}
                 {!eventosLoading && eventos.map((ev: any) => (
-                  <div key={ev.id} style={{ background: '#fff', borderRadius: 14, padding: '14px 16px', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 10, background: ev.tipo === 'batizado' ? '#fef3c7' : '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>
+                  <div key={ev.id} style={{ background: '#161616', borderRadius: 14, padding: '14px 16px', border: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 10, background: ev.tipo === 'batizado' ? 'rgba(250,204,21,0.12)' : 'rgba(168,85,247,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>
                       {ev.tipo === 'batizado' ? '🥋' : '🎖️'}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#111827' }}>{ev.nome}</div>
+                      <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#f5f5f4' }}>{ev.nome}</div>
                       {ev.data && (
-                        <div style={{ fontSize: '0.78rem', color: nucleoColor, fontWeight: 600, marginTop: 2 }}>
+                        <div style={{ fontSize: '0.78rem', color: '#FF9200', fontWeight: 600, marginTop: 2 }}>
                           📅 {new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
                           {ev.hora ? ` · ${ev.hora}` : ''}
                         </div>
                       )}
-                      {ev.local && <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 1 }}>📍 {ev.local}</div>}
-                      {ev.nucleo && <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 1 }}>Núcleo: {ev.nucleo}</div>}
+                      {ev.local && <div style={{ fontSize: '0.75rem', color: '#a3a3a3', marginTop: 1 }}>📍 {ev.local}</div>}
+                      {ev.nucleo && <div style={{ fontSize: '0.72rem', color: '#8f8f8f', marginTop: 1 }}>Núcleo: {ev.nucleo}</div>}
                     </div>
                     <div style={{ flexShrink: 0, textAlign: 'center' }}>
-                      <div style={{ background: ev.tipo === 'batizado' ? '#fef3c7' : '#ede9fe', color: ev.tipo === 'batizado' ? '#92400e' : '#5b21b6', borderRadius: 8, padding: '4px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+                      <div style={{ background: ev.tipo === 'batizado' ? 'rgba(250,204,21,0.12)' : 'rgba(168,85,247,0.12)', color: ev.tipo === 'batizado' ? '#92400e' : '#5b21b6', borderRadius: 8, padding: '4px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
                         {ev.tipo === 'batizado' ? 'Batizado' : 'Troca de Corda'}
                       </div>
                       {ev.participantes && ev.participantes.length > 0 && (
-                        <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 3 }}>{ev.participantes.length} participante(s)</div>
+                        <div style={{ fontSize: '0.68rem', color: '#8f8f8f', marginTop: 3 }}>{ev.participantes.length} participante(s)</div>
                       )}
                     </div>
                   </div>
                 ))}
                 {!eventosLoading && eventos.length === 0 && (
-                  <div style={{ background: '#f9fafb', borderRadius: 12, padding: '14px 16px', border: '1px solid #e5e7eb', textAlign: 'center', fontSize: '0.82rem', color: '#9ca3af' }}>
+                  <div style={{ background: '#141414', borderRadius: 12, padding: '14px 16px', border: '1px solid #2a2a2a', textAlign: 'center', fontSize: '0.82rem', color: '#8f8f8f' }}>
                     Nenhum evento programado no momento.
                   </div>
                 )}
@@ -1687,19 +1677,19 @@ export default function AlunoPage() {
 
             {/* Timeline */}
             {loadingHistorico ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af' }}>Carregando histórico...</div>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#8f8f8f' }}>Carregando histórico...</div>
             ) : historico.length === 0 ? (
-              <div style={{ background: '#fff', borderRadius: 16, padding: '32px 20px', border: '1px solid #e5e7eb', textAlign: 'center' }}>
+              <div style={{ background: '#161616', borderRadius: 16, padding: '32px 20px', border: '1px solid #2a2a2a', textAlign: 'center' }}>
                 <div style={{ fontSize: 40, marginBottom: 10 }}>📋</div>
-                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#374151', marginBottom: 4 }}>Nenhum registro encontrado</div>
-                <div style={{ fontSize: '0.8rem', color: '#9ca3af', lineHeight: 1.5 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#d4d4d4', marginBottom: 4 }}>Nenhum registro encontrado</div>
+                <div style={{ fontSize: '0.8rem', color: '#8f8f8f', lineHeight: 1.5 }}>
                   Seu histórico de graduações aparecerá aqui após o administrador finalizar os lançamentos de batizados e trocas de corda.
                 </div>
               </div>
             ) : (
               <div style={{ position: 'relative' }}>
                 {/* Timeline line */}
-                <div style={{ position: 'absolute', left: 20, top: 0, bottom: 0, width: 2, background: `linear-gradient(to bottom, ${nucleoColor}80, transparent)`, borderRadius: 2 }} />
+                <div style={{ position: 'absolute', left: 20, top: 0, bottom: 0, width: 2, background: 'linear-gradient(to bottom, rgba(255,146,0,0.5), transparent)', borderRadius: 2 }} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                   {historico.map((reg, idx) => {
@@ -1712,7 +1702,7 @@ export default function AlunoPage() {
                         </div>
 
                         {/* Card */}
-                        <div style={{ flex: 1, background: '#fff', borderRadius: 14, padding: '14px 16px', border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                        <div style={{ flex: 1, background: '#161616', borderRadius: 14, padding: '14px 16px', border: '1px solid #2a2a2a', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -1720,22 +1710,22 @@ export default function AlunoPage() {
                                   {reg.graduacao_recebida}
                                 </span>
                                 {idx === 0 && (
-                                  <span style={{ background: '#dcfce7', color: '#166534', borderRadius: 8, padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700 }}>
+                                  <span style={{ background: 'rgba(34,197,94,0.10)', color: '#86efac', borderRadius: 8, padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700 }}>
                                     Mais recente
                                   </span>
                                 )}
                               </div>
-                              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#111827', marginTop: 6 }}>{reg.evento}</div>
-                              <div style={{ fontSize: '0.76rem', color: '#6b7280', marginTop: 2 }}>Prof. {reg.professor_responsavel}</div>
+                              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f5f5f4', marginTop: 6 }}>{reg.evento}</div>
+                              <div style={{ fontSize: '0.76rem', color: '#a3a3a3', marginTop: 2 }}>Prof. {reg.professor_responsavel}</div>
                             </div>
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: nucleoColor }}>
+                              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#FF9200' }}>
                                 {new Date(reg.data_graduacao + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
                               </div>
                             </div>
                           </div>
                           {reg.observacoes && (
-                            <div style={{ marginTop: 8, padding: '8px 10px', background: '#f9fafb', borderRadius: 8, fontSize: '0.78rem', color: '#6b7280', fontStyle: 'italic' }}>
+                            <div style={{ marginTop: 8, padding: '8px 10px', background: '#141414', borderRadius: 8, fontSize: '0.78rem', color: '#a3a3a3', fontStyle: 'italic' }}>
                               &ldquo;{reg.observacoes}&rdquo;
                             </div>
                           )}
@@ -1747,7 +1737,7 @@ export default function AlunoPage() {
               </div>
             )}
 
-            <div style={{ background: '#f0f9ff', borderRadius: 12, padding: '12px 16px', border: '1px solid #bae6fd', fontSize: '0.78rem', color: '#0369a1', lineHeight: 1.5 }}>
+            <div style={{ background: 'rgba(14,165,233,0.10)', borderRadius: 12, padding: '12px 16px', border: '1px solid rgba(14,165,233,0.35)', fontSize: '0.78rem', color: '#7dd3fc', lineHeight: 1.5 }}>
               ℹ️ O histórico é atualizado automaticamente quando o administrador finaliza um evento de batizado ou troca de corda no painel.
             </div>
           </div>
@@ -1756,11 +1746,11 @@ export default function AlunoPage() {
         {/* ── JUSTIFICATIVAS ── */}
         {activeTab === 'justificativas' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>📝 Justificativas de Falta</h2>
+            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>📝 Justificativas de Falta</h2>
 
             {/* Form */}
-            <div style={{ background: '#fff', borderRadius: 16, padding: '20px', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', marginBottom: 14 }}>Enviar nova justificativa</div>
+            <div style={{ background: '#161616', borderRadius: 16, padding: '20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 14 }}>Enviar nova justificativa</div>
               {justMsg && (
                 <div style={{ background: justMsgType === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${justMsgType === 'success' ? '#bbf7d0' : '#fecaca'}`, color: justMsgType === 'success' ? '#166534' : '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: '0.83rem' }}>
                   {justMsgType === 'success' ? '✅ ' : '❌ '}{justMsg}
@@ -1768,43 +1758,43 @@ export default function AlunoPage() {
               )}
               <form onSubmit={handleSubmitJustificativa} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: 5 }}>Data da Falta *</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#d4d4d4', marginBottom: 5 }}>Data da Falta *</label>
                   <input type="date" value={justForm.data_falta} onChange={e => setJustForm(p => ({ ...p, data_falta: e.target.value }))}
                     max={new Date().toISOString().split('T')[0]}
                     min={new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                    style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} required />
-                  <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 3 }}>Apenas os últimos 30 dias</div>
+                    style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} required />
+                  <div style={{ fontSize: '0.72rem', color: '#8f8f8f', marginTop: 3 }}>Apenas os últimos 30 dias</div>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: 5 }}>Motivo da Falta *</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#d4d4d4', marginBottom: 5 }}>Motivo da Falta *</label>
                   <textarea value={justForm.motivo} onChange={e => setJustForm(p => ({ ...p, motivo: e.target.value }))}
-                    style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', resize: 'none' }}
+                    style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', resize: 'none' }}
                     rows={3} placeholder="Descreva o motivo da falta..." maxLength={500} required />
-                  <div style={{ fontSize: '0.72rem', color: '#9ca3af', textAlign: 'right', marginTop: 2 }}>{justForm.motivo.length}/500</div>
+                  <div style={{ fontSize: '0.72rem', color: '#8f8f8f', textAlign: 'right', marginTop: 2 }}>{justForm.motivo.length}/500</div>
                 </div>
                 <button type="submit" disabled={justLoading}
-                  style={{ background: justLoading ? '#9ca3af' : `linear-gradient(135deg, ${nucleoColor}, ${nucleoColor}cc)`, color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontWeight: 700, fontSize: '0.9rem', cursor: justLoading ? 'not-allowed' : 'pointer' }}>
+                  style={{ background: justLoading ? '#3a3a3a' : 'linear-gradient(135deg, #FF9200, #d97706)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontWeight: 700, fontSize: '0.9rem', cursor: justLoading ? 'not-allowed' : 'pointer' }}>
                   {justLoading ? 'Enviando...' : 'Enviar Justificativa'}
                 </button>
               </form>
             </div>
 
             {/* List */}
-            <div style={{ background: '#fff', borderRadius: 16, padding: '20px', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', marginBottom: 14 }}>Minhas justificativas</div>
+            <div style={{ background: '#161616', borderRadius: 16, padding: '20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 14 }}>Minhas justificativas</div>
               {justificativas.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '24px 0', color: '#9ca3af', fontSize: '0.85rem' }}>Nenhuma justificativa enviada ainda.</div>
+                <div style={{ textAlign: 'center', padding: '24px 0', color: '#8f8f8f', fontSize: '0.85rem' }}>Nenhuma justificativa enviada ainda.</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {justificativas.map(j => (
-                    <div key={j.id} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                    <div key={j.id} style={{ border: '1px solid #2a2a2a', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#111827' }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f5f5f4' }}>
                           {new Date(j.data_falta + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
                         </div>
-                        <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 3 }}>{j.motivo}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#a3a3a3', marginTop: 3 }}>{j.motivo}</div>
                         {j.resposta_mestre && (
-                          <div style={{ marginTop: 6, padding: '6px 10px', background: '#eff6ff', borderRadius: 6, fontSize: '0.76rem', color: '#1e40af' }}>
+                          <div style={{ marginTop: 6, padding: '6px 10px', background: 'rgba(59,130,246,0.10)', borderRadius: 6, fontSize: '0.76rem', color: '#93c5fd' }}>
                             💬 Mestre: {j.resposta_mestre}
                           </div>
                         )}
@@ -1828,8 +1818,8 @@ export default function AlunoPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>📸 Registro de Fotos e Vídeos</h2>
-                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#6b7280' }}>Gerencie suas fotos e vídeos de treinos</p>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>📸 Registro de Fotos e Vídeos</h2>
+                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>Gerencie suas fotos e vídeos de treinos</p>
               </div>
               <button onClick={() => fotosFileRef.current?.click()} disabled={fotosUploading}
                 style={{ background: `linear-gradient(135deg, #86198f, #9d174d)`, color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', opacity: fotosUploading ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1859,17 +1849,17 @@ export default function AlunoPage() {
             )}
 
             {fotosLoading ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af', fontSize: '0.9rem' }}>Carregando arquivos...</div>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#8f8f8f', fontSize: '0.9rem' }}>Carregando arquivos...</div>
             ) : fotosMedia.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px 20px', background: '#fdf2f8', borderRadius: 16, border: '2px dashed #f0abfc' }}>
+              <div style={{ textAlign: 'center', padding: '60px 20px', background: 'rgba(236,72,153,0.10)', borderRadius: 16, border: '2px dashed #f0abfc' }}>
                 <div style={{ fontSize: '3rem', marginBottom: 12 }}>📷</div>
                 <div style={{ fontWeight: 700, color: '#86198f', fontSize: '0.95rem' }}>Nenhum arquivo ainda</div>
-                <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: 6 }}>Clique em "Enviar Arquivo" para adicionar fotos ou vídeos de treino</div>
+                <div style={{ fontSize: '0.78rem', color: '#8f8f8f', marginTop: 6 }}>Clique em "Enviar Arquivo" para adicionar fotos ou vídeos de treino</div>
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
                 {fotosMedia.map(m => (
-                  <div key={m.name} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                  <div key={m.name} style={{ background: '#161616', border: '1px solid #2a2a2a', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                     {m.type === 'foto' ? (
                       <a href={m.url} target="_blank" rel="noreferrer">
                         <img src={m.url} alt={m.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
@@ -1880,17 +1870,17 @@ export default function AlunoPage() {
                       </a>
                     )}
                     <div style={{ padding: '8px 10px' }}>
-                      <div style={{ fontSize: '0.7rem', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name.replace(/^[^_]+_/, '')}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#a3a3a3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name.replace(/^[^_]+_/, '')}</div>
                       <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
                         <a href={m.url} download target="_blank" rel="noreferrer"
-                          style={{ flex: 1, background: '#eff6ff', color: '#1e40af', borderRadius: 6, padding: '4px 6px', fontSize: '0.68rem', fontWeight: 700, textDecoration: 'none', textAlign: 'center' }}>
+                          style={{ flex: 1, background: 'rgba(59,130,246,0.10)', color: '#93c5fd', borderRadius: 6, padding: '4px 6px', fontSize: '0.68rem', fontWeight: 700, textDecoration: 'none', textAlign: 'center' }}>
                           ⬇ Baixar
                         </a>
                         <button onClick={async () => {
                           if (!confirm('Excluir este arquivo?')) return;
                           const res = await fetch('/api/aluno/media', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: session!.student_id, name: m.name }) });
                           if (res.ok) { setFotosMedia(prev => prev.filter(f => f.name !== m.name)); setFotosMsg('Arquivo excluído.'); }
-                        }} style={{ background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '4px 7px', fontSize: '0.68rem', cursor: 'pointer', fontWeight: 700 }}>
+                        }} style={{ background: 'rgba(239,68,68,0.09)', color: '#f87171', border: 'none', borderRadius: 6, padding: '4px 7px', fontSize: '0.68rem', cursor: 'pointer', fontWeight: 700 }}>
                           🗑
                         </button>
                       </div>
@@ -1899,7 +1889,7 @@ export default function AlunoPage() {
                 ))}
               </div>
             )}
-            <div style={{ fontSize: '0.72rem', color: '#9ca3af', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.72rem', color: '#8f8f8f', textAlign: 'center' }}>
               Formatos aceitos: JPG, PNG, GIF, MP4, MOV • Máx. 50 MB por arquivo
             </div>
           </div>
@@ -1910,13 +1900,13 @@ export default function AlunoPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>📂 Meus Documentos</h2>
-                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#6b7280' }}>PDF, Word, imagens, planilhas e qualquer formato — máx. 50 MB</p>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>📂 Meus Documentos</h2>
+                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>PDF, Word, imagens, planilhas e qualquer formato — máx. 50 MB</p>
               </div>
               <button
                 onClick={() => docsFileRef.current?.click()}
                 disabled={docsUploading}
-                style={{ background: docsUploading ? '#e5e7eb' : `linear-gradient(135deg, ${nucleoColor}, ${nucleoColor}cc)`, color: docsUploading ? '#9ca3af' : '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', cursor: docsUploading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                style={{ background: docsUploading ? '#3a3a3a' : 'linear-gradient(135deg, #FF9200, #d97706)', color: docsUploading ? '#8f8f8f' : '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', cursor: docsUploading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                 {docsUploading ? '⏳ Enviando...' : '⬆ Enviar Documento'}
               </button>
               <input ref={docsFileRef} type="file" accept="*/*" style={{ display: 'none' }} onChange={async e => {
@@ -1947,21 +1937,21 @@ export default function AlunoPage() {
             )}
 
             {docsLoading ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af', fontSize: '0.9rem' }}>Carregando documentos...</div>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#8f8f8f', fontSize: '0.9rem' }}>Carregando documentos...</div>
             ) : docsItems.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '50px 20px', background: '#f0f9ff', borderRadius: 16, border: '2px dashed #bae6fd' }}>
+              <div style={{ textAlign: 'center', padding: '50px 20px', background: 'rgba(14,165,233,0.10)', borderRadius: 16, border: '2px dashed #bae6fd' }}>
                 <div style={{ fontSize: '3rem', marginBottom: 12 }}>📂</div>
-                <div style={{ fontWeight: 700, color: '#0369a1', fontSize: '0.95rem' }}>Nenhum documento ainda</div>
-                <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: 6, lineHeight: 1.5 }}>Clique em <strong>Enviar Documento</strong> para adicionar PDFs, imagens,<br/>contratos ou qualquer arquivo</div>
+                <div style={{ fontWeight: 700, color: '#7dd3fc', fontSize: '0.95rem' }}>Nenhum documento ainda</div>
+                <div style={{ fontSize: '0.78rem', color: '#8f8f8f', marginTop: 6, lineHeight: 1.5 }}>Clique em <strong>Enviar Documento</strong> para adicionar PDFs, imagens,<br/>contratos ou qualquer arquivo</div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {docsItems.map(doc => (
-                  <div key={doc.name} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div key={doc.name} style={{ background: '#161616', border: '1px solid #2a2a2a', borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
                     <div style={{ fontSize: '2rem', flexShrink: 0 }}>{doc.icon}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.displayName}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 2 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f5f5f4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.displayName}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#8f8f8f', marginTop: 2 }}>
                         {doc.size} • {doc.ext.toUpperCase()} • {doc.created_at ? new Date(doc.created_at).toLocaleDateString('pt-BR') : ''}
                       </div>
                     </div>
@@ -1976,7 +1966,7 @@ export default function AlunoPage() {
                         if (res.ok) { setDocsItems(prev => prev.filter(d => d.name !== doc.name)); setDocsMsg('✓ Documento removido.'); setTimeout(() => setDocsMsg(''), 3000); }
                         else setDocsMsg('Erro ao remover documento.');
                       }}
-                        style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 10, padding: '8px 12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                        style={{ background: 'rgba(239,68,68,0.09)', color: '#f87171', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 10, padding: '8px 12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                         🗑
                       </button>
                     </div>
@@ -1993,23 +1983,23 @@ export default function AlunoPage() {
             {contaSection === 'main' && (
               <>
                 <div>
-                  <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>⚙️ Minha Conta</h2>
-                  <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#6b7280' }}>Gerencie suas credenciais de acesso</p>
+                  <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>⚙️ Minha Conta</h2>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>Gerencie suas credenciais de acesso</p>
                 </div>
 
                 {/* Current account info */}
-                <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Dados da Conta</div>
+                <div style={{ background: '#161616', border: '1px solid #2a2a2a', borderRadius: 14, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Dados da Conta</div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginBottom: 1 }}>Usuário</div>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111827' }}>{session.username}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#8f8f8f', marginBottom: 1 }}>Usuário</div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f5f5f4' }}>{session.username}</div>
                     </div>
-                    <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>Ativo</span>
+                    <span style={{ background: 'rgba(34,197,94,0.10)', color: '#4ade80', borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>Ativo</span>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginBottom: 1 }}>E-mail de recuperação</div>
-                    <div style={{ fontWeight: 600, fontSize: '0.88rem', color: student?.email ? '#111827' : '#9ca3af', fontStyle: student?.email ? 'normal' : 'italic' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#8f8f8f', marginBottom: 1 }}>E-mail de recuperação</div>
+                    <div style={{ fontWeight: 600, fontSize: '0.88rem', color: student?.email ? '#f5f5f4' : '#8f8f8f', fontStyle: student?.email ? 'normal' : 'italic' }}>
                       {student?.email || 'Não cadastrado'}
                     </div>
                   </div>
@@ -2018,31 +2008,31 @@ export default function AlunoPage() {
                 {/* Action buttons */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <button onClick={() => { setContaSection('edit-profile'); setContaForm(f => ({ ...f, new_username: session.username, new_email: student?.email || '' })); setContaMsg(''); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left' }}>
-                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>✏️</div>
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.35)', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left' }}>
+                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(59,130,246,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>✏️</div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1e40af' }}>Editar Perfil</div>
-                      <div style={{ fontSize: '0.73rem', color: '#6b7280', marginTop: 1 }}>Alterar usuário e e-mail de recuperação</div>
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#93c5fd' }}>Editar Perfil</div>
+                      <div style={{ fontSize: '0.73rem', color: '#a3a3a3', marginTop: 1 }}>Alterar usuário e e-mail de recuperação</div>
                     </div>
                     <span style={{ color: '#93c5fd', fontSize: '1.1rem' }}>›</span>
                   </button>
 
                   <button onClick={() => { setContaSection('change-password'); setContaForm(f => ({ ...f, current_password: '', new_password: '', confirm_password: '' })); setContaMsg(''); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left' }}>
-                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>🔒</div>
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(168,85,247,0.10)', border: '1px solid rgba(168,85,247,0.35)', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left' }}>
+                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>🔒</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#7e22ce' }}>Alterar Senha</div>
-                      <div style={{ fontSize: '0.73rem', color: '#6b7280', marginTop: 1 }}>Trocar sua senha de acesso</div>
+                      <div style={{ fontSize: '0.73rem', color: '#a3a3a3', marginTop: 1 }}>Trocar sua senha de acesso</div>
                     </div>
                     <span style={{ color: '#c4b5fd', fontSize: '1.1rem' }}>›</span>
                   </button>
 
                   <button onClick={() => { setContaSection('delete-account'); setContaForm(f => ({ ...f, current_password: '' })); setDeleteConfirmText(''); setContaMsg(''); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left' }}>
-                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>🗑️</div>
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(239,68,68,0.09)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left' }}>
+                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(239,68,68,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>🗑️</div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#dc2626' }}>Excluir Conta de Acesso</div>
-                      <div style={{ fontSize: '0.73rem', color: '#6b7280', marginTop: 1 }}>Remove apenas o login — seu histórico é mantido</div>
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f87171' }}>Excluir Conta de Acesso</div>
+                      <div style={{ fontSize: '0.73rem', color: '#a3a3a3', marginTop: 1 }}>Remove apenas o login — seu histórico é mantido</div>
                     </div>
                     <span style={{ color: '#fca5a5', fontSize: '1.1rem' }}>›</span>
                   </button>
@@ -2054,30 +2044,30 @@ export default function AlunoPage() {
             {contaSection === 'edit-profile' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <button onClick={() => setContaSection('main')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#6b7280', padding: '4px 6px', borderRadius: 8 }}>←</button>
+                  <button onClick={() => setContaSection('main')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#a3a3a3', padding: '4px 6px', borderRadius: 8 }}>←</button>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#111827' }}>✏️ Editar Perfil</h2>
-                    <p style={{ margin: 0, fontSize: '0.72rem', color: '#6b7280' }}>Confirme sua senha para alterar</p>
+                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f5f5f4' }}>✏️ Editar Perfil</h2>
+                    <p style={{ margin: 0, fontSize: '0.72rem', color: '#a3a3a3' }}>Confirme sua senha para alterar</p>
                   </div>
                 </div>
-                <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '18px' }}>
+                <div style={{ background: '#161616', border: '1px solid #2a2a2a', borderRadius: 14, padding: '18px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Novo Usuário</label>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#d4d4d4', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Novo Usuário</label>
                       <input type="text" value={contaForm.new_username} onChange={e => setContaForm(f => ({ ...f, new_username: e.target.value }))}
-                        style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+                        style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>E-mail de Recuperação</label>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#d4d4d4', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>E-mail de Recuperação</label>
                       <input type="email" value={contaForm.new_email} onChange={e => setContaForm(f => ({ ...f, new_email: e.target.value }))}
                         placeholder="seu@email.com"
-                        style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+                        style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Senha Atual <span style={{ color: '#dc2626' }}>*</span></label>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#d4d4d4', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Senha Atual <span style={{ color: '#f87171' }}>*</span></label>
                       <input type="password" value={contaForm.current_password} onChange={e => setContaForm(f => ({ ...f, current_password: e.target.value }))}
                         placeholder="Confirme sua senha atual"
-                        style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+                        style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     {contaMsg && (
                       <div style={{ padding: '10px 14px', borderRadius: 10, background: contaMsgType === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${contaMsgType === 'success' ? '#bbf7d0' : '#fecaca'}`, color: contaMsgType === 'success' ? '#166534' : '#991b1b', fontSize: '0.83rem', fontWeight: 600 }}>
@@ -2116,21 +2106,21 @@ export default function AlunoPage() {
             {contaSection === 'change-password' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <button onClick={() => setContaSection('main')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#6b7280', padding: '4px 6px', borderRadius: 8 }}>←</button>
+                  <button onClick={() => setContaSection('main')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#a3a3a3', padding: '4px 6px', borderRadius: 8 }}>←</button>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#111827' }}>🔒 Alterar Senha</h2>
-                    <p style={{ margin: 0, fontSize: '0.72rem', color: '#6b7280' }}>Escolha uma senha forte</p>
+                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f5f5f4' }}>🔒 Alterar Senha</h2>
+                    <p style={{ margin: 0, fontSize: '0.72rem', color: '#a3a3a3' }}>Escolha uma senha forte</p>
                   </div>
                 </div>
-                <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '18px' }}>
+                <div style={{ background: '#161616', border: '1px solid #2a2a2a', borderRadius: 14, padding: '18px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     {(['current_password', 'new_password', 'confirm_password'] as const).map((field, i) => (
                       <div key={field}>
-                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          {['Senha Atual', 'Nova Senha', 'Confirmar Nova Senha'][i]} <span style={{ color: '#dc2626' }}>*</span>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#d4d4d4', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          {['Senha Atual', 'Nova Senha', 'Confirmar Nova Senha'][i]} <span style={{ color: '#f87171' }}>*</span>
                         </label>
                         <input type="password" value={contaForm[field]} onChange={e => setContaForm(f => ({ ...f, [field]: e.target.value }))}
-                          style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+                          style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                       </div>
                     ))}
                     {contaMsg && (
@@ -2162,33 +2152,33 @@ export default function AlunoPage() {
             {contaSection === 'delete-account' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <button onClick={() => setContaSection('main')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#6b7280', padding: '4px 6px', borderRadius: 8 }}>←</button>
+                  <button onClick={() => setContaSection('main')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#a3a3a3', padding: '4px 6px', borderRadius: 8 }}>←</button>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#dc2626' }}>⚠️ Excluir Conta</h2>
-                    <p style={{ margin: 0, fontSize: '0.72rem', color: '#6b7280' }}>Esta ação é irreversível</p>
+                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f87171' }}>⚠️ Excluir Conta</h2>
+                    <p style={{ margin: 0, fontSize: '0.72rem', color: '#a3a3a3' }}>Esta ação é irreversível</p>
                   </div>
                 </div>
-                <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 14, padding: '16px 18px' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#991b1b', marginBottom: 8 }}>⚠️ O que acontece ao excluir:</div>
-                  <ul style={{ margin: 0, padding: '0 0 0 18px', fontSize: '0.82rem', color: '#7f1d1d', lineHeight: 1.7 }}>
+                <div style={{ background: 'rgba(239,68,68,0.09)', border: '1.5px solid #fecaca', borderRadius: 14, padding: '16px 18px' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fca5a5', marginBottom: 8 }}>⚠️ O que acontece ao excluir:</div>
+                  <ul style={{ margin: 0, padding: '0 0 0 18px', fontSize: '0.82rem', color: '#fca5a5', lineHeight: 1.7 }}>
                     <li>Seu login e senha são <strong>removidos permanentemente</strong></li>
                     <li>Seu histórico de presenças e graduações <strong>é mantido</strong></li>
                     <li>Você precisará de nova conta para acessar a plataforma</li>
                   </ul>
                 </div>
-                <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '18px' }}>
+                <div style={{ background: '#161616', border: '1px solid #2a2a2a', borderRadius: 14, padding: '18px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Digite <strong>EXCLUIR</strong> para confirmar</label>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#d4d4d4', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Digite <strong>EXCLUIR</strong> para confirmar</label>
                       <input type="text" value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)}
                         placeholder="EXCLUIR"
-                        style={{ width: '100%', border: `1.5px solid ${deleteConfirmText === 'EXCLUIR' ? '#dc2626' : '#e5e7eb'}`, borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+                        style={{ width: '100%', border: `1.5px solid ${deleteConfirmText === 'EXCLUIR' ? '#dc2626' : '#2e2e2e'}`, borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Senha Atual <span style={{ color: '#dc2626' }}>*</span></label>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#d4d4d4', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Senha Atual <span style={{ color: '#f87171' }}>*</span></label>
                       <input type="password" value={contaForm.current_password} onChange={e => setContaForm(f => ({ ...f, current_password: e.target.value }))}
                         placeholder="Confirme sua senha"
-                        style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+                        style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     {contaMsg && (
                       <div style={{ padding: '10px 14px', borderRadius: 10, background: contaMsgType === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${contaMsgType === 'success' ? '#bbf7d0' : '#fecaca'}`, color: contaMsgType === 'success' ? '#166534' : '#991b1b', fontSize: '0.83rem', fontWeight: 600 }}>
@@ -2208,7 +2198,7 @@ export default function AlunoPage() {
                         } else { setContaMsg(data.error || 'Erro ao excluir conta.'); setContaMsgType('error'); }
                       } catch { setContaMsg('Erro de conexão.'); setContaMsgType('error'); }
                       setContaLoading(false);
-                    }} style={{ background: deleteConfirmText === 'EXCLUIR' ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : '#e5e7eb', color: deleteConfirmText === 'EXCLUIR' ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: '12px', fontWeight: 700, fontSize: '0.9rem', cursor: (contaLoading || deleteConfirmText !== 'EXCLUIR') ? 'not-allowed' : 'pointer', opacity: contaLoading ? 0.7 : 1 }}>
+                    }} style={{ background: deleteConfirmText === 'EXCLUIR' ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : '#2e2e2e', color: deleteConfirmText === 'EXCLUIR' ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: '12px', fontWeight: 700, fontSize: '0.9rem', cursor: (contaLoading || deleteConfirmText !== 'EXCLUIR') ? 'not-allowed' : 'pointer', opacity: contaLoading ? 0.7 : 1 }}>
                       {contaLoading ? '⏳ Excluindo...' : '🗑️ Excluir Minha Conta Definitivamente'}
                     </button>
                   </div>
@@ -2239,10 +2229,10 @@ export default function AlunoPage() {
             return null;
           }
           const platformMeta: Record<string, { icon: string; color: string; label: string }> = {
-            youtube: { icon: '▶', color: '#dc2626', label: 'YouTube' },
-            spotify: { icon: '🎧', color: '#16a34a', label: 'Spotify' },
-            deezer:  { icon: '🎵', color: '#7c3aed', label: 'Deezer' },
-            tiktok:  { icon: '🎶', color: '#0891b2', label: 'TikTok' },
+            youtube: { icon: '▶', color: '#f87171', label: 'YouTube' },
+            spotify: { icon: '🎧', color: '#4ade80', label: 'Spotify' },
+            deezer:  { icon: '🎵', color: '#c4b5fd', label: 'Deezer' },
+            tiktok:  { icon: '🎶', color: '#67e8f9', label: 'TikTok' },
             kwai:    { icon: '📱', color: '#ea580c', label: 'Kwai' },
             link:    { icon: '🔗', color: '#64748b', label: 'Link' },
           };
@@ -2301,20 +2291,20 @@ export default function AlunoPage() {
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>🎵 Minha Playlist</h2>
-                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#6b7280' }}>Adicione links do Spotify, Deezer, YouTube, TikTok e Kwai</p>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>🎵 Minha Playlist</h2>
+                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>Adicione links do Spotify, Deezer, YouTube, TikTok e Kwai</p>
               </div>
 
               {/* Formulário para adicionar */}
-              <div style={{ background: '#fff', borderRadius: 16, padding: '18px', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#111827', marginBottom: 12 }}>➕ Adicionar link</div>
+              <div style={{ background: '#161616', borderRadius: 16, padding: '18px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f5f5f4', marginBottom: 12 }}>➕ Adicionar link</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <input
                     type="url"
                     value={playlistAddUrl}
                     onChange={e => setPlaylistAddUrl(e.target.value)}
                     placeholder="Cole aqui o link (Spotify, YouTube, TikTok, Deezer, Kwai...)"
-                    style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                     onKeyDown={e => e.key === 'Enter' && handleAddPlaylist()}
                   />
                   <input
@@ -2322,7 +2312,7 @@ export default function AlunoPage() {
                     value={playlistAddTitle}
                     onChange={e => setPlaylistAddTitle(e.target.value)}
                     placeholder="Título (opcional — será preenchido automaticamente)"
-                    style={{ width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                   {playlistMsg && (
                     <div style={{ padding: '8px 12px', borderRadius: 8, background: playlistMsgType === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${playlistMsgType === 'success' ? '#bbf7d0' : '#fecaca'}`, color: playlistMsgType === 'success' ? '#166534' : '#991b1b', fontSize: '0.82rem', fontWeight: 600 }}>
@@ -2330,7 +2320,7 @@ export default function AlunoPage() {
                     </div>
                   )}
                   <button onClick={handleAddPlaylist} disabled={playlistAdding || !playlistAddUrl.trim()}
-                    style={{ background: playlistAdding || !playlistAddUrl.trim() ? '#9ca3af' : `linear-gradient(135deg,${nucleoColor},${nucleoColor}cc)`, color: '#fff', border: 'none', borderRadius: 10, padding: '11px', fontWeight: 700, fontSize: '0.88rem', cursor: playlistAdding || !playlistAddUrl.trim() ? 'not-allowed' : 'pointer' }}>
+                    style={{ background: playlistAdding || !playlistAddUrl.trim() ? '#3a3a3a' : 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px', fontWeight: 700, fontSize: '0.88rem', cursor: playlistAdding || !playlistAddUrl.trim() ? 'not-allowed' : 'pointer' }}>
                     {playlistAdding ? '⏳ Adicionando...' : '➕ Adicionar à Playlist'}
                   </button>
                 </div>
@@ -2345,12 +2335,12 @@ export default function AlunoPage() {
 
               {/* Lista de itens */}
               {playlistLoading ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af', fontSize: '0.9rem' }}>Carregando playlist...</div>
+                <div style={{ textAlign: 'center', padding: '40px 0', color: '#8f8f8f', fontSize: '0.9rem' }}>Carregando playlist...</div>
               ) : playlistItems.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 20px', background: '#f5f3ff', borderRadius: 16, border: '2px dashed #a78bfa' }}>
+                <div style={{ textAlign: 'center', padding: '60px 20px', background: 'rgba(139,92,246,0.10)', borderRadius: 16, border: '2px dashed #a78bfa' }}>
                   <div style={{ fontSize: '3rem', marginBottom: 12 }}>🎵</div>
-                  <div style={{ fontWeight: 700, color: '#7c3aed', fontSize: '0.95rem' }}>Playlist vazia</div>
-                  <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: 6 }}>Adicione links acima para criar sua playlist personalizada.</div>
+                  <div style={{ fontWeight: 700, color: '#c4b5fd', fontSize: '0.95rem' }}>Playlist vazia</div>
+                  <div style={{ fontSize: '0.78rem', color: '#8f8f8f', marginTop: 6 }}>Adicione links acima para criar sua playlist personalizada.</div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -2360,35 +2350,35 @@ export default function AlunoPage() {
                     const embedH = item.platform === 'spotify' ? 80 : item.platform === 'deezer' ? 100 : 157;
                     const isEditing = playlistEditId === item.id;
                     return (
-                      <div key={item.id} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                      <div key={item.id} style={{ background: '#161616', border: '1px solid #2a2a2a', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                         {isEditing ? (
                           <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                             <input type="text" value={playlistEditTitle} onChange={e => setPlaylistEditTitle(e.target.value)}
-                              placeholder="Título" style={{ border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', width: '100%' }} />
+                              placeholder="Título" style={{ border: '1.5px solid #2e2e2e', borderRadius: 8, padding: '8px 12px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', width: '100%' }} />
                             <input type="url" value={playlistEditUrl} onChange={e => setPlaylistEditUrl(e.target.value)}
-                              placeholder="URL" style={{ border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', width: '100%' }} />
+                              placeholder="URL" style={{ border: '1.5px solid #2e2e2e', borderRadius: 8, padding: '8px 12px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', width: '100%' }} />
                             <div style={{ display: 'flex', gap: 8 }}>
-                              <button onClick={() => handleEditPlaylist(item.id)} style={{ flex: 1, background: nucleoColor, color: '#fff', border: 'none', borderRadius: 8, padding: '8px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>Salvar</button>
-                              <button onClick={() => setPlaylistEditId(null)} style={{ flex: 1, background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: 8, padding: '8px', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}>Cancelar</button>
+                              <button onClick={() => handleEditPlaylist(item.id)} style={{ flex: 1, background: '#FF9200', color: '#fff', border: 'none', borderRadius: 8, padding: '8px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>Salvar</button>
+                              <button onClick={() => setPlaylistEditId(null)} style={{ flex: 1, background: '#1c1c1c', color: '#d4d4d4', border: 'none', borderRadius: 8, padding: '8px', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}>Cancelar</button>
                             </div>
                           </div>
                         ) : (
                           <>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderBottom: embed ? '1px solid #f3f4f6' : 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderBottom: embed ? '1px solid #1c1c1c' : 'none' }}>
                               <span style={{ background: meta.color, color: '#fff', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', flexShrink: 0, fontWeight: 800 }}>{meta.icon}</span>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
+                                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f5f5f4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
                                 <div style={{ fontSize: '0.7rem', color: meta.color, fontWeight: 600, marginTop: 1 }}>{meta.label}</div>
                               </div>
                               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                                 <a href={item.url} target="_blank" rel="noopener noreferrer"
-                                  style={{ padding: '5px 10px', borderRadius: 7, background: '#f8fafc', border: '1px solid #e5e7eb', color: '#374151', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
+                                  style={{ padding: '5px 10px', borderRadius: 7, background: '#121212', border: '1px solid #2a2a2a', color: '#d4d4d4', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
                                   Abrir
                                 </a>
                                 <button onClick={() => { setPlaylistEditId(item.id); setPlaylistEditTitle(item.title); setPlaylistEditUrl(item.url); }}
-                                  style={{ padding: '5px 8px', borderRadius: 7, background: '#eff6ff', border: 'none', color: '#1d4ed8', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>✏️</button>
+                                  style={{ padding: '5px 8px', borderRadius: 7, background: 'rgba(59,130,246,0.10)', border: 'none', color: '#1d4ed8', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>✏️</button>
                                 <button onClick={() => handleDeletePlaylist(item.id)}
-                                  style={{ padding: '5px 8px', borderRadius: 7, background: '#fef2f2', border: 'none', color: '#dc2626', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>🗑</button>
+                                  style={{ padding: '5px 8px', borderRadius: 7, background: 'rgba(239,68,68,0.09)', border: 'none', color: '#f87171', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>🗑</button>
                               </div>
                             </div>
                             {embed && embed.type === 'iframe' && (
@@ -2406,7 +2396,7 @@ export default function AlunoPage() {
                   })}
                 </div>
               )}
-              <div style={{ fontSize: '0.72rem', color: '#9ca3af', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.72rem', color: '#8f8f8f', textAlign: 'center' }}>
                 Plataformas suportadas: Spotify · Deezer · YouTube · TikTok · Kwai · outros links
               </div>
             </div>
@@ -2556,24 +2546,24 @@ export default function AlunoPage() {
           const sexo_opts = [{ v: 'M', l: 'Masculino' }, { v: 'F', l: 'Feminino' }, { v: 'O', l: 'Outro' }];
           const estados = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
           const isMissing = cadastroIncompleto;
-          const fs: React.CSSProperties = { width: '100%', borderColor: '#e5e7eb', borderStyle: 'solid', borderWidth: 1.5, borderRadius: 8, padding: '9px 11px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', background: '#fff' };
-          const ls: React.CSSProperties = { display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#374151', marginBottom: 4 };
-          const sec: React.CSSProperties = { fontWeight: 800, fontSize: '0.78rem', color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid #f3f4f6' };
+          const fs: React.CSSProperties = { width: '100%', borderColor: '#2e2e2e', borderStyle: 'solid', borderWidth: 1.5, borderRadius: 8, padding: '9px 11px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', background: '#161616' };
+          const ls: React.CSSProperties = { display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#d4d4d4', marginBottom: 4 };
+          const sec: React.CSSProperties = { fontWeight: 800, fontSize: '0.78rem', color: '#a3a3a3', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid #1c1c1c' };
 
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>✏️ Meus Dados</h2>
-                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#6b7280' }}>Complete ou atualize suas informações de cadastro</p>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>✏️ Meus Dados</h2>
+                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>Complete ou atualize suas informações de cadastro</p>
               </div>
 
               {/* ── Foto de Perfil ── */}
-              <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div style={{ flexShrink: 0, position: 'relative' }}>
                   {student.foto_url ? (
-                    <img src={student.foto_url as string} alt={student.nome_completo} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${nucleoColor}40` }} />
+                    <img src={student.foto_url as string} alt={student.nome_completo} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,146,0,0.35)' }} />
                   ) : (
-                    <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${nucleoColor}18`, border: `3px solid ${nucleoColor}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(255,146,0,0.10)', border: '3px solid rgba(255,146,0,0.30)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <svg width="42" height="42" viewBox="0 0 64 64" fill="none">
                         <circle cx="32" cy="14" r="9" fill={nucleoColor} opacity="0.7"/>
                         <path d="M32 23 C24 27 20 37 22 46 L18 62" stroke={nucleoColor} strokeWidth="4" strokeLinecap="round" opacity="0.7"/>
@@ -2585,12 +2575,12 @@ export default function AlunoPage() {
                   )}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', marginBottom: 2 }}>Foto de Perfil</div>
-                  <div style={{ fontSize: '0.72rem', color: '#6b7280', marginBottom: 8 }}>JPG, PNG — máx. 5 MB. Aparece na carteirinha e no painel.</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 2 }}>Foto de Perfil</div>
+                  <div style={{ fontSize: '0.72rem', color: '#a3a3a3', marginBottom: 8 }}>JPG, PNG — máx. 5 MB. Aparece na carteirinha e no painel.</div>
                   {fotoMsg && <div style={{ fontSize: '0.75rem', color: fotoMsg.startsWith('✅') ? '#16a34a' : '#dc2626', marginBottom: 6, fontWeight: 600 }}>{fotoMsg}</div>}
                   <input ref={fotoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFotoPick(f); e.target.value = ''; }} />
                   <button onClick={() => fotoInputRef.current?.click()} disabled={fotoUploading}
-                    style={{ background: fotoUploading ? '#e5e7eb' : `${nucleoColor}18`, color: fotoUploading ? '#9ca3af' : nucleoColor, border: `1.5px solid ${fotoUploading ? '#e5e7eb' : nucleoColor}40`, borderRadius: 8, padding: '7px 16px', fontWeight: 700, fontSize: '0.8rem', cursor: fotoUploading ? 'not-allowed' : 'pointer' }}>
+                    style={{ background: fotoUploading ? '#3a3a3a' : 'rgba(255,146,0,0.10)', color: fotoUploading ? '#8f8f8f' : '#FF9200', border: '1.5px solid rgba(255,146,0,0.4)', borderRadius: 8, padding: '7px 16px', fontWeight: 700, fontSize: '0.8rem', cursor: fotoUploading ? 'not-allowed' : 'pointer' }}>
                     {fotoUploading ? '⏳ Enviando...' : student.foto_url ? '🔄 Trocar Foto' : '📷 Adicionar Foto'}
                   </button>
                 </div>
@@ -2610,20 +2600,20 @@ export default function AlunoPage() {
 
               {/* ── Matrícula ── */}
               {(student.ordem_inscricao || alunoInscricaoNum) && (
-                <div style={{ background: `${nucleoColor}08`, border: `1px solid ${nucleoColor}30`, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${nucleoColor}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>🪪</div>
+                <div style={{ background: 'rgba(255,146,0,0.06)', border: '1px solid rgba(255,146,0,0.30)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,146,0,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>🪪</div>
                   <div>
-                    <div style={{ fontSize: '0.7rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 1 }}>Matrícula</div>
+                    <div style={{ fontSize: '0.7rem', color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 1 }}>Matrícula</div>
                     <div style={{ fontWeight: 800, fontSize: '1.1rem', color: nucleoColor, fontFamily: 'monospace' }}>
                       #{String(student.ordem_inscricao as number || alunoInscricaoNum || 0).padStart(4, '0')}
                     </div>
-                    <div style={{ fontSize: '0.68rem', color: '#9ca3af' }}>Número de matrícula na associação</div>
+                    <div style={{ fontSize: '0.68rem', color: '#8f8f8f' }}>Número de matrícula na associação</div>
                   </div>
                 </div>
               )}
 
               {/* Aviso de completude obrigatório */}
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 12, padding: '12px 16px', fontSize: '0.82rem', color: '#1e40af', fontWeight: 600, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <div style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.35)', borderRadius: 12, padding: '12px 16px', fontSize: '0.82rem', color: '#93c5fd', fontWeight: 600, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                 <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>📝</span>
                 <div>
                   <div>Por favor, complete e atualize todos os dados do seu cadastro.</div>
@@ -2634,7 +2624,7 @@ export default function AlunoPage() {
               </div>
 
               {isMissing && (
-                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: '12px 16px', fontSize: '0.8rem', color: '#92400e' }}>
+                <div style={{ background: 'rgba(234,179,8,0.10)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 12, padding: '12px 16px', fontSize: '0.8rem', color: '#fcd34d' }}>
                   ⚠️ Dados incompletos. Preencha os campos abaixo para finalizar seu cadastro.
                 </div>
               )}
@@ -2646,7 +2636,7 @@ export default function AlunoPage() {
               )}
 
               {/* ── Identificação na Associação ── */}
-              <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
                 <div style={sec}>Identificação na Associação</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div>
@@ -2663,13 +2653,13 @@ export default function AlunoPage() {
                     <div style={{ display: 'flex', gap: 8 }}>
                       {(['Infantil', 'Adulto'] as const).map(t => (
                         <button key={t} type="button" onClick={() => setDadosForm(p => ({ ...p, tipo_graduacao: t, graduacao: '' }))}
-                          style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: `2px solid ${tipoEfetivo === t ? nucleoColor : '#e5e7eb'}`, background: tipoEfetivo === t ? `${nucleoColor}18` : '#fff', color: tipoEfetivo === t ? nucleoColor : '#374151', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.15s' }}>
+                          style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: `2px solid ${tipoEfetivo === t ? 'rgba(255,146,0,0.6)' : '#2a2a2a'}`, background: tipoEfetivo === t ? 'rgba(255,146,0,0.10)' : '#161616', color: tipoEfetivo === t ? '#FF9200' : '#d4d4d4', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.15s' }}>
                           {t === 'Infantil' ? '👦 Infantil' : '🧑 Adulto'}
                         </button>
                       ))}
                     </div>
                     {autoTipo && !dadosForm.tipo_graduacao && (
-                      <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 4 }}>
+                      <div style={{ fontSize: '0.72rem', color: '#a3a3a3', marginTop: 4 }}>
                         Detectado automaticamente como <strong>{autoTipo}</strong> com base na data de nascimento
                       </div>
                     )}
@@ -2688,7 +2678,7 @@ export default function AlunoPage() {
                       </>}
                     </select>
                     {tipoEfetivo && (
-                      <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 4 }}>
+                      <div style={{ fontSize: '0.72rem', color: '#a3a3a3', marginTop: 4 }}>
                         Exibindo graduações para: <strong>{tipoEfetivo}</strong>
                       </div>
                     )}
@@ -2697,7 +2687,7 @@ export default function AlunoPage() {
               </div>
 
               {/* ── Dados Pessoais ── */}
-              <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
                 <div style={sec}>Dados Pessoais</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
@@ -2723,7 +2713,7 @@ export default function AlunoPage() {
                         onChange={e => setDadosForm(p => ({ ...p, autoriza_imagem: e.target.checked }))}
                         style={{ width: 18, height: 18, marginTop: 1, accentColor: nucleoColor, flexShrink: 0 }}
                       />
-                      <span style={{ fontWeight: 600, fontSize: '0.82rem', color: '#374151', lineHeight: 1.4 }}>
+                      <span style={{ fontWeight: 600, fontSize: '0.82rem', color: '#d4d4d4', lineHeight: 1.4 }}>
                         Autorizo o uso da minha imagem (fotos/vídeos) para fins institucionais do Portal Aluno, incluindo redes sociais, materiais de divulgação e eventos.
                       </span>
                     </label>
@@ -2748,7 +2738,7 @@ export default function AlunoPage() {
                       const age = (new Date().getFullYear()) - parseInt(dadosForm.data_nascimento.slice(0,4));
                       if (age >= 18) return null;
                       return (
-                        <div style={{ marginTop: 6, background: '#fef9c3', border: '1px solid #fde047', borderRadius: 8, padding: '7px 10px', fontSize: '0.75rem', color: '#854d0e' }}>
+                        <div style={{ marginTop: 6, background: 'rgba(250,204,21,0.10)', border: '1px solid rgba(250,204,21,0.4)', borderRadius: 8, padding: '7px 10px', fontSize: '0.75rem', color: '#854d0e' }}>
                           ⚠️ Menor de idade — Termo de Responsabilidade obrigatório.{' '}
                           <button type="button" onClick={() => setActiveTab('termo')} style={{ background: '#854d0e', color: '#fff', border: 'none', borderRadius: 5, padding: '2px 8px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', marginLeft: 4 }}>Assinar Termo →</button>
                         </div>
@@ -2758,7 +2748,7 @@ export default function AlunoPage() {
                   <div>
                     <label style={ls}>CPF</label>
                     <input value={dadosForm.cpf} onChange={e => setDadosForm(p => ({ ...p, cpf: maskCPF(e.target.value) }))}
-                      style={{ ...fs, borderColor: dadosForm.cpf && dadosForm.cpf.replace(/\D/g,'').length === 11 ? (validarCPF(dadosForm.cpf) ? '#86efac' : '#fca5a5') : '#e5e7eb' }}
+                      style={{ ...fs, borderColor: dadosForm.cpf && dadosForm.cpf.replace(/\D/g,'').length === 11 ? (validarCPF(dadosForm.cpf) ? '#86efac' : '#fca5a5') : '#2e2e2e' }}
                       placeholder="000.000.000-00" inputMode="numeric" maxLength={14} />
                     {dadosForm.cpf && dadosForm.cpf.replace(/\D/g,'').length === 11 && (
                       <div style={{ fontSize: '0.7rem', marginTop: 3, fontWeight: 600, color: validarCPF(dadosForm.cpf) ? '#16a34a' : '#dc2626' }}>
@@ -2775,7 +2765,7 @@ export default function AlunoPage() {
                     <input value={dadosForm.numeracao_unica} onChange={e => setDadosForm(p => ({ ...p, numeracao_unica: e.target.value }))}
                       style={fs}
                       placeholder="Ex: 0042 (exclusivo por aluno)" maxLength={20} />
-                    <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 2 }}>Identificador único no sistema Portal Aluno</div>
+                    <div style={{ fontSize: '0.68rem', color: '#8f8f8f', marginTop: 2 }}>Identificador único no sistema Portal Aluno</div>
                   </div>
                   <div>
                     <label style={ls}>Telefone / WhatsApp</label>
@@ -2799,7 +2789,7 @@ export default function AlunoPage() {
                       }}
                       style={fs} placeholder="seu@email.com" />
                     {!dadosForm.email.trim() && (
-                      <div style={{ marginTop: 6, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: '#9a3412', lineHeight: 1.5 }}>
+                      <div style={{ marginTop: 6, background: 'rgba(255,146,0,0.10)', border: '1px solid rgba(255,146,0,0.35)', borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: '#9a3412', lineHeight: 1.5 }}>
                         ⚠️ <strong>Sem e-mail vinculado, você corre o risco de perder o acesso à conta</strong> se esquecer sua senha — sem e-mail não há recuperação automática. Nesse caso, será preciso contatar o admin responsável do seu núcleo para redefinir o acesso.
                       </div>
                     )}
@@ -2808,7 +2798,7 @@ export default function AlunoPage() {
               </div>
 
               {/* ── Endereço ── */}
-              <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
                 <div style={sec}>Endereço</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
@@ -2817,7 +2807,7 @@ export default function AlunoPage() {
                       onChange={e => setDadosForm(p => ({ ...p, cep: maskCEP(e.target.value) }))}
                       onBlur={e => handleCepBlur(e.target.value)}
                       style={fs} placeholder="00000-000" inputMode="numeric" maxLength={9} />
-                    <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 2 }}>Endereço preenchido automaticamente ao sair do campo</div>
+                    <div style={{ fontSize: '0.68rem', color: '#8f8f8f', marginTop: 2 }}>Endereço preenchido automaticamente ao sair do campo</div>
                   </div>
                   <div style={{ gridColumn: '1/-1' }}>
                     <label style={ls}>Logradouro (Rua / Avenida)</label>
@@ -2850,7 +2840,7 @@ export default function AlunoPage() {
               </div>
 
               {/* ── Filiação ── */}
-              <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
                 <div style={sec}>Filiação</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
@@ -2875,17 +2865,17 @@ export default function AlunoPage() {
                   )}
                 </div>
                 {(autoTipo === 'Infantil' || (student.menor_de_idade as boolean)) && (
-                  <div style={{ marginTop: 10, background: '#eff6ff', borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: '#1e40af' }}>
+                  <div style={{ marginTop: 10, background: 'rgba(59,130,246,0.10)', borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: '#93c5fd' }}>
                     ℹ️ Como aluno(a) menor de idade, o Termo de Responsabilidade também deve ser assinado. Acesse a aba <strong>📄 Termo</strong>.
-                    <button onClick={() => setActiveTab('termo')} style={{ marginLeft: 8, background: '#1e40af', color: '#fff', border: 'none', borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>Ver Termo</button>
+                    <button onClick={() => setActiveTab('termo')} style={{ marginLeft: 8, background: '#FF9200', color: '#fff', border: 'none', borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>Ver Termo</button>
                   </div>
                 )}
               </div>
 
               {/* ── Desenvolvimento Atípico / Necessidades Específicas ── */}
-              <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
                 <div style={sec}>Desenvolvimento Atípico / Necessidades Específicas</div>
-                <p style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 0, marginBottom: 12 }}>Campo opcional. Selecione todas as condições que se aplicam.</p>
+                <p style={{ fontSize: '0.72rem', color: '#a3a3a3', marginTop: 0, marginBottom: 12 }}>Campo opcional. Selecione todas as condições que se aplicam.</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   {[
                     'Transtorno do Espectro Autista (TEA)',
@@ -2907,7 +2897,7 @@ export default function AlunoPage() {
                   ].map(opt => {
                     const checked = dadosForm.desenvolvimento_atipico.includes(opt);
                     return (
-                      <label key={opt} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', fontSize: '0.78rem', color: '#374151', padding: '6px 8px', background: checked ? `${nucleoColor}08` : 'transparent', borderRadius: 8, border: `1px solid ${checked ? nucleoColor + '30' : 'transparent'}`, transition: 'all 0.15s' }}>
+                      <label key={opt} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', fontSize: '0.78rem', color: '#d4d4d4', padding: '6px 8px', background: checked ? 'rgba(255,146,0,0.07)' : 'transparent', borderRadius: 8, border: `1px solid ${checked ? 'rgba(255,146,0,0.30)' : 'transparent'}`, transition: 'all 0.15s' }}>
                         <input type="checkbox" checked={checked} onChange={e => {
                           if (e.target.checked) setDadosForm(p => ({ ...p, desenvolvimento_atipico: [...p.desenvolvimento_atipico, opt] }));
                           else setDadosForm(p => ({ ...p, desenvolvimento_atipico: p.desenvolvimento_atipico.filter(x => x !== opt) }));
@@ -2918,18 +2908,18 @@ export default function AlunoPage() {
                   })}
                 </div>
                 {dadosForm.desenvolvimento_atipico.length > 0 && (
-                  <div style={{ marginTop: 10, fontSize: '0.72rem', color: nucleoColor, fontWeight: 600 }}>
+                  <div style={{ marginTop: 10, fontSize: '0.72rem', color: '#FF9200', fontWeight: 600 }}>
                     ✓ {dadosForm.desenvolvimento_atipico.length} condição(ões) selecionada(s)
                   </div>
                 )}
               </div>
 
               <button onClick={handleSaveDados} disabled={dadosLoading}
-                style={{ background: dadosLoading ? '#9ca3af' : `linear-gradient(135deg, ${nucleoColor}, ${nucleoColor}bb)`, color: '#fff', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: dadosLoading ? 'not-allowed' : 'pointer', boxShadow: dadosLoading ? 'none' : `0 4px 14px ${nucleoColor}40` }}>
+                style={{ background: dadosLoading ? '#3a3a3a' : 'linear-gradient(135deg, #FF9200, #d97706)', color: '#fff', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: dadosLoading ? 'not-allowed' : 'pointer', boxShadow: dadosLoading ? 'none' : '0 4px 14px rgba(255,146,0,0.35)' }}>
                 {dadosLoading ? '⏳ Salvando...' : '💾 Salvar Meus Dados'}
               </button>
 
-              <div style={{ fontSize: '0.72rem', color: '#9ca3af', textAlign: 'center', lineHeight: 1.5 }}>
+              <div style={{ fontSize: '0.72rem', color: '#8f8f8f', textAlign: 'center', lineHeight: 1.5 }}>
                 Os dados são salvos diretamente no banco e aparecem no painel administrativo imediatamente.
               </div>
             </div>
@@ -2998,11 +2988,11 @@ export default function AlunoPage() {
 
           if (!isMenor) return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>📄 Termo de Responsabilidade</h2>
-              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 16, padding: '32px 20px', textAlign: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>📄 Termo de Responsabilidade</h2>
+              <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 16, padding: '32px 20px', textAlign: 'center' }}>
                 <div style={{ fontSize: '3rem', marginBottom: 12 }}>✅</div>
-                <div style={{ fontWeight: 700, fontSize: '1rem', color: '#166534', marginBottom: 6 }}>Não aplicável</div>
-                <div style={{ fontSize: '0.82rem', color: '#15803d', lineHeight: 1.5 }}>
+                <div style={{ fontWeight: 700, fontSize: '1rem', color: '#86efac', marginBottom: 6 }}>Não aplicável</div>
+                <div style={{ fontSize: '0.82rem', color: '#4ade80', lineHeight: 1.5 }}>
                   Este aluno é maior de idade e não necessita de Termo de Responsabilidade.<br />
                   O termo é obrigatório apenas para alunos menores de 18 anos.
                 </div>
@@ -3013,8 +3003,8 @@ export default function AlunoPage() {
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>📄 Termo de Responsabilidade</h2>
-                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#6b7280' }}>Autorização para prática de capoeira — menor de idade</p>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>📄 Termo de Responsabilidade</h2>
+                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>Autorização para prática de capoeira — menor de idade</p>
               </div>
 
               {/* Status badge */}
@@ -3029,7 +3019,7 @@ export default function AlunoPage() {
                   </div>
                 </div>
                 {termoSaved && (
-                  <button onClick={handlePrint} style={{ marginLeft: 'auto', background: '#1e40af', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
+                  <button onClick={handlePrint} style={{ marginLeft: 'auto', background: '#FF9200', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
                     🖨️ Imprimir / PDF
                   </button>
                 )}
@@ -3042,19 +3032,19 @@ export default function AlunoPage() {
               )}
 
               {/* Documento */}
-              <div style={{ background: '#fff', border: `2px solid ${nucleoColor}`, borderRadius: 16, overflow: 'hidden' }}>
-                <div style={{ background: nucleoColor, padding: '14px 20px', textAlign: 'center' }}>
+              <div style={{ background: '#161616', border: '2px solid rgba(255,146,0,0.45)', borderRadius: 16, overflow: 'hidden' }}>
+                <div style={{ background: '#FF9200', padding: '14px 20px', textAlign: 'center' }}>
                   <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                     ⚠️ Autorização de Participação — Menor de Idade
                   </div>
                 </div>
                 <div style={{ padding: '24px 22px', fontFamily: 'Georgia, serif' }}>
                   {/* Dados do aluno */}
-                  <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 18px', marginBottom: 22, fontFamily: 'sans-serif', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: '0.83rem' }}>
-                    <div><span style={{ color: '#6b7280' }}>Aluno: </span><strong>{student.nome_completo}</strong></div>
-                    <div><span style={{ color: '#6b7280' }}>Núcleo: </span><strong>{student.nucleo || '—'}</strong></div>
-                    <div><span style={{ color: '#6b7280' }}>Nascimento: </span><strong>{student.data_nascimento ? new Date((student.data_nascimento as string)+'T12:00:00').toLocaleDateString('pt-BR') : '—'}</strong></div>
-                    <div><span style={{ color: '#6b7280' }}>Data: </span><strong>{hoje}</strong></div>
+                  <div style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: 10, padding: '14px 18px', marginBottom: 22, fontFamily: 'sans-serif', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: '0.83rem' }}>
+                    <div><span style={{ color: '#a3a3a3' }}>Aluno: </span><strong>{student.nome_completo}</strong></div>
+                    <div><span style={{ color: '#a3a3a3' }}>Núcleo: </span><strong>{student.nucleo || '—'}</strong></div>
+                    <div><span style={{ color: '#a3a3a3' }}>Nascimento: </span><strong>{student.data_nascimento ? new Date((student.data_nascimento as string)+'T12:00:00').toLocaleDateString('pt-BR') : '—'}</strong></div>
+                    <div><span style={{ color: '#a3a3a3' }}>Data: </span><strong>{hoje}</strong></div>
                   </div>
                   <p style={{ textAlign: 'justify', lineHeight: 1.9, marginBottom: 22, fontSize: '0.9rem' }}>
                     Eu, responsável legal pelo menor acima identificado, autorizo sua participação nas atividades de capoeira realizadas pela <strong>Portal Aluno</strong>, estando ciente das atividades físicas envolvidas, e assumindo a responsabilidade integral pela participação do menor nas referidas atividades.
@@ -3063,16 +3053,16 @@ export default function AlunoPage() {
                   {/* Campos do responsável */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, fontFamily: 'sans-serif' }}>
                     <div style={{ gridColumn: '1/-1' }}>
-                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
-                        Nome do Responsável Legal <span style={{ color: '#dc2626' }}>*</span>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#d4d4d4', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+                        Nome do Responsável Legal <span style={{ color: '#f87171' }}>*</span>
                       </label>
                       <input value={termoForm.nome_responsavel} onChange={e => setTermoForm(p => ({ ...p, nome_responsavel: e.target.value }))}
                         disabled={termoSaved} placeholder="Nome completo do responsável (pai, mãe ou tutor legal)"
                         style={{ width: '100%', border: '1.5px solid #d1d5db', borderRadius: 8, padding: '10px 12px', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', opacity: termoSaved ? 0.7 : 1, fontFamily: 'Georgia, serif' }} />
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
-                        CPF do Responsável <span style={{ color: '#dc2626' }}>*</span>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#d4d4d4', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+                        CPF do Responsável <span style={{ color: '#f87171' }}>*</span>
                       </label>
                       <input value={termoForm.cpf_responsavel}
                         onChange={e => setTermoForm(p => ({ ...p, cpf_responsavel: maskCPFt(e.target.value) }))}
@@ -3080,7 +3070,7 @@ export default function AlunoPage() {
                         style={{ width: '100%', border: '1.5px solid #d1d5db', borderRadius: 8, padding: '10px 12px', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', opacity: termoSaved ? 0.7 : 1 }} />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                      <div style={{ fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
+                      <div style={{ fontSize: '0.78rem', color: '#a3a3a3', lineHeight: 1.5 }}>
                         Assinatura digital via sistema Portal Aluno<br />
                         <span style={{ fontSize: '0.7rem' }}>{hoje}</span>
                       </div>
@@ -3091,7 +3081,7 @@ export default function AlunoPage() {
 
               {!termoSaved ? (
                 <button onClick={handleSaveTermo} disabled={termoSaving || !termoForm.nome_responsavel.trim()}
-                  style={{ background: termoForm.nome_responsavel.trim() ? `linear-gradient(135deg, #dc2626, #b91c1c)` : '#e5e7eb', color: termoForm.nome_responsavel.trim() ? '#fff' : '#9ca3af', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: termoForm.nome_responsavel.trim() ? 'pointer' : 'not-allowed', boxShadow: termoForm.nome_responsavel.trim() ? '0 4px 14px rgba(220,38,38,0.35)' : 'none' }}>
+                  style={{ background: termoForm.nome_responsavel.trim() ? `linear-gradient(135deg, #dc2626, #b91c1c)` : '#2e2e2e', color: termoForm.nome_responsavel.trim() ? '#fff' : '#9ca3af', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: termoForm.nome_responsavel.trim() ? 'pointer' : 'not-allowed', boxShadow: termoForm.nome_responsavel.trim() ? '0 4px 14px rgba(220,38,38,0.35)' : 'none' }}>
                   {termoSaving ? '⏳ Salvando...' : '✍️ Confirmar e Assinar Termo'}
                 </button>
               ) : (
@@ -3101,7 +3091,7 @@ export default function AlunoPage() {
                 </button>
               )}
 
-              <div style={{ fontSize: '0.72rem', color: '#9ca3af', textAlign: 'center', lineHeight: 1.5 }}>
+              <div style={{ fontSize: '0.72rem', color: '#8f8f8f', textAlign: 'center', lineHeight: 1.5 }}>
                 Este termo é vinculado ao cadastro do aluno e fica visível para o administrador do núcleo.
               </div>
             </div>
@@ -3165,44 +3155,44 @@ export default function AlunoPage() {
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>📊 Dashboard de Evolução</h2>
-                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#6b7280' }}>Acompanhe sua frequência e evolução nos treinos</p>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>📊 Dashboard de Evolução</h2>
+                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>Acompanhe sua frequência e evolução nos treinos</p>
               </div>
 
               {evolucaoLoading ? (
-                <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af', fontSize: '0.9rem' }}>Carregando dados...</div>
+                <div style={{ textAlign: 'center', padding: '60px 0', color: '#8f8f8f', fontSize: '0.9rem' }}>Carregando dados...</div>
               ) : (
                 <>
                   {/* Stats cards */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
                     {[
-                      { label: 'Total de treinos', value: totalDays, icon: '🥋', color: nucleoColor, bg: `${nucleoColor}15`, border: `${nucleoColor}30` },
-                      { label: 'Este mês', value: thisMonthCount, icon: '📅', color: '#7c3aed', bg: '#f5f3ff', border: '#e9d5ff' },
-                      { label: 'Mês passado', value: lastMonthCount, icon: '📆', color: '#0891b2', bg: '#f0f9ff', border: '#bae6fd' },
-                      { label: 'Sequência atual', value: `${streak}d`, icon: '🔥', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+                      { label: 'Total de treinos', value: totalDays, icon: '🥋', color: '#FF9200', bg: 'rgba(255,146,0,0.10)', border: 'rgba(255,146,0,0.30)' },
+                      { label: 'Este mês', value: thisMonthCount, icon: '📅', color: '#c4b5fd', bg: '#f5f3ff', border: '#e9d5ff' },
+                      { label: 'Mês passado', value: lastMonthCount, icon: '📆', color: '#67e8f9', bg: '#f0f9ff', border: '#bae6fd' },
+                      { label: 'Sequência atual', value: `${streak}d`, icon: '🔥', color: '#f87171', bg: '#fef2f2', border: '#fecaca' },
                     ].map(s => (
                       <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
                         <div style={{ fontSize: '1.6rem', lineHeight: 1 }}>{s.icon}</div>
                         <div>
                           <div style={{ fontSize: '1.4rem', fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                          <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 2 }}>{s.label}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#a3a3a3', marginTop: 2 }}>{s.label}</div>
                         </div>
                       </div>
                     ))}
                   </div>
 
                   {/* Monthly frequency bar chart */}
-                  <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#111827', marginBottom: 16 }}>Frequência Mensal</div>
+                  <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f5f5f4', marginBottom: 16 }}>Frequência Mensal</div>
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 100 }}>
                       {months6.map(m => {
                         const heightPct = maxCount > 0 ? (m.count / maxCount) * 100 : 0;
                         const isCurrent = m.key === thisMonthKey;
                         return (
                           <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: isCurrent ? nucleoColor : '#6b7280' }}>{m.count}</div>
+                            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: isCurrent ? '#FF9200' : '#8f8f8f' }}>{m.count}</div>
                             <div style={{ width: '100%', borderRadius: '6px 6px 0 0', background: isCurrent ? nucleoColor : `${nucleoColor}55`, minHeight: 4, height: `${Math.max(heightPct, 4)}%`, transition: 'height 0.3s' }} />
-                            <div style={{ fontSize: '0.6rem', color: isCurrent ? nucleoColor : '#9ca3af', fontWeight: isCurrent ? 700 : 400, whiteSpace: 'nowrap' }}>{m.label}</div>
+                            <div style={{ fontSize: '0.6rem', color: isCurrent ? '#FF9200' : '#8f8f8f', fontWeight: isCurrent ? 700 : 400, whiteSpace: 'nowrap' }}>{m.label}</div>
                           </div>
                         );
                       })}
@@ -3210,31 +3200,31 @@ export default function AlunoPage() {
                   </div>
 
                   {/* Last 30 days calendar grid */}
-                  <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#111827', marginBottom: 12 }}>Últimos 30 Dias</div>
+                  <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f5f5f4', marginBottom: 12 }}>Últimos 30 Dias</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 5 }}>
                       {last30Arr.map(d => {
                         const present = last30.has(d);
                         const isToday = d === todayStr;
                         return (
                           <div key={d} title={new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                            style={{ aspectRatio: '1', borderRadius: 6, background: present ? nucleoColor : '#f3f4f6', border: isToday ? `2px solid ${nucleoColor}` : '2px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', color: present ? '#fff' : '#d1d5db', fontWeight: 700 }}>
+                            style={{ aspectRatio: '1', borderRadius: 6, background: present ? '#FF9200' : '#1c1c1c', border: isToday ? '2px solid #FF9200' : '2px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', color: present ? '#fff' : '#8f8f8f', fontWeight: 700 }}>
                             {new Date(d + 'T12:00:00').getDate()}
                           </div>
                         );
                       })}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: '0.7rem', color: '#9ca3af' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: '0.7rem', color: '#8f8f8f' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: nucleoColor, display: 'inline-block' }} /> Treinou</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: '#f3f4f6', border: '1px solid #e5e7eb', display: 'inline-block' }} /> Não treinou</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 3, border: `2px solid ${nucleoColor}`, display: 'inline-block' }} /> Hoje</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: '#1c1c1c', border: '1px solid #2a2a2a', display: 'inline-block' }} /> Não treinou</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 3, border: '2px solid #FF9200', display: 'inline-block' }} /> Hoje</span>
                     </div>
                   </div>
 
                   {/* Attendance list — last 10 */}
                   {evolucaoDates.length > 0 && (
-                    <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#111827', marginBottom: 12 }}>Histórico de Presenças</div>
+                    <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f5f5f4', marginBottom: 12 }}>Histórico de Presenças</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {([...evolucaoEntries].length > 0
                           ? [...evolucaoEntries].reverse()
@@ -3242,20 +3232,20 @@ export default function AlunoPage() {
                         ).slice(0, 10).map(entry => {
                           const localLabel = entry.local_nome || entry.nucleo || null;
                           return (
-                            <div key={entry.date} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', background: '#f8fafc', borderRadius: 10, borderLeft: `3px solid ${nucleoColor}` }}>
+                            <div key={entry.date} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', background: '#121212', borderRadius: 10, borderLeft: `3px solid ${nucleoColor}` }}>
                               <span style={{ width: 8, height: 8, borderRadius: '50%', background: nucleoColor, flexShrink: 0, marginTop: 5 }} />
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#111827', textTransform: 'capitalize' }}>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f5f5f4', textTransform: 'capitalize' }}>
                                   {new Date(entry.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
                                 </div>
                                 {localLabel && (
-                                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <div style={{ fontSize: '0.75rem', color: '#a3a3a3', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
                                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                                    <span>Núcleo: <strong style={{ color: '#374151' }}>{localLabel}</strong></span>
+                                    <span>Núcleo: <strong style={{ color: '#d4d4d4' }}>{localLabel}</strong></span>
                                   </div>
                                 )}
                                 {entry.hora && (
-                                  <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <div style={{ fontSize: '0.72rem', color: '#8f8f8f', marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                     {entry.hora}
                                   </div>
@@ -3266,7 +3256,7 @@ export default function AlunoPage() {
                         })}
                       </div>
                       {evolucaoDates.length > 10 && (
-                        <div style={{ textAlign: 'center', marginTop: 10, fontSize: '0.75rem', color: '#9ca3af' }}>
+                        <div style={{ textAlign: 'center', marginTop: 10, fontSize: '0.75rem', color: '#8f8f8f' }}>
                           e mais {evolucaoDates.length - 10} registros anteriores
                         </div>
                       )}
@@ -3274,10 +3264,10 @@ export default function AlunoPage() {
                   )}
 
                   {evolucaoDates.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '40px 20px', background: '#f9fafb', borderRadius: 16, border: '2px dashed #e5e7eb' }}>
+                    <div style={{ textAlign: 'center', padding: '40px 20px', background: '#141414', borderRadius: 16, border: '2px dashed #2e2e2e' }}>
                       <div style={{ fontSize: '3rem', marginBottom: 10 }}>🥋</div>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#374151' }}>Nenhuma presença registrada</div>
-                      <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: 6, lineHeight: 1.5 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#d4d4d4' }}>Nenhuma presença registrada</div>
+                      <div style={{ fontSize: '0.78rem', color: '#8f8f8f', marginTop: 6, lineHeight: 1.5 }}>
                         Use a aba <strong>Presença</strong> para registrar seus treinos. Eles aparecerão aqui automaticamente.
                       </div>
                     </div>
@@ -3285,7 +3275,7 @@ export default function AlunoPage() {
 
                   {/* Performance tip */}
                   {totalDays > 0 && (
-                    <div style={{ background: `${nucleoColor}10`, borderRadius: 12, padding: '14px 16px', border: `1px solid ${nucleoColor}30`, fontSize: '0.8rem', color: '#374151', lineHeight: 1.6 }}>
+                    <div style={{ background: `${nucleoColor}10`, borderRadius: 12, padding: '14px 16px', border: `1px solid ${nucleoColor}30`, fontSize: '0.8rem', color: '#d4d4d4', lineHeight: 1.6 }}>
                       {streak >= 7 ? (
                         <span>🔥 <strong>Incrível!</strong> Você está em sequência há {streak} dias. Continue assim!</span>
                       ) : thisMonthCount >= 8 ? (
@@ -3304,6 +3294,67 @@ export default function AlunoPage() {
         })()}
 
       </main>
+
+      {/* Navegação inferior fixa, estilo aplicativo */}
+      <nav
+        aria-label="Navegação principal"
+        style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 70,
+          background: 'rgba(12,12,12,0.92)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+          borderTop: '1px solid #262626',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
+      >
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '6px 4px 8px', display: 'flex', alignItems: 'stretch' }}>
+          {primaryTabs.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} aria-current={isActive ? 'page' : undefined}
+                style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '7px 2px', border: 'none', background: 'none', cursor: 'pointer', color: isActive ? '#FF9200' : '#8f8f8f', WebkitTapHighlightColor: 'transparent' }}>
+                <span style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 28, borderRadius: 999,
+                  background: isActive ? 'rgba(255,146,0,0.16)' : 'transparent',
+                  fontSize: '1.2rem', lineHeight: 1, transition: 'background 0.15s',
+                }}>{tab.icon}</span>
+                <span style={{ fontSize: '0.62rem', fontWeight: isActive ? 700 : 500, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>{tab.label}</span>
+                {tab.badge && <span style={{ position: 'absolute', top: 4, right: 'calc(50% - 22px)', width: 8, height: 8, borderRadius: '50%', background: '#ef4444', border: '1.5px solid #0c0c0c' }} />}
+              </button>
+            );
+          })}
+          <button onClick={() => setShowMore(true)} aria-label="Mais seções"
+            style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '7px 2px', border: 'none', background: 'none', cursor: 'pointer', color: '#8f8f8f', WebkitTapHighlightColor: 'transparent' }}>
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 28, borderRadius: 999, fontSize: '1.2rem', lineHeight: 1 }}>⋯</span>
+            <span style={{ fontSize: '0.62rem', fontWeight: 500, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>Mais</span>
+            {tabs.filter(t => !primaryTabIds.includes(t.id)).some(t => t.badge) && <span style={{ position: 'absolute', top: 4, right: 'calc(50% - 22px)', width: 8, height: 8, borderRadius: '50%', background: '#ef4444', border: '1.5px solid #0c0c0c' }} />}
+          </button>
+        </div>
+      </nav>
+
+      {/* Gaveta "Mais" — todas as seções */}
+      {showMore && (
+        <div onClick={e => { if (e.target === e.currentTarget) setShowMore(false); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end' }}>
+          <div role="dialog" aria-label="Todas as seções" style={{
+            width: '100%', maxWidth: 560, margin: '0 auto', background: '#141414',
+            borderRadius: '20px 20px 0 0', border: '1px solid #262626', borderBottom: 'none',
+            padding: '14px 18px calc(18px + env(safe-area-inset-bottom, 0px))',
+            maxHeight: '72vh', overflowY: 'auto',
+          }}>
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#3a3a3a', margin: '0 auto 14px' }} />
+            <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Todas as seções</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+              {tabs.map(tab => (
+                <button key={tab.id} onClick={() => { setActiveTab(tab.id); setShowMore(false); }}
+                  style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 4px', background: '#1c1c1c', border: '1px solid #262626', borderRadius: 14, cursor: 'pointer', color: activeTab === tab.id ? '#FF9200' : '#d4d4d4' }}>
+                  <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>{tab.icon}</span>
+                  <span style={{ fontSize: '0.62rem', fontWeight: 600, textAlign: 'center', lineHeight: 1.25 }}>{tab.label}</span>
+                  {tab.badge && <span style={{ position: 'absolute', top: 6, right: 8, width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

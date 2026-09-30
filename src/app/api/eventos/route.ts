@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { appendAudit } from '@/lib/audit';
 import { readPanelSession } from '@/lib/panelSession';
-import { loadCreds } from '@/lib/panelCredentials';
+import { loadCreds, accIsGeral, accNucleos } from '@/lib/panelCredentials';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -80,15 +80,22 @@ async function saveAll(list: Evento[]) {
 
 export async function GET(req: NextRequest) {
   let list = await getAll();
-  // Admin de núcleo vê somente os eventos do próprio núcleo
+  // Admin de núcleo vê somente os eventos dos próprios núcleos
   const sess = readPanelSession(req);
   if (sess) {
     const creds = await loadCreds();
     const acc = creds[sess.u];
-    if (acc && acc.nucleo !== 'geral') {
-      const { data: tenant } = await supabaseWrite.from('tenants').select('nome').eq('slug', acc.nucleo).maybeSingle();
-      const nomeNucleo = tenant?.nome || acc.nucleo;
-      list = list.filter(e => !e.nucleo || e.nucleo === nomeNucleo || e.nucleo === acc.nucleo);
+    if (acc && !accIsGeral(acc)) {
+      const nucleosAdmin = accNucleos(acc);
+      if (nucleosAdmin.length > 0) {
+        const { data: tenants } = await supabaseWrite.from('tenants').select('slug, nome').in('slug', nucleosAdmin);
+        const permitidos = new Set<string>(nucleosAdmin.map(s => s.toLowerCase()));
+        for (const t of tenants || []) {
+          const nome = String((t as { nome?: string }).nome || '').trim().toLowerCase();
+          if (nome) permitidos.add(nome);
+        }
+        list = list.filter(e => !e.nucleo || permitidos.has(String(e.nucleo).trim().toLowerCase()));
+      }
     }
   }
   return NextResponse.json(list, {

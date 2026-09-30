@@ -12,6 +12,7 @@ import {
   normalizeCpfDigits,
   normalizeEmail,
   ensureSupabaseAuthUser,
+  accNucleos,
   OWNER_KEY,
   type CredsMap,
 } from '@/lib/panelCredentials';
@@ -314,15 +315,17 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'ID do núcleo é obrigatório.' }, { status: 400 });
     }
 
-    // Admin de núcleo só pode editar o próprio núcleo
+    // Admin de núcleo só pode editar núcleos que gerencia (principal + vinculados)
     if (!auth.owner && !auth.adminGeral && auth.loginNucleo) {
+      const acc = auth.loginNucleo ? (await loadCreds())[auth.actor] : undefined;
+      const gerenciados = accNucleos(acc);
       const { data: tenant } = await supabaseAdmin
         .from('tenants')
         .select('id, slug')
         .eq('id', id)
         .maybeSingle();
-      if (!tenant || tenant.slug !== auth.loginNucleo) {
-        return NextResponse.json({ error: 'Você só pode editar o seu próprio núcleo.' }, { status: 403 });
+      if (!tenant || !gerenciados.includes(String(tenant.slug))) {
+        return NextResponse.json({ error: 'Você só pode editar núcleos que você gerencia.' }, { status: 403 });
       }
     }
 
@@ -362,7 +365,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Renomeou o núcleo? Propaga o novo slug para as contas de admin vinculadas.
+    // Renomeou o núcleo? Propaga o novo slug para as contas de admin vinculadas
+    // (campo principal e listas de núcleos adicionais).
     const oldSlug = typeof body.slug_anterior === 'string' ? body.slug_anterior : null;
     const newSlug = typeof updates.slug === 'string' ? updates.slug : null;
     if (oldSlug && newSlug && oldSlug !== newSlug) {
@@ -370,7 +374,12 @@ export async function PATCH(req: NextRequest) {
       let mudou = false;
       for (const [k, c] of Object.entries(creds)) {
         if (c.nucleo === oldSlug) {
-          creds[k] = { ...c, nucleo: newSlug };
+          const extras = Array.isArray(c.nucleos) ? c.nucleos.filter(s => s !== oldSlug) : undefined;
+          creds[k] = { ...c, nucleo: newSlug, nucleos: extras };
+          mudou = true;
+        } else if (Array.isArray(c.nucleos) && c.nucleos.includes(oldSlug)) {
+          const extras = c.nucleos.map(s => (s === oldSlug ? newSlug : s));
+          creds[k] = { ...c, nucleos: extras };
           mudou = true;
         }
       }

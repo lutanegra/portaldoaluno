@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { appendAudit } from '@/lib/audit';
 import { readPanelSession } from '@/lib/panelSession';
-import { loadCreds } from '@/lib/panelCredentials';
+import { loadCreds, accIsGeral, accNucleos, accHasNucleo, type PanelAccount } from '@/lib/panelCredentials';
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
@@ -205,28 +205,36 @@ export async function POST(req: Request) {
 
   // ── SESSÃO DE ADMIN (bypass das travas, com filtro de núcleo) ──
   let adminNucleo: string | null = null; // null = sem admin; 'geral' = admin geral/owner
+  let adminNucleos: string[] = [];
+  let adminAcc: PanelAccount | undefined;
   const sess = readPanelSession(req);
-  if (sess) {
-    const creds = await loadCreds();
-    const acc = creds[sess.u];
-    if (acc) adminNucleo = acc.nucleo;
-  }
-  if (adminNucleo && adminNucleo !== 'geral') {
-    const nucleoNomeAluno = String(student?.nucleo || '').trim();
-    const nucleoSlugAdmin = adminNucleo;
-    const mesmoNucleo = nucleoNomeAluno === nucleoSlugAdmin;
-    let nomeBate = false;
-    if (!mesmoNucleo && nucleoNomeAluno) {
-      const { data: tenant } = await admin
-        .from('tenants')
-        .select('nome')
-        .eq('slug', nucleoSlugAdmin)
-        .maybeSingle();
-      nomeBate = !!tenant && tenant.nome === nucleoNomeAluno;
+  const credsAdmin = sess ? await loadCreds() : null;
+  if (sess && credsAdmin) {
+    const acc = credsAdmin[sess.u];
+    if (acc) {
+      adminAcc = acc;
+      if (accIsGeral(acc)) {
+        adminNucleo = 'geral';
+      } else {
+        adminNucleo = acc.nucleo;
+        adminNucleos = accNucleos(acc);
+      }
     }
-    if (!mesmoNucleo && !nomeBate) {
+  }
+  if (adminAcc && adminNucleos.length > 0) {
+    const nucleoNomeAluno = String(student?.nucleo || '').trim();
+    const { data: tenants } = await admin
+      .from('tenants')
+      .select('slug, nome')
+      .in('slug', adminNucleos);
+    const nomesPorSlug: Record<string, string> = {};
+    for (const t of tenants || []) {
+      const nome = String((t as { nome?: string }).nome || '').trim();
+      if (nome) nomesPorSlug[(t as { slug: string }).slug] = nome;
+    }
+    if (!accHasNucleo(adminAcc, nucleoNomeAluno, nomesPorSlug)) {
       return NextResponse.json(
-        { success: false, bloqueado: true, motivo: 'fora_do_nucleo', error: 'Este aluno não é do seu núcleo. Você só pode registrar presença dos alunos do seu núcleo.' },
+        { success: false, bloqueado: true, motivo: 'fora_do_nucleo', error: 'Este aluno não é dos seus núcleos. Você só pode registrar presença de alunos dos núcleos que você gerencia.' },
         { status: 422 },
       );
     }

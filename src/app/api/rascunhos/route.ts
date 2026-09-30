@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { readPanelSession } from '@/lib/panelSession';
-import { loadCreds } from '@/lib/panelCredentials';
+import { loadCreds, accIsGeral, accNucleos } from '@/lib/panelCredentials';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -127,16 +127,23 @@ export async function GET(req: NextRequest) {
   );
   rascunhos.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
 
-  // Admin de núcleo vê somente os rascunhos do próprio núcleo
+  // Admin de núcleo vê somente os rascunhos dos próprios núcleos
   const sess = readPanelSession(req);
   if (sess) {
     const creds = await loadCreds();
     const acc = creds[sess.u];
-    if (acc && acc.nucleo !== 'geral') {
-      const { data: tenant } = await supabase.from('tenants').select('nome').eq('slug', acc.nucleo).maybeSingle();
-      const nomeNucleo = (tenant as { nome?: string } | null)?.nome || acc.nucleo;
-      const filtrados = rascunhos.filter(r => (r as { nucleo?: string }).nucleo === nomeNucleo || (r as { nucleo?: string }).nucleo === acc.nucleo);
-      return NextResponse.json(filtrados);
+    if (acc && !accIsGeral(acc)) {
+      const nucleosAdmin = accNucleos(acc);
+      if (nucleosAdmin.length > 0) {
+        const { data: tenants } = await supabase.from('tenants').select('slug, nome').in('slug', nucleosAdmin);
+        const permitidos = new Set<string>(nucleosAdmin.map(s => s.toLowerCase()));
+        for (const t of tenants || []) {
+          const nome = String((t as { nome?: string }).nome || '').trim().toLowerCase();
+          if (nome) permitidos.add(nome);
+        }
+        const filtrados = rascunhos.filter(r => permitidos.has(String((r as { nucleo?: string }).nucleo || '').trim().toLowerCase()));
+        return NextResponse.json(filtrados);
+      }
     }
   }
 
