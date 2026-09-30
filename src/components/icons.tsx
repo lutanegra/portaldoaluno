@@ -142,3 +142,6 @@ export const IconBerimbau = ({ size = 20, style, strokeWidth = 2 }: IconProps) =
 
 export const IconMail = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
   base(size, style, strokeWidth, <><rect x="3" y="5.5" width="18" height="13" rx="2.5" /><path d="m4 7.5 8 5.6 8-5.6" /></>);
+
+export const IconSearch = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
+  base(size, style, strokeWidth, <><circle cx="11" cy="11" r="6.5" /><path d="m16 16 5 5" /></>);

@@ -495,42 +495,49 @@ export async function POST(req: NextRequest) {
   if (action === 'link-nucleo') {
     const sess = await currentSession(creds0, req, body as { username?: string; password?: string });
     if (!sess) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
-    if (!verifyPassword(String(body.password || ''), sess.acc.password)) {
-      return NextResponse.json({ error: 'Senha incorreta.' }, { status: 401 });
+    // Regra: só Owner/Admin Geral alteram os núcleos que uma conta gerencia
+    if (!accIsGeral(sess.acc)) {
+      return NextResponse.json({ error: 'Somente o Owner ou o Admin Geral podem vincular núcleos a uma conta.' }, { status: 403 });
     }
-    if (accIsGeral(sess.acc)) return NextResponse.json({ error: 'Gestores já enxergam todos os núcleos.' }, { status: 400 });
+    const alvoKey = resolveUsername(creds0, String(body.username || ''));
+    if (!alvoKey) return NextResponse.json({ error: 'Conta alvo não encontrada.' }, { status: 404 });
+    const alvo = creds0[alvoKey];
+    if (accIsGeral(alvo)) return NextResponse.json({ error: 'Gestores já enxergam todos os núcleos.' }, { status: 400 });
     const slug = normalizeLogin(String(body.nucleo_slug || ''));
     if (!slug) return NextResponse.json({ error: 'Informe o núcleo a vincular.' }, { status: 400 });
     const check = await validateNucleoSlugs([slug]);
     if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
-    const atuais = accNucleos(sess.acc);
-    if (uaisIncludes(atuais, slug)) return NextResponse.json({ error: 'Este núcleo já está vinculado à sua conta.' }, { status: 409 });
-    const principal = atuais[0] || sess.acc.nucleo;
+    const atuais = accNucleos(alvo);
+    if (uaisIncludes(atuais, slug)) return NextResponse.json({ error: 'Este núcleo já está vinculado a essa conta.' }, { status: 409 });
+    const principal = atuais[0] || alvo.nucleo;
     const extras = sanitizeNucleoSlugs([...atuais, slug]).filter(s => s !== principal);
-    creds0[sess.key] = { ...sess.acc, nucleo: principal, nucleos: extras.length > 0 ? extras : undefined };
+    creds0[alvoKey] = { ...alvo, nucleo: principal, nucleos: extras.length > 0 ? extras : undefined };
     await saveCreds(creds0);
-    await appendAudit({ actor: sess.key, actor_type: 'admin', action: 'nucleo_vinculado', target_id: slug, details: { nucleos: accNucleos(creds0[sess.key]) } });
-    return NextResponse.json({ ok: true, nucleo: principal, nucleos: accNucleos(creds0[sess.key]) });
+    await appendAudit({ actor: sess.key, actor_type: 'admin', action: 'nucleo_vinculado', target_id: slug, details: { conta: alvoKey, nucleos: accNucleos(creds0[alvoKey]) } });
+    return NextResponse.json({ ok: true, nucleo: principal, nucleos: accNucleos(creds0[alvoKey]) });
   }
 
-  // ── DESVINCULAR um núcleo da própria conta (não pode remover o principal) ──
+  // ── DESVINCULAR um núcleo de uma conta (somente Owner/Admin Geral; principal intocável) ──
   if (action === 'unlink-nucleo') {
     const sess = await currentSession(creds0, req, body as { username?: string; password?: string });
     if (!sess) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
-    if (!verifyPassword(String(body.password || ''), sess.acc.password)) {
-      return NextResponse.json({ error: 'Senha incorreta.' }, { status: 401 });
+    if (!accIsGeral(sess.acc)) {
+      return NextResponse.json({ error: 'Somente o Owner ou o Admin Geral podem desvincular núcleos de uma conta.' }, { status: 403 });
     }
-    if (accIsGeral(sess.acc)) return NextResponse.json({ error: 'Gestores já enxergam todos os núcleos.' }, { status: 400 });
+    const alvoKey = resolveUsername(creds0, String(body.username || ''));
+    if (!alvoKey) return NextResponse.json({ error: 'Conta alvo não encontrada.' }, { status: 404 });
+    const alvo = creds0[alvoKey];
+    if (accIsGeral(alvo)) return NextResponse.json({ error: 'Gestores já enxergam todos os núcleos.' }, { status: 400 });
     const slug = normalizeLogin(String(body.nucleo_slug || ''));
-    const atuais = accNucleos(sess.acc);
-    const principal = atuais[0] || sess.acc.nucleo;
-    if (!uaisIncludes(atuais, slug)) return NextResponse.json({ error: 'Este núcleo não está vinculado à sua conta.' }, { status: 404 });
+    const atuais = accNucleos(alvo);
+    const principal = atuais[0] || alvo.nucleo;
+    if (!uaisIncludes(atuais, slug)) return NextResponse.json({ error: 'Este núcleo não está vinculado a essa conta.' }, { status: 404 });
     if (slug === principal) return NextResponse.json({ error: 'O núcleo principal não pode ser desvinculado.' }, { status: 400 });
     const extras = sanitizeNucleoSlugs(atuais.filter(s => s !== slug)).filter(s => s !== principal);
-    creds0[sess.key] = { ...sess.acc, nucleo: principal, nucleos: extras.length > 0 ? extras : undefined };
+    creds0[alvoKey] = { ...alvo, nucleo: principal, nucleos: extras.length > 0 ? extras : undefined };
     await saveCreds(creds0);
-    await appendAudit({ actor: sess.key, actor_type: 'admin', action: 'nucleo_desvinculado', target_id: slug, details: { nucleos: accNucleos(creds0[sess.key]) } });
-    return NextResponse.json({ ok: true, nucleo: principal, nucleos: accNucleos(creds0[sess.key]) });
+    await appendAudit({ actor: sess.key, actor_type: 'admin', action: 'nucleo_desvinculado', target_id: slug, details: { conta: alvoKey, nucleos: accNucleos(creds0[alvoKey]) } });
+    return NextResponse.json({ ok: true, nucleo: principal, nucleos: accNucleos(creds0[alvoKey]) });
   }
 
   // ── ESQUECI MINHA SENHA (código por e-mail via Resend/SMTP) ──

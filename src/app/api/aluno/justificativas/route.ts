@@ -141,6 +141,9 @@ export async function POST(req: NextRequest) {
     if (!id || !['aprovado', 'recusado'].includes(status)) {
       return NextResponse.json({ error: 'Dados inválidos.' }, { status: 400 });
     }
+    // Apenas painel autenticado pode aprovar/recusar
+    const sess = readPanelSession(req);
+    if (!sess) return NextResponse.json({ error: 'Sessão administrativa necessária.' }, { status: 401 });
 
     const idx = all.findIndex(j => j.id === id);
     if (idx === -1) return NextResponse.json({ error: 'Justificativa não encontrada.' }, { status: 404 });
@@ -152,6 +155,17 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     };
     await saveJustificativas(all);
+
+    // Justificativa APROVADA converte a falta daquela data em FALTA JUSTIFICADA
+    // na chamada do núcleo (mesmo aluno + mesma data; nunca afeta outra data).
+    if (status === 'aprovado') {
+      try {
+        const { aplicarJustificada } = await import('@/lib/chamada');
+        await aplicarJustificada(all[idx].student_id, all[idx].data_falta, all[idx].nucleo);
+      } catch (e) {
+        console.error('[justificativas] falha ao aplicar falta justificada:', e);
+      }
+    }
     return NextResponse.json({ success: true });
   }
 

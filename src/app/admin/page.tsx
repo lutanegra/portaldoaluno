@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getCordaColors, graduacoes, nomenclaturaGraduacao } from '@/lib/graduacoes';
 import { getCheckins, getHistorico, removeCheckin, CheckinRecord } from '@/lib/checkins';
+import ChamadaPanel from '@/components/ChamadaPanel';
 import Link from 'next/link';
 import Carteirinha from '@/components/Carteirinha';
 import DocumentsBar from '@/components/DocumentsBar';
@@ -2383,7 +2384,6 @@ export default function AdminPage() {
             {
               title: 'Gestão Principal', Icon: IconMapPin,
               buttons: [
-                { key: 'registrar-presenca', icon: '📋', label: 'Registrar Presença', href: '/presenca' },
                 { key: 'presencas',   icon: '👥', label: 'Presenças' },
                 { key: 'certificado', icon: '🏅', label: 'Certificado' },
                 { key: 'manual',      icon: '📖', label: 'Manual Ginga Gestão' },
@@ -3081,6 +3081,22 @@ _Portal Aluno_`
         {/* ===== ABA PRESENÇAS ===== */}
         {activeTab === 'presencas' && (
           <div>
+            {/* ── CHAMADA DIÁRIA ── */}
+            <ChamadaPanel
+              nucleoSlug={activeNucleo === 'geral' ? (dynamicNucleos[0]?.slug || '') : (activeNucleo || '')}
+              nucleosPermitidos={
+                activeNucleo === 'geral'
+                  ? dynamicNucleos.map(n => ({ slug: n.slug, nome: n.nome }))
+                  : dynamicNucleos.filter(n => String(n.slug).toLowerCase() === String(activeNucleo).toLowerCase()).map(n => ({ slug: n.slug, nome: n.nome }))
+              }
+              podeTrocarNucleo={isOwner || activeNucleo === 'geral'}
+              dataInicial={presencaDate || hoje()}
+              onAudit={msg => { void msg; }}
+            />
+            <div style={{ height: 26 }} />
+
+            {/* ── HISTÓRICO DO DIA ── */}
+            <div>
             {/* Stats */}
             <div className="admin-stats">
               <div className="stat-card">
@@ -3138,9 +3154,6 @@ _Portal Aluno_`
                 {refreshing ? t('admin_updating') : t('admin_update')}
               </button>
               <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-              <Link href="/presenca" style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff', padding: '8px 16px', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center' }}>
-                + {t('attendance_title')}
-              </Link>
               <button
                 onClick={() => setShowGpsMap(v => !v)}
                 style={{ background: showGpsMap ? 'linear-gradient(135deg,#0ea5e9,#0284c7)' : 'var(--bg-input)', border: showGpsMap ? 'none' : '1px solid var(--border)', color: showGpsMap ? '#fff' : 'var(--text-secondary)', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6 }}
@@ -3271,11 +3284,10 @@ _Portal Aluno_`
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)' }}>
-                Nenhuma presença registrada hoje ainda.
-                <br />
-                <Link href="/presenca" style={{ color: '#16a34a', fontWeight: 600 }}>Registrar presença →</Link>
+                Nenhuma presença avulsa registrada nesta data. Use a chamada acima para lançar presenças e faltas do dia.
               </div>
             )}
+            </div>
           </div>
         )}
       {/* ===== ABA RANKING ===== */}
@@ -6528,6 +6540,53 @@ _Portal Aluno_`
                         onChange={e => setNucleoEditForm(f => ({ ...f, email: e.target.value }))}
                         style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
                       />
+                    </div>
+                  </div>
+                  {/* Coordenadas GPS do polo (para travas de presença do aluno) */}
+                  <div style={{ padding: 12, background: 'rgba(255,146,0,0.07)', border: '1px solid rgba(255,146,0,0.25)', borderRadius: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#FF9200', marginBottom: 4 }}>Coordenadas do polo (GPS da presença)</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginBottom: 8 }}>
+                      Sem coordenadas, o aluno não consegue registrar presença por GPS neste núcleo. Obtenha no Google Maps: toque e segure no local → copie as coordenadas.
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10, alignItems: 'end' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: 'var(--text-secondary)' }}>Latitude</label>
+                        <input
+                          type="text"
+                          value={nucleoEditForm.lat || ''}
+                          onChange={e => setNucleoEditForm(f => f && ({ ...f, lat: e.target.value }))}
+                          placeholder="Ex: -22.7077"
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', color: '#111', fontSize: '0.82rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: 'var(--text-secondary)' }}>Longitude</label>
+                        <input
+                          type="text"
+                          value={nucleoEditForm.lng || ''}
+                          onChange={e => setNucleoEditForm(f => f && ({ ...f, lng: e.target.value }))}
+                          placeholder="Ex: -43.1451"
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', color: '#111', fontSize: '0.82rem' }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!navigator.geolocation) { setNucleoEditMsg('Seu navegador não suporta GPS.'); return; }
+                          setNucleoEditMsg('Obtendo localização...');
+                          navigator.geolocation.getCurrentPosition(
+                            pos => {
+                              setNucleoEditForm(f => f && ({ ...f, lat: pos.coords.latitude.toFixed(6), lng: pos.coords.longitude.toFixed(6) }));
+                              setNucleoEditMsg('✓ Coordenadas capturadas do GPS deste dispositivo.');
+                            },
+                            err => setNucleoEditMsg('Não foi possível obter o GPS: ' + (err.message || 'permissão negada.')),
+                            { enableHighAccuracy: true, timeout: 12000 },
+                          );
+                        }}
+                        style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid rgba(255,146,0,0.5)', background: 'rgba(255,146,0,0.12)', color: '#FF9200', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                      >
+                        Usar GPS atual
+                      </button>
                     </div>
                   </div>
                   {/* Dias de treino */}
