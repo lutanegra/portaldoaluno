@@ -58,7 +58,7 @@ export default function MyAccountCard({
         setMeusNucleos(Array.isArray(d.nucleos) ? d.nucleos : d.nucleo ? [d.nucleo] : []);
       })
       .catch(() => {});
-    fetch('/api/admin/nucleos', { headers: { 'x-admin-auth': 'geral' } })
+    fetch('/api/admin/nucleos')
       .then(r => r.json())
       .then(d => { if (Array.isArray(d.nucleos)) setTodosNucleos(d.nucleos.filter((n: { ativo: boolean }) => n.ativo).map((n: { slug: string; nome: string }) => ({ slug: n.slug, nome: n.nome }))); })
       .catch(() => {});

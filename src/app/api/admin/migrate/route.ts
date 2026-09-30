@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,9 @@ async function runSQL(sql: string): Promise<{ ok: boolean; error?: string; data?
 }
 
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   try {
     const body = await req.json().catch(() => ({}));
     const adminAuth = (req.headers.get('x-admin-auth') || body.admin_auth || '').toLowerCase();

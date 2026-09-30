@@ -286,7 +286,7 @@ export default function AlunoPage() {
 
   // ── Load nucleos dinamicos ──────────────────────────────────────────────────
   useEffect(() => {
-    fetch('/api/admin/nucleos', { headers: { 'x-admin-auth': 'geral' } })
+    fetch('/api/admin/nucleos')
       .then(r => r.json())
       .then(d => { if (d.nucleos) setDynamicNucleos(d.nucleos.filter((n: any) => n.ativo)); })
       .catch(() => {});

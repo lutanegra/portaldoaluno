@@ -691,12 +691,16 @@ export default function AdminPage() {
   const [showPass, setShowPass] = useState(false);
   // Change-credentials modal
   const [editingProfile, setEditingProfile] = useState<NucleoKey>('edson-alves');
-  // Admin forgot-password inline flow
+  // Admin forgot-password inline flow (código por e-mail)
   const [showAdminForgot, setShowAdminForgot] = useState(false);
   const [adminForgotCpf, setAdminForgotCpf] = useState('');
   const [adminForgotMsg, setAdminForgotMsg] = useState('');
   const [adminForgotLoading, setAdminForgotLoading] = useState(false);
   const [adminForgotDone, setAdminForgotDone] = useState(false);
+  const [adminForgotStep, setAdminForgotStep] = useState<'login' | 'code' | 'newpass'>('login');
+  const [adminForgotCode, setAdminForgotCode] = useState('');
+  const [adminForgotPass, setAdminForgotPass] = useState('');
+  const [adminForgotPass2, setAdminForgotPass2] = useState('');
 
   // ── Funções Histórico de Graduações ───────────────────────────────────────
   async function loadHistGrad(studentId: string) {
@@ -789,7 +793,7 @@ export default function AdminPage() {
     if (ownerStored === 'true') setIsOwner(true);
     
     // Carregar nucleos dinamicos do banco (admin de núcleo vê somente os seus)
-    fetch('/api/admin/nucleos', { headers: { 'x-admin-auth': 'geral' } })
+    fetch('/api/admin/nucleos')
       .then(r => r.json())
       .then(d => {
         if (!d.nucleos) return;
@@ -1887,68 +1891,161 @@ export default function AdminPage() {
             <button type="submit" style={{ background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', marginTop: 4 }}>Entrar</button>
           </form>
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
-            <button type="button" onClick={() => { setShowAdminForgot(v => !v); setAdminForgotMsg(''); setAdminForgotDone(false); setAdminForgotCpf(''); }}
+            <button type="button" onClick={() => { setShowAdminForgot(v => !v); setAdminForgotMsg(''); setAdminForgotDone(false); setAdminForgotCpf(''); setAdminForgotStep('login'); setAdminForgotCode(''); setAdminForgotPass(''); setAdminForgotPass2(''); }}
               style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}>
               Esqueci minha senha
             </button>
           </div>
 
-{/* Admin forgot-password inline panel (Supabase Auth) */}
+{/* Admin forgot-password inline panel (código por e-mail via Resend/SMTP) */}
           {showAdminForgot && (
             <div style={{ marginTop: 14, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: '16px 18px' }}>
               <div style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 700, fontSize: '0.88rem', marginBottom: 10 }}>Recuperar Acesso</div>
 
               {!adminForgotDone ? (
-                <>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', lineHeight: 1.5, marginBottom: 12 }}>
-                    Informe seu login de acesso. Enviaremos um link seguro para o e-mail cadastrado na sua conta, válido por pouco tempo, para você definir uma nova senha.
-                  </div>
-                  <input
-                    type="text"
-                    value={adminForgotCpf}
-                    onChange={e => { setAdminForgotCpf(e.target.value); setAdminForgotMsg(''); }}
-                    placeholder="Seu login de acesso"
-                    style={{ width: '100%', padding: '10px 12px', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 8, fontSize: '0.9rem', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box', marginBottom: 8 }}
-                  />
-                  {adminForgotMsg && (
-                    <div style={{ fontSize: '0.78rem', color: adminForgotMsg.includes('✓') ? '#86efac' : '#fca5a5', marginBottom: 8, lineHeight: 1.5 }}>{adminForgotMsg}</div>
-                  )}
-                  <button
-                    type="button"
-                    disabled={adminForgotLoading}
-                    onClick={async () => {
-                      const login = adminForgotCpf.trim();
-                      if (!login) { setAdminForgotMsg('Informe seu login de acesso.'); return; }
-                      setAdminForgotLoading(true); setAdminForgotMsg('');
-                      try {
-                        const res = await fetch('/api/admin/panel-auth', {
-                          method: 'POST', headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ action: 'forgot-password', username: login }),
-                        });
-                        const data = await res.json();
-                        if (res.ok && data.ok) {
-                          if (data.sent) {
-                            setAdminForgotDone(true);
-                            setAdminForgotMsg(`✓ ${data.message}`);
+                adminForgotStep === 'login' ? (
+                  <>
+                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', lineHeight: 1.5, marginBottom: 12 }}>
+                      Informe seu login de acesso. Enviaremos um código de 6 dígitos para o e-mail cadastrado na sua conta, válido por 15 minutos.
+                    </div>
+                    <input
+                      type="text"
+                      value={adminForgotCpf}
+                      onChange={e => { setAdminForgotCpf(e.target.value); setAdminForgotMsg(''); }}
+                      placeholder="Seu login de acesso"
+                      style={{ width: '100%', padding: '10px 12px', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 8, fontSize: '0.9rem', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box', marginBottom: 8 }}
+                    />
+                    {adminForgotMsg && (
+                      <div style={{ fontSize: '0.78rem', color: adminForgotMsg.includes('✓') ? '#86efac' : '#fca5a5', marginBottom: 8, lineHeight: 1.5 }}>{adminForgotMsg}</div>
+                    )}
+                    <button
+                      type="button"
+                      disabled={adminForgotLoading}
+                      onClick={async () => {
+                        const login = adminForgotCpf.trim();
+                        if (!login) { setAdminForgotMsg('Informe seu login de acesso.'); return; }
+                        setAdminForgotLoading(true); setAdminForgotMsg('');
+                        try {
+                          const res = await fetch('/api/admin/panel-auth', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'forgot-password', username: login }),
+                          });
+                          const data = await res.json();
+                          if (res.ok && data.ok) {
+                            if (data.sent) {
+                              setAdminForgotStep('code');
+                              setAdminForgotMsg(`✓ ${data.message}`);
+                            } else {
+                              setAdminForgotMsg(data.message || 'Conta sem e-mail cadastrado. Fale com o Owner/Admin Geral.');
+                            }
                           } else {
-                            setAdminForgotMsg(data.message || 'Conta sem e-mail cadastrado. Fale com o Owner/Admin Geral.');
+                            setAdminForgotMsg(data.error || 'Erro ao solicitar redefinição.');
                           }
-                        } else {
-                          setAdminForgotMsg(data.error || 'Erro ao solicitar redefinição.');
-                        }
-                      } catch { setAdminForgotMsg('Erro de conexao.'); }
-                      setAdminForgotLoading(false);
-                    }}
-                    style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', opacity: adminForgotLoading ? 0.6 : 1 }}>
-                    {adminForgotLoading ? 'Enviando...' : 'Enviar link de recuperação'}
-                  </button>
-                </>
+                        } catch { setAdminForgotMsg('Erro de conexao.'); }
+                        setAdminForgotLoading(false);
+                      }}
+                      style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', opacity: adminForgotLoading ? 0.6 : 1 }}>
+                      {adminForgotLoading ? 'Enviando...' : 'Enviar código de recuperação'}
+                    </button>
+                  </>
+                ) : adminForgotStep === 'code' ? (
+                  <>
+                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', lineHeight: 1.5, marginBottom: 12 }}>
+                      {adminForgotMsg || 'Digite o código de 6 dígitos enviado para o seu e-mail.'}
+                    </div>
+                    <input
+                      type="text" inputMode="numeric" maxLength={6}
+                      value={adminForgotCode}
+                      onChange={e => { setAdminForgotCode(e.target.value.replace(/\D/g, '')); setAdminForgotMsg(''); }}
+                      placeholder="Código de 6 dígitos"
+                      style={{ width: '100%', padding: '10px 12px', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 8, fontSize: '1.1rem', letterSpacing: '0.35em', textAlign: 'center', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box', marginBottom: 8 }}
+                    />
+                    {adminForgotMsg.includes('✓') && (
+                      <div style={{ fontSize: '0.78rem', color: '#86efac', marginBottom: 8 }}>{adminForgotMsg.replace('✓ ', '')}</div>
+                    )}
+                    <button
+                      type="button"
+                      disabled={adminForgotLoading || adminForgotCode.length !== 6}
+                      onClick={async () => {
+                        setAdminForgotLoading(true); setAdminForgotMsg('');
+                        try {
+                          const res = await fetch('/api/admin/panel-auth', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'verify-reset-code', code: adminForgotCode }),
+                          });
+                          const data = await res.json();
+                          if (res.ok && data.ok) {
+                            setAdminForgotStep('newpass');
+                            setAdminForgotMsg('');
+                          } else {
+                            setAdminForgotMsg(data.error || 'Código inválido.');
+                          }
+                        } catch { setAdminForgotMsg('Erro de conexao.'); }
+                        setAdminForgotLoading(false);
+                      }}
+                      style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', opacity: adminForgotLoading || adminForgotCode.length !== 6 ? 0.6 : 1 }}>
+                      {adminForgotLoading ? 'Validando...' : 'Validar código'}
+                    </button>
+                    <button type="button" onClick={() => { setAdminForgotStep('login'); setAdminForgotCode(''); setAdminForgotMsg(''); }}
+                      style={{ width: '100%', marginTop: 6, padding: '8px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}>
+                      Usar outro login
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', lineHeight: 1.5, marginBottom: 12 }}>
+                      Código validado. Defina a nova senha da sua conta.
+                    </div>
+                    <input
+                      type="password"
+                      value={adminForgotPass}
+                      onChange={e => { setAdminForgotPass(e.target.value); setAdminForgotMsg(''); }}
+                      placeholder="Nova senha"
+                      style={{ width: '100%', padding: '10px 12px', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 8, fontSize: '0.9rem', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box', marginBottom: 8 }}
+                    />
+                    <input
+                      type="password"
+                      value={adminForgotPass2}
+                      onChange={e => { setAdminForgotPass2(e.target.value); setAdminForgotMsg(''); }}
+                      placeholder="Confirmar nova senha"
+                      style={{ width: '100%', padding: '10px 12px', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 8, fontSize: '0.9rem', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box', marginBottom: 8 }}
+                    />
+                    {adminForgotMsg && (
+                      <div style={{ fontSize: '0.78rem', color: '#fca5a5', marginBottom: 8 }}>{adminForgotMsg}</div>
+                    )}
+                    <button
+                      type="button"
+                      disabled={adminForgotLoading}
+                      onClick={async () => {
+                        if (adminForgotPass !== adminForgotPass2) { setAdminForgotMsg('As senhas não coincidem.'); return; }
+                        if (adminForgotPass.length < 6) { setAdminForgotMsg('A nova senha deve ter pelo menos 6 caracteres.'); return; }
+                        setAdminForgotLoading(true); setAdminForgotMsg('');
+                        try {
+                          const res = await fetch('/api/admin/panel-auth', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'reset-with-code', code: adminForgotCode, new_password: adminForgotPass }),
+                          });
+                          const data = await res.json();
+                          if (res.ok && data.ok) {
+                            setAdminForgotDone(true);
+                            setAdminForgotMsg('✓ Senha redefinida com sucesso! Entre com a nova senha.');
+                          } else {
+                            setAdminForgotMsg(data.error || 'Erro ao redefinir a senha.');
+                          }
+                        } catch { setAdminForgotMsg('Erro de conexao.'); }
+                        setAdminForgotLoading(false);
+                      }}
+                      style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', opacity: adminForgotLoading ? 0.6 : 1 }}>
+                      {adminForgotLoading ? 'Salvando...' : 'Definir nova senha'}
+                    </button>
+                  </>
+                )
               ) : (
                 <div style={{ textAlign: 'center', color: '#86efac', fontSize: '0.85rem', lineHeight: 1.6 }}>
                   <span style={{ display: 'inline-flex', verticalAlign: '-3px', marginRight: 6, color: '#86efac' }}><IconMailOk size={15} /></span>
                   {adminForgotMsg}
                   <br />
-                  <button type="button" onClick={() => { setShowAdminForgot(false); setAdminForgotDone(false); setAdminForgotMsg(''); setAdminForgotCpf(''); }} style={{ marginTop: 10, padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '0.78rem', cursor: 'pointer' }}>Fechar</button>
+                  <button type="button" onClick={() => { setShowAdminForgot(false); setAdminForgotDone(false); setAdminForgotMsg(''); setAdminForgotCpf(''); setAdminForgotStep('login'); setAdminForgotCode(''); setAdminForgotPass(''); setAdminForgotPass2(''); }} style={{ marginTop: 10, padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '0.78rem', cursor: 'pointer' }}>Fechar</button>
                 </div>
               )}
             </div>
@@ -2218,7 +2315,7 @@ export default function AdminPage() {
             if (key === 'editais') { setLoadingEditais(true); fetch('/api/editais').then(r => r.json()).then(d => { setEditais(d); setLoadingEditais(false); }).catch(() => setLoadingEditais(false)); }
             if (key === 'materiais') { setLoadingMateriais(true); fetch('/api/materiais').then(r => r.json()).then(d => { setMateriais(d); setLoadingMateriais(false); }).catch(() => setLoadingMateriais(false)); }
             if (key === 'patrimonio') { setLoadingPatrimonio(true); fetch('/api/patrimonio').then(r => r.json()).then(d => { setPatrimonio(d); setLoadingPatrimonio(false); }).catch(() => setLoadingPatrimonio(false)); }
-            if (key === 'nucleos') { setLoadingNucleos(true); fetch('/api/admin/nucleos', { headers: { 'x-admin-auth': 'geral' } }).then(r => r.json()).then(d => { setNucleosList(d.nucleos || []); setLoadingNucleos(false); }).catch(() => setLoadingNucleos(false)); }
+            if (key === 'nucleos') { setLoadingNucleos(true); fetch('/api/admin/nucleos').then(r => r.json()).then(d => { setNucleosList(d.nucleos || []); setLoadingNucleos(false); }).catch(() => setLoadingNucleos(false)); }
             if (key === 'rascunhos') {
               setLoadingRascunhos(true);
               fetch('/api/rascunhos').then(r => r.json()).then(d => { setRascunhos(d); setRascunhosCount(d.length); setLoadingRascunhos(false); }).catch(() => setLoadingRascunhos(false));
@@ -2552,13 +2649,6 @@ export default function AdminPage() {
           );
         })()}
 
-        {/* ── Documentos CCLN — after tabs (admin always unlocked, somente download aqui) ────── */}
-        <DocumentsBar
-          adminAlwaysUnlocked
-          readOnly={true}
-          students={students.map(s => ({ id: s.id, nome_completo: s.nome_completo, telefone: s.telefone, nucleo: s.nucleo, email: s.email }))}
-        />
-
         {/* ── Alerta de Aniversariantes ── */}
         <style>{`
           @keyframes sirenSpin { 0%{transform:rotate(-15deg)} 50%{transform:rotate(15deg)} 100%{transform:rotate(-15deg)} }
@@ -2714,7 +2804,7 @@ export default function AdminPage() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
           <button onClick={async () => {
             if (!confirm('Migrar fotos de todos os alunos para o novo formato estável?\nIsso corrige fotos que aparecem quebradas no sistema.')) return;
-            const res = await fetch('/api/admin/migrate-fotos', { method: 'POST', headers: { 'x-admin-auth': 'geral' } });
+            const res = await fetch('/api/admin/migrate-fotos', { method: 'POST', headers: { } });
             const d = await res.json();
             alert(d.message || (d.error ? 'Erro: ' + d.error : JSON.stringify(d)));
             fetchStudents(activeNucleo);
@@ -2725,7 +2815,7 @@ export default function AdminPage() {
             if (!confirm('Preencher tenant_id de todos os alunos com base no núcleo?\nAlunos que já possuem tenant_id não serão alterados.')) return;
             const res = await fetch('/api/admin/backfill-tenants', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'x-admin-auth': 'geral' },
+              headers: { 'Content-Type': 'application/json', },
               body: JSON.stringify({ admin_auth: 'geral' }),
             });
             const d = await res.json();
@@ -6113,7 +6203,7 @@ _Portal Aluno_`
                           const newAtivo = !nucleo.ativo;
                           const res = await fetch('/api/admin/nucleos', {
                             method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json', 'x-admin-auth': 'owner' },
+                            headers: { 'Content-Type': 'application/json', },
                             body: JSON.stringify({ id: nucleo.id, ativo: newAtivo }),
                           });
                           if (res.ok) {
@@ -6345,7 +6435,7 @@ _Portal Aluno_`
                         try {
                           const res = await fetch('/api/admin/nucleos', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'x-admin-auth': isOwner ? 'owner' : 'geral' },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ ...nucleoForm }),
                           });
                           const data = await res.json();
@@ -6550,7 +6640,7 @@ _Portal Aluno_`
                       try {
                         const res = await fetch('/api/admin/nucleos', {
                           method: 'DELETE',
-                          headers: { 'Content-Type': 'application/json', 'x-admin-auth': isOwner ? 'owner' : 'geral' },
+                          headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ id: nucleoDeleteConfirm.id }),
                         });
                         const data = await res.json();
@@ -7170,18 +7260,7 @@ _Portal Aluno_`
                 style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700 }}>+ Novo Rascunho</button>
               <button onClick={() => { setLoadingRascunhos(true); fetch('/api/rascunhos').then(r => r.json()).then(d => { setRascunhos(d); setRascunhosCount(d.length); setLoadingRascunhos(false); }).catch(() => setLoadingRascunhos(false)); }}
                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: '0.82rem' }}>↻ Atualizar</button>
-              {activeNucleo === 'geral' && (
-                <button onClick={async () => {
-                  if (!confirm('Renumerar matrículas de todos os alunos? O André será CCLN-001 e os demais seguirão a ordem de cadastro.')) return;
-                  const res = await fetch('/api/fix-matriculas');
-                  const d = await res.json();
-                  if (d.ok) alert(`✅ ${d.updated || d.total} matrículas atualizadas! André = CCLN-001`);
-                  else alert('Erro ao renumerar: ' + JSON.stringify(d));
-                }}
-                  style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700 }}>
-                  🔢 Fixar Matrículas
-                </button>
-              )}
+              {activeNucleo === 'geral' && null}
             </div>
           </div>
 
@@ -8117,13 +8196,13 @@ _Portal Aluno_`
                   setShowCarteirinha(next);
                   if (next && !(selected as any).ordem_inscricao) {
                     try {
-                      const r = await fetch('/api/fix-matriculas', {
+                      const r = await fetch('/api/aluno/gerar-id', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: selected.id, cpf: selected.cpf }),
+                        body: JSON.stringify({ action: 'assign', student_id: selected.id }),
                       });
                       const d = await r.json();
-                      setAdminMatriculaNum(d.matricula ?? null);
+                      setAdminMatriculaNum(d.display_id ?? null);
                     } catch { setAdminMatriculaNum(null); }
                   } else {
                     setAdminMatriculaNum((selected as any).ordem_inscricao ?? null);
@@ -9743,7 +9822,7 @@ _Portal Aluno_`
                 try {
                   const res = await fetch('/api/admin/setup-db', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-admin-auth': 'geral' },
+                    headers: { 'Content-Type': 'application/json', },
                     body: JSON.stringify({ admin_auth: 'geral', tenant_id: '3a3480c1-e937-4a46-8a27-d5358099e697' }),
                   });
                   setDbStatus(await res.json());
@@ -11304,18 +11383,15 @@ Assim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍�
                 if (!resetPassForm.student_id) { setContasMsg('❌ Selecione um aluno.'); return; }
                 if (!resetPassForm.new_password || resetPassForm.new_password.length < 6) { setContasMsg('❌ Senha deve ter mínimo 6 caracteres.'); return; }
                 if (resetPassForm.new_password !== resetPassForm.confirm_new_password) { setContasMsg('❌ As senhas não coincidem.'); return; }
-                const res = await fetch('/api/aluno/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin-reset-password', student_id: resetPassForm.student_id, new_password: resetPassForm.new_password }) });
-                const d = await res.json();
-                if (!res.ok) { setContasMsg(`❌ ${d.error}`); return; }
-                // Try to send email notification with new password
                 const acc = alunoContas.find(a => a.student_id === resetPassForm.student_id);
                 const st = students.find(s => s.id === resetPassForm.student_id);
                 const emailAddr = (acc as any)?.email || (st as any)?.email || '';
+                const res = await fetch('/api/aluno/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin-reset-password', student_id: resetPassForm.student_id, new_password: resetPassForm.new_password, notify_email: emailAddr, student_name: st?.nome_completo }) });
+                const d = await res.json();
+                if (!res.ok) { setContasMsg(`❌ ${d.error}`); return; }
                 let emailStatus = '';
                 if (emailAddr) {
-                  const emailRes = await fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: emailAddr, tipo: 'nova-senha', nome: st?.nome_completo || 'Aluno', novaSenha: resetPassForm.new_password, loginUrl: `${window.location.origin}/aluno` }) });
-                  const ej = await emailRes.json();
-                  emailStatus = (emailRes.ok && !ej.skipped) ? ' E-mail enviado ao aluno.' : ' (sem e-mail configurado)';
+                  emailStatus = d.email_sent ? ' E-mail enviado ao aluno.' : ' (sem e-mail configurado — avise o aluno pelo WhatsApp)';
                 }
                 setContasMsg(`✅ Senha redefinida com sucesso!${emailStatus}`);
                 setResetPassForm({ student_id: '', new_password: '', confirm_new_password: '' });

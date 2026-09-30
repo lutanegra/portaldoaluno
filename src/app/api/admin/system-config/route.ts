@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { appendAudit } from '@/lib/audit';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -117,6 +118,9 @@ export async function GET() {
 
 // POST - Salva configuracoes (apenas Owner)
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   try {
     const body = await req.json();
     const { updates, updated_by } = body;

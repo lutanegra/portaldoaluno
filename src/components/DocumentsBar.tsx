@@ -10,16 +10,13 @@ import {
 const KEY_ESTATUTO   = 'demo_estatuto';
 const KEY_REGIMENTO  = 'demo_regimento';
 const INFO_KEY = (n: NucleoTab) => `demo_info_${n}`;
-const SESSION_KEY   = 'demo_doc_admin_ok';
-
-// ── Admin check (CPF digits split to avoid plain-text string in bundle) ───────
-const _P = ['09','85','69','25','70','3'];           // 098569257-03
-function checkAdmin(raw: string) { return raw.replace(/\D/g,'') === _P.join(''); }
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
-type NucleoTab = 'geral' | 'maua' | 'saracuruna';
-const NUCLEO_LABELS: Record<NucleoTab,string> = { geral:'🌐 Geral', maua:'🔴 Mauá', saracuruna:'🟢 Saracuruna' };
-const NUCLEO_COLORS: Record<NucleoTab,string> = { geral:'#1d4ed8', maua:'#dc2626', saracuruna:'#16a34a' };
+// Este componente é renderizado apenas dentro do painel administrativo
+// (as permissões vêm da sessão do painel — nenhum segredo no frontend).
+type NucleoTab = 'geral';
+const NUCLEO_LABELS: Record<NucleoTab,string> = { geral:'Geral' };
+const NUCLEO_COLORS: Record<NucleoTab,string> = { geral:'#FF9200' };
 
 export interface SimpleStudent {
   id: string; nome_completo: string; telefone: string | null; nucleo: string | null; email?: string | null;
@@ -42,19 +39,10 @@ const WA = ({s=14}:{s?:number}) => (
   </svg>
 );
 
-export default function DocumentsBar({ students=[], studentPhone, studentName, adminAlwaysUnlocked=false, readOnly=false }: Props) {
+export default function DocumentsBar({ students=[], studentPhone, studentName, adminAlwaysUnlocked=true, readOnly=false }: Props) {
 
-  // ── Unlock state ──────────────────────────────────────────────────────────
-  const [unlocked, setUnlocked] = useState(() => {
-    if (adminAlwaysUnlocked) return true;
-    try { return sessionStorage.getItem(SESSION_KEY) === '1'; } catch { return false; }
-  });
-  const [pendingAction, setPendingAction] = useState<null|'estatuto'|'regimento'|'info'|string>(null);
-  const [cpfInput, setCpfInput]     = useState('');
-  const [cpfError, setCpfError]     = useState('');
-  const [showCpfModal, setShowCpfModal] = useState(false);
-
-  useEffect(() => { if (adminAlwaysUnlocked) setUnlocked(true); }, [adminAlwaysUnlocked]);
+  // ── Permissão de edição (somente painel admin) ────────────────────────────
+  const unlocked = adminAlwaysUnlocked;
 
   // ── File state ────────────────────────────────────────────────────────────
   const [estName,  setEstName]  = useState<string|null>(() => getCachedFileName(KEY_ESTATUTO));
@@ -74,7 +62,7 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
   // ── Info state ────────────────────────────────────────────────────────────
   const [showInfo,   setShowInfo]   = useState(false);
   const [infoTab,    setInfoTab]    = useState<NucleoTab>('geral');
-  const [texts,      setTexts]      = useState<Record<NucleoTab,string>>({ geral:'', maua:'', saracuruna:'' });
+  const [texts,      setTexts]      = useState<Record<NucleoTab,string>>({ geral:'' });
   const [draft,      setDraft]      = useState('');
   const [editing,    setEditing]    = useState(false);
   const [sendModal,  setSendModal]  = useState<{tab:NucleoTab;text:string}|null>(null);
@@ -105,43 +93,15 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
         }).catch(() => {});
       });
     }).catch(() => {});
-    const t: Record<NucleoTab,string> = { geral:'', maua:'', saracuruna:'' };
-    (['geral','maua','saracuruna'] as NucleoTab[]).forEach(n => { try { t[n]=localStorage.getItem(INFO_KEY(n))||''; } catch {} });
+    const t: Record<NucleoTab,string> = { geral:'' };
+    (['geral'] as NucleoTab[]).forEach(n => { try { t[n]=localStorage.getItem(INFO_KEY(n))||''; } catch {} });
     setTexts(t);
   }, []);
 
-  // ── CPF modal flow ────────────────────────────────────────────────────────
+  // ── Upload gate (já autenticado no painel) ────────────────────────────────
   const requireUpload = (which: 'estatuto'|'regimento'|'info'|string) => {
-    if (unlocked) {
-      if (which === 'estatuto') estRef.current?.click();
-      else if (which === 'regimento') regRef.current?.click();
-    } else {
-      setPendingAction(which);
-      setCpfInput(''); setCpfError('');
-      setShowCpfModal(true);
-    }
-  };
-
-  const handleCpfSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (checkAdmin(cpfInput)) {
-      setUnlocked(true);
-      try { sessionStorage.setItem(SESSION_KEY,'1'); } catch {}
-      setShowCpfModal(false);
-      setTimeout(() => {
-        if (pendingAction === 'estatuto') estRef.current?.click();
-        if (pendingAction === 'regimento') regRef.current?.click();
-        if (typeof pendingAction === 'string' && pendingAction.startsWith('pa_bio_mestre_')) {
-          const inp = document.querySelector<HTMLInputElement>(`input[data-doc-key="${pendingAction}"]`);
-          inp?.click();
-        }
-        if (pendingAction === 'info') { setDraft(texts[infoTab]); setEditing(false); setShowInfo(true); }
-      }, 50);
-      setPendingAction(null); setCpfInput('');
-    } else {
-      setCpfError('Identificação incorreta. Tente novamente.');
-      setCpfInput('');
-    }
+    if (which === 'estatuto') estRef.current?.click();
+    else if (which === 'regimento') regRef.current?.click();
   };
 
   // ── Upload handler ────────────────────────────────────────────────────────
@@ -177,15 +137,11 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
   };
 
   const hasPhone = (s: SimpleStudent) => !!(s.telefone && s.telefone.replace(/\D/g,'').length >= 8);
-  const normalNucleo = (n: string | null | undefined) =>
-    (n || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 
   const studentsFor = (tab: NucleoTab): SimpleStudent[] => {
     if (!students.length) return (studentPhone && studentPhone.replace(/\D/g,'').length >= 8)
       ? [{id:'single',nome_completo:studentName||'Aluno',telefone:studentPhone,nucleo:null}] : [];
-    if (tab === 'geral') return students.filter(hasPhone);
-    const target = tab === 'maua' ? 'maua' : 'saracuruna';
-    return students.filter(s => normalNucleo(s.nucleo) === target && hasPhone(s));
+    return students.filter(hasPhone);
   };
 
   const waLink = (phone: string, text: string) => {
@@ -313,7 +269,6 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
         {/* ── Informações Gerais ────────────────────────────────────────────── */}
         <div style={{ flex:1, minWidth:145, display:'flex', flexDirection:'column', gap:4 }}>
           <button onClick={()=>{
-            if (!unlocked) { setPendingAction('info'); setCpfInput(''); setCpfError(''); setShowCpfModal(true); return; }
             setDraft(texts[infoTab]); setEditing(false); setShowInfo(v=>!v);
           }} style={mainBtn(showInfo?'#15803d':'#16a34a', Object.values(texts).some(Boolean))}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -434,31 +389,7 @@ export default function DocumentsBar({ students=[], studentPhone, studentName, a
         </div>
       )}
 
-      {/* ── CPF / Identificação modal ─────────────────────────────────────────── */}
-      {showCpfModal && (
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.65)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:500,padding:20}}>
-          <div style={{background:'#fff',borderRadius:16,padding:'28px 24px',width:'100%',maxWidth:340,boxShadow:'0 12px 40px rgba(0,0,0,0.35)'}}>
-            <div style={{textAlign:'center',marginBottom:20}}>
-              <div style={{fontSize:'2.2rem',marginBottom:8}}>🔒</div>
-              <div style={{fontWeight:800,fontSize:'1.05rem',color:'#1e3a8a'}}>Acesso Restrito</div>
-              <div style={{fontSize:'0.78rem',color:'#64748b',marginTop:5}}>Digite sua identificação para continuar</div>
-            </div>
-            <form onSubmit={handleCpfSubmit} style={{display:'flex',flexDirection:'column',gap:12}}>
-              <input type="password" value={cpfInput} onChange={e=>{setCpfInput(e.target.value);setCpfError('');}}
-                placeholder="Sua identificação (CPF)" autoFocus
-                style={{width:'100%',padding:'12px 14px',border:'1.5px solid #e2e8f0',borderRadius:9,fontSize:'1rem',outline:'none',boxSizing:'border-box',textAlign:'center',letterSpacing:'0.1em'}} />
-              {cpfError&&<div style={{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:7,padding:'8px 12px',color:'#dc2626',fontSize:'0.8rem',fontWeight:600,textAlign:'center'}}>⚠ {cpfError}</div>}
-              <div style={{display:'flex',gap:8}}>
-                <button type="button" onClick={()=>{setShowCpfModal(false);setPendingAction(null);setCpfInput('');setCpfError('');}}
-                  style={{flex:1,padding:'11px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:'0.9rem',color:'#64748b'}}>Cancelar</button>
-                <button type="submit"
-                  style={{flex:2,padding:'11px',background:'linear-gradient(135deg,#1d4ed8,#1e40af)',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:'0.9rem',color:'#fff'}}>Confirmar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
+      {/* ── Identificação removida — a permissão vem da sessão do painel ── */}
       {/* ── Bulk send modal ───────────────────────────────────────────────────── */}
       {sendModal && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:400,padding:16}}>

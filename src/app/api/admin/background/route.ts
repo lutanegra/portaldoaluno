@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
@@ -43,12 +44,18 @@ async function saveConfig(config: BackgroundConfig): Promise<void> {
     .upload(KEY, blob, { upsert: true, contentType: 'application/json' });
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   const config = await readConfig();
   return NextResponse.json({ url: config.url });
 }
 
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   const contentType = req.headers.get('content-type') ?? '';
 
   // Handle file deletion
@@ -110,7 +117,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ error: 'Unsupported content type' }, { status: 415 });
 }
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
   const config: BackgroundConfig = {
     url: null,
     updated_at: new Date().toISOString(),

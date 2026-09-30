@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'dummy-key-for-build';
 
 // DELETE /api/admin/delete-student - Delete a student using service role
 export async function DELETE(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   try {
     const { id } = await req.json();
     

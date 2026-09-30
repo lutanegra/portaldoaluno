@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { readPanelSession } from '@/lib/panelSession';
 
 function getAdmin() {
   return createClient(
@@ -46,8 +47,33 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  // ── Autenticação: sessão do painel (owner/admin geral) OU credenciais de gestão no corpo ──
+  const session = readPanelSession(req);
+  let autorizado = !!(session && session.n === 'geral');
+  if (!autorizado) {
+    try {
+      const bodyAny = await req.json();
+      (req as unknown as { _cachedBody?: unknown })._cachedBody = bodyAny;
+      const adminUsername = String(bodyAny.admin_username || '');
+      const adminPassword = String(bodyAny.admin_password || '');
+      if (adminUsername && adminPassword) {
+        const { loadCreds, resolveUsername, verifyPassword, accIsGeral } = await import('@/lib/panelCredentials');
+        const creds = await loadCreds();
+        const key = resolveUsername(creds, adminUsername);
+        const acc = key ? creds[key] : undefined;
+        autorizado = !!(acc && verifyPassword(adminPassword, acc.password) && accIsGeral(acc));
+      }
+    } catch { /* corpo inválido — segue não autorizado */ }
+  }
+  if (!autorizado) {
+    return NextResponse.json({ error: 'Somente Owner ou Admin Geral podem salvar a hierarquia.' }, { status: 401 });
+  }
+
   const supabaseAdmin = getAdmin();
-  const body: Hierarquia = await req.json();
+  const cached = (req as unknown as { _cachedBody?: Record<string, unknown> })._cachedBody;
+  const body: Hierarquia = (cached as unknown as Hierarquia) || await req.json();
+  delete (body as unknown as Record<string, unknown>).admin_username;
+  delete (body as unknown as Record<string, unknown>).admin_password;
   body.updated_at = new Date().toISOString();
   const blob = new Blob([JSON.stringify(body)], { type: 'application/json' });
   const { error } = await supabaseAdmin.storage.from(BUCKET).upload(KEY, blob, { upsert: true, contentType: 'application/json' });

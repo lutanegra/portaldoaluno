@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,9 @@ const supabaseAdmin = createClient(
 // POST /api/admin/migrate-fotos
 // Migrates all students with old signed foto_urls to the new stable /api/foto?id= format.
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   try {
     // Fetch all students that have a foto_url but not the new proxy format
     const { data: students, error } = await supabaseAdmin

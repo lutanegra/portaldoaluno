@@ -827,7 +827,7 @@ export async function POST(req: NextRequest) {
 
     // Admin: reset password
     if (action === 'admin-reset-password') {
-      const { student_id, new_password } = body;
+      const { student_id, new_password, notify_email, student_name } = body;
       const authMap = await loadAuthMap();
       if (!authMap[student_id]) return NextResponse.json({ error: 'Conta não encontrada.' }, { status: 404 });
 
@@ -838,7 +838,20 @@ export async function POST(req: NextRequest) {
         salt,
       };
       await saveAuthMap(authMap);
-      return NextResponse.json({ success: true });
+
+      // Avisa o aluno por e-mail (quando informado e houver serviço configurado)
+      let email_sent = false;
+      let email_skipped = false;
+      const destino = String(notify_email || '').trim();
+      if (destino.includes('@')) {
+        const { buildNewPasswordHtml } = await import('@/lib/email');
+        const tmpl = buildNewPasswordHtml(String(student_name || 'Aluno'), String(new_password), `${process.env.NEXT_PUBLIC_APP_URL || ''}/aluno`);
+        const result = await sendEmail(destino, tmpl.subject, tmpl.html);
+        email_sent = !!result.sent;
+        email_skipped = !!result.skipped;
+      }
+
+      return NextResponse.json({ success: true, email_sent, email_skipped });
     }
 
     // ── Update profile (email, username) — requires session token (student_id)

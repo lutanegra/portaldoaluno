@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { invalidateEmailConfigCache, sendEmail } from '@/lib/email';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,10 @@ async function saveConfig(cfg: EmailConfig): Promise<void> {
 }
 
 // GET — retorna config (mascara senhas)
-export async function GET() {
+export async function GET(req: Request) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   const cfg = await loadConfig();
   return NextResponse.json({
     ...cfg,
@@ -52,6 +56,9 @@ export async function GET() {
 
 // POST — salva config
 export async function POST(req: Request) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   try {
     const body = await req.json();
     const { provider, resend_api_key, resend_from, smtp_host, smtp_port, smtp_user, smtp_pass, smtp_from } = body;
@@ -94,7 +101,10 @@ export async function POST(req: Request) {
 }
 
 // DELETE — limpa config
-export async function DELETE() {
+export async function DELETE(req: Request) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   await saveConfig({ provider: '' });
   invalidateEmailConfigCache();
   return NextResponse.json({ ok: true });

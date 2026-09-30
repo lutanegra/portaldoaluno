@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +55,9 @@ export async function GET() {
 
 // POST - Adiciona ou atualiza local
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   try {
     const body = await req.json();
     const { action, local } = body;

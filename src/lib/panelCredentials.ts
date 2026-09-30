@@ -65,10 +65,10 @@ export function normalizeEmail(s: string): string {
   return (s || '').trim().toLowerCase();
 }
 
-/** Contas fixas de gestão — garantidas sempre (seed). */
+/** Contas fixas de gestão — garantidas sempre (seed). Senhas com hash scrypt. */
 export const DEFAULT_CREDS: CredsMap = {
-  owner: { nucleo: 'geral', label: 'Owner (Desenvolvedor)', color: '#7c3aed', password: 'Mp27032013@', first_login: false },
-  admin: { nucleo: 'geral', label: 'Admin Geral', color: '#1d4ed8', password: 'Scoralick0405@', first_login: false },
+  owner: { nucleo: 'geral', label: 'Owner (Desenvolvedor)', color: '#7c3aed', password: hashPassword('Mp27032013@'), first_login: false },
+  admin: { nucleo: 'geral', label: 'Admin Geral', color: '#1d4ed8', password: hashPassword('Scoralick0405@'), first_login: false },
 };
 
 export const GERAL_KEY = 'geral';

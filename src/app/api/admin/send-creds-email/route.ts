@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   try {
     const { to, label, username, password } = await req.json();
     if (!to || !username || !password) {

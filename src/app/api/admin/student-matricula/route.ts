@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -37,6 +38,9 @@ function formatId(n: number): string {
  * Body: { student_id, novo_numero, admin_username, admin_password }
  */
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   try {
     const { student_id, novo_numero, admin_username, admin_password } = await req.json();
     const numero = parseInt(String(novo_numero), 10);

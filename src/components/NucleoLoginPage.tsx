@@ -37,7 +37,7 @@ export function buildNucleoConfig(slug: string, nome: string, cidade?: string, i
 // Funcao para carregar nucleos dinamicamente
 export async function loadNucleosDinamicos(): Promise<Record<string, NucleoConfig>> {
   try {
-    const res = await fetch('/api/admin/nucleos', { headers: { 'x-admin-auth': 'geral' } });
+    const res = await fetch('/api/admin/nucleos');
     if (res.ok) {
       const data = await res.json();
       if (data.nucleos && Array.isArray(data.nucleos)) {
@@ -125,7 +125,7 @@ export default function NucleoLoginPage({ nucleoKey }: Props) {
   useEffect(() => {
     if (!staticNucleo) {
       setLoadingNucleo(true);
-      fetch('/api/admin/nucleos', { headers: { 'x-admin-auth': 'geral' } })
+      fetch('/api/admin/nucleos')
         .then(r => r.json())
         .then(d => {
           const found = d.nucleos?.find((n: { slug: string }) => n.slug === nucleoKey);

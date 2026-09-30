@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,8 @@ function toPath(key: string): string {
  * After upload, client calls POST /api/docs/confirm to save the metadata sidecar.
  */
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
   const { key, filename, type, size } = await req.json();
   if (!key || !filename) {
     return NextResponse.json({ error: 'key and filename required' }, { status: 400 });

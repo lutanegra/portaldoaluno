@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // allow up to 60s for large PDF uploads
@@ -41,6 +42,9 @@ export async function GET() {
 
 /** POST /api/admin/manual — upload a PDF file (multipart/form-data) */
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   const form = await req.formData();
   const file = form.get('file') as File | null;
   if (!file) return NextResponse.json({ error: 'Nenhum arquivo enviado.' }, { status: 400 });
@@ -70,6 +74,9 @@ export async function POST(req: NextRequest) {
 
 /** DELETE /api/admin/manual — remove a manual file */
 export async function DELETE(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   const { name } = await req.json();
   if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 });
 

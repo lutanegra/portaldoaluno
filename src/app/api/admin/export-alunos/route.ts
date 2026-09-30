@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,9 @@ const supabaseAdmin = createClient(
 // GET /api/admin/export-alunos?auth=geral&nucleo=saracuruna
 // Returns a CSV file with ALL columns from the students table
 export async function GET(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   const auth = req.nextUrl.searchParams.get('auth') || '';
   const nucleoFilter = req.nextUrl.searchParams.get('nucleo') || '';
 

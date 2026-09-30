@@ -73,14 +73,12 @@ async function autenticar(
   return { autorizado: false, owner: false, adminGeral: false, actor: '' };
 }
 
-// GET /api/admin/nucleos - List all nucleos (tenants)
+// GET /api/admin/nucleos - Lista de núcleos (tenants)
+// Leitura pública com campos seguros (nome, endereço, dias, coordenadas) —
+// o app do aluno precisa dela para escolher núcleo e fazer check-in.
+// Nenhum dado de conta/admin é exposto aqui.
 export async function GET(req: NextRequest) {
   try {
-    const adminAuth = req.headers.get('x-admin-auth') || req.nextUrl.searchParams.get('auth') || '';
-    if (!['geral', 'admin', 'owner'].includes(adminAuth.toLowerCase())) {
-      return NextResponse.json({ error: 'Não autorizado.' }, { status: 403 });
-    }
-
     const { data, error } = await supabaseAdmin
       .from('tenants')
       .select('*')
@@ -90,7 +88,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ nucleos: data || [] });
+    const seguros = (data || []).map((n: Record<string, unknown>) => {
+      const { admin_login, ...resto } = n as Record<string, unknown>;
+      void admin_login;
+      return resto;
+    });
+
+    return NextResponse.json({ nucleos: seguros });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 500 });

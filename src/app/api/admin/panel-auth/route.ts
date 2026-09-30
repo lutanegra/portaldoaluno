@@ -29,6 +29,7 @@ import {
   readPanelSession,
   type PanelRole,
 } from '@/lib/panelSession';
+import { sendEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -121,6 +122,10 @@ export async function POST(req: NextRequest) {
     if (!user || !verifyPassword(String(password), user.password)) {
       return NextResponse.json({ error: 'Usuário ou senha incorretos.' }, { status: 401 });
     }
+    if (username.startsWith('__')) {
+      // Entradas internas (ex.: código de recuperação pendente) não são contas.
+      return NextResponse.json({ error: 'Usuário ou senha incorretos.' }, { status: 401 });
+    }
     const role = roleOf(username, user);
     await appendAudit({
       actor: username,
@@ -182,7 +187,9 @@ export async function POST(req: NextRequest) {
   if (action === 'list-users') {
     const g = await requireGestor(creds0, String(body.admin_username || body.username || ''), String(body.admin_password || body.password || ''));
     if (!g.ok) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
-    const list = await Promise.all(Object.entries(creds0).map(async ([u, c]) => {
+    const list = await Promise.all(Object.entries(creds0)
+      .filter(([u]) => u !== '__admin_otp')
+      .map(async ([u, c]) => {
       const nucleosDaConta = accNucleos(c);
       let nucleoNome: string | null = null;
       if (nucleosDaConta.length > 0) {
@@ -526,63 +533,91 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, nucleo: principal, nucleos: accNucleos(creds0[sess.key]) });
   }
 
-  // ── ESQUECI MINHA SENHA (Supabase Auth envia o link) ──
+  // ── ESQUECI MINHA SENHA (código por e-mail via Resend/SMTP) ──
   if (action === 'forgot-password') {
     const username = resolveUsername(creds0, String(body.username || ''));
     if (!username) {
-      return NextResponse.json({ ok: true, sent: true, message: 'Se existir conta com este login e e-mail cadastrado, você receberá um link de redefinição.' });
+      // Resposta neutra: não revelar quais logins existem
+      return NextResponse.json({ ok: true, sent: true, message: 'Se existir conta com este login e e-mail cadastrado, você receberá um código de recuperação.' });
     }
     const user = creds0[username];
     const email = normalizeEmail(user.email || '');
     if (!email) {
       return NextResponse.json({ ok: true, no_email: true, message: 'Sua conta não tem e-mail cadastrado. Fale com o Owner ou Admin Geral para redefinir sua senha.' });
     }
-    await ensureSupabaseAuthUser(email, username, user.nome);
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${req.headers.get('host')}`;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${baseUrl}/admin/redefinir-senha`,
-    });
-    if (error) {
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    const otpAcc: PanelAccount = {
+      nucleo: '__otp__',
+      label: 'Código de recuperação pendente',
+      color: '#FF9200',
+      password: hashPassword(otp),
+      email,
+      nome: user.nome || '',
+      first_login: false,
+    };
+    creds0.__admin_otp = Object.assign(otpAcc, { otp_expires: expires });
+    await saveCreds(creds0);
+    const { buildAdminOtpHtml } = await import('@/lib/email');
+    const tmpl = buildAdminOtpHtml(user.nome || '', otp);
+    const result = await sendEmail(email, tmpl.subject, tmpl.html);
+    if (!result.sent) {
+      delete creds0.__admin_otp;
+      await saveCreds(creds0);
       return NextResponse.json({
         ok: true,
-        send_error: error.message,
-        message: `Não foi possível enviar o e-mail agora (${error.message}). Tente novamente em alguns minutos ou fale com o Owner.`,
+        send_error: result.error || 'envio_nao_configurado',
+        message: 'Não foi possível enviar o e-mail agora. Peça ao Owner para configurar o envio (aba Config. E-mail) ou redefinir sua senha em Contas de Acesso.',
       });
     }
     await appendAudit({
       actor: username,
       actor_type: 'admin',
       action: 'senha_reset_solicitada',
-      details: { email_mascarado: maskEmail(email), via: 'supabase_auth' },
+      details: { email_mascarado: maskEmail(email), via: 'codigo_email' },
     });
-    return NextResponse.json({ ok: true, sent: true, email_mascarado: maskEmail(email), message: `Link de redefinição enviado para ${maskEmail(email)}. Verifique a caixa de entrada e o spam.` });
+    return NextResponse.json({ ok: true, sent: true, email_mascarado: maskEmail(email), message: `Código enviado para ${maskEmail(email)}. Verifique a caixa de entrada e o spam.` });
   }
 
-  // ── REDEFINIR SENHA COM TOKEN DO SUPABASE AUTH ──
-  if (action === 'reset-by-tokens') {
-    const { access_token, new_password } = body as { access_token?: string; new_password?: string };
-    if (!access_token || !new_password) return NextResponse.json({ error: 'Campos obrigatórios ausentes.' }, { status: 400 });
-    if (String(new_password).length < 6) return NextResponse.json({ error: 'Nova senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
-
-    const { data, error } = await supabase.auth.getUser(String(access_token));
-    if (error || !data?.user) {
-      return NextResponse.json({ error: 'Link inválido ou expirado. Solicite um novo em "Esqueci minha senha".' }, { status: 401 });
-    }
-    const { error: upErr } = await supabase.auth.admin.updateUserById(data.user.id, { password: String(new_password) });
-    if (upErr) return NextResponse.json({ error: 'Erro ao atualizar a senha.' }, { status: 500 });
-
-    const email = (data.user.email || '').toLowerCase();
-    const meta = (data.user.user_metadata || {}) as Record<string, unknown>;
-    let credKey = normalizeLogin(String(meta.panel_login || ''));
-    if (!credKey || !creds0[credKey] || normalizeEmail(creds0[credKey].email || '') !== email) {
-      credKey = Object.keys(creds0).find(k => normalizeEmail(creds0[k].email || '') === email) || '';
-    }
-    if (credKey) {
-      creds0[credKey] = { ...creds0[credKey], password: hashPassword(String(new_password)), first_login: false };
+  // ── VALIDAR CÓDIGO DE RECUPERAÇÃO ──
+  if (action === 'verify-reset-code') {
+    const otp = String(body.code || '').replace(/\D/g, '');
+    const pend = creds0.__admin_otp as (PanelAccount & { otp_expires?: string }) | undefined;
+    if (!pend || !otp) return NextResponse.json({ error: 'Nenhum código pendente. Solicite um novo.' }, { status: 400 });
+    if (!pend.otp_expires || new Date(pend.otp_expires) < new Date()) {
+      delete creds0.__admin_otp;
       await saveCreds(creds0);
+      return NextResponse.json({ error: 'Código expirado. Solicite um novo.' }, { status: 400 });
     }
-    await appendAudit({ actor: credKey || email, actor_type: 'admin', action: 'senha_redefinida_supabase', details: { via: 'link_email' } });
-    return NextResponse.json({ ok: true, synced_panel: !!credKey });
+    if (!verifyPassword(otp, pend.password)) {
+      return NextResponse.json({ error: 'Código incorreto.' }, { status: 401 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  // ── REDEFINIR SENHA COM O CÓDIGO VALIDADO ──
+  if (action === 'reset-with-code') {
+    const otp = String(body.code || '').replace(/\D/g, '');
+    const newPassword = String(body.new_password || '');
+    if (newPassword.length < 6) return NextResponse.json({ error: 'Nova senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
+    const pend = creds0.__admin_otp as (PanelAccount & { otp_expires?: string }) | undefined;
+    if (!pend || !otp) return NextResponse.json({ error: 'Nenhum código pendente. Solicite um novo.' }, { status: 400 });
+    if (!pend.otp_expires || new Date(pend.otp_expires) < new Date()) {
+      delete creds0.__admin_otp;
+      await saveCreds(creds0);
+      return NextResponse.json({ error: 'Código expirado. Solicite um novo.' }, { status: 400 });
+    }
+    if (!verifyPassword(otp, pend.password)) {
+      return NextResponse.json({ error: 'Código incorreto.' }, { status: 401 });
+    }
+    const email = normalizeEmail(pend.email || '');
+    const targetKey = Object.keys(creds0).find(k => k !== '__admin_otp' && normalizeEmail(creds0[k].email || '') === email);
+    if (!targetKey) return NextResponse.json({ error: 'Conta não encontrada para este e-mail.' }, { status: 404 });
+    creds0[targetKey] = { ...creds0[targetKey], password: hashPassword(newPassword), first_login: false };
+    delete creds0.__admin_otp;
+    await saveCreds(creds0);
+    await appendAudit({ actor: targetKey, actor_type: 'admin', action: 'senha_redefinida_codigo_email', details: { via: 'codigo_email' } });
+    return NextResponse.json({ ok: true });
   }
 
   return NextResponse.json({ error: 'Ação inválida.' }, { status: 400 });

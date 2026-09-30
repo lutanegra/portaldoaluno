@@ -107,8 +107,21 @@ export function buildNewPasswordHtml(nome: string, novaSenha: string, loginUrl: 
   return { subject, html };
 }
 
-export function buildInscricaoHtml(nome: string, nucleo: string, graduacao: string): { subject: string; html: string } {
-  const subject = 'Inscricao Confirmada - Portal Aluno';
+export function buildAdminOtpHtml(nome: string, otp: string): { subject: string; html: string } {
+  const subject = 'Codigo de recuperacao - Painel Portal Aluno';
+  const html = baseLayout(`
+    <p style="color:#374151;font-size:1rem">Ola, <strong>${nome || 'Responsavel'}</strong>!</p>
+    <p style="color:#64748b;margin:0 0 24px">Recebemos uma solicitacao de recuperacao de acesso ao <strong>Painel do Portal Aluno</strong>. Use o codigo abaixo:</p>
+    <div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:14px;padding:28px;text-align:center;margin:0 0 24px">
+      <div style="font-size:2.8rem;font-weight:900;letter-spacing:0.45em;color:#c2410c;font-family:monospace;line-height:1">${otp}</div>
+      <div style="color:#64748b;font-size:0.78rem;margin-top:10px">Válido por <strong>15 minutos</strong></div>
+    </div>
+    <p style="color:#94a3b8;font-size:0.8rem">Se você não solicitou este código, ignore este e-mail. Sua senha permanece a mesma.</p>
+  `, '#FF9200');
+  return { subject, html };
+}
+
+export function buildInscricaoHtml(nome: string, nucleo: string, graduacao: string): { subject: string; html: string } {  const subject = 'Inscricao Confirmada - Portal Aluno';
   const html = baseLayout(`
     <p style="color:#374151;font-size:1rem">Ola, <strong>${nome}</strong>!</p>
     <p style="color:#64748b;margin:0 0 20px">Sua inscricao foi recebida com sucesso. Aqui estao seus dados:</p>

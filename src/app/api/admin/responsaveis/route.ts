@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 // Write (service_role bypasses RLS)
 const supabaseAdmin = createClient(
@@ -51,7 +52,9 @@ async function readConfig(): Promise<ResponsaveisConfig> {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
   return NextResponse.json(await readConfig());
 }
 
@@ -92,6 +95,9 @@ async function saveCreds(map: Record<string, unknown>) {
 }
 
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   const body: Partial<ResponsaveisConfig> = await req.json();
   const now = new Date().toISOString();
 

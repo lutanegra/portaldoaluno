@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,6 +81,9 @@ export async function GET() {
 
 /** POST — add a link */
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   const { title, url } = await req.json();
   if (!title || !url) return NextResponse.json({ error: 'title and url required' }, { status: 400 });
 
@@ -99,6 +103,9 @@ export async function POST(req: NextRequest) {
 
 /** DELETE — remove by id */
 export async function DELETE(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   const { id } = await req.json();
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,8 +39,10 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/docs — uploads file + meta sidecar
+// POST /api/docs — uploads file + meta sidecar (restrito ao painel)
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
   const supabase = getAdmin();
 
   let formData: FormData;

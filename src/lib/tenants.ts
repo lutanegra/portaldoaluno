@@ -33,7 +33,6 @@ export function getTenantIdByKey(nucleoKey: string): string | null {
 export async function fetchTenants(): Promise<Array<{ id: string; nome: string; slug: string; ativo: boolean }>> {
   try {
     const res = await fetch('/api/admin/nucleos', {
-      headers: { 'x-admin-auth': 'geral' },
       cache: 'no-store'
     });
     if (!res.ok) return [];

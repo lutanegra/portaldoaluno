@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { appendAudit } from '@/lib/audit';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
@@ -49,7 +50,9 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
   const logs = await readLogs();
   // Une com a auditoria estruturada (src/lib/audit.ts) para exibição unificada
   let auditEntries: AdminLogEntry[] = [];
@@ -81,6 +84,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   const body: Partial<AdminLogEntry> = await req.json();
 
   if (!body.action || !body.user || !body.nucleo) {

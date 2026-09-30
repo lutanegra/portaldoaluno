@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -38,6 +39,9 @@ async function saveJson(key: string, obj: unknown): Promise<void> {
  * Body: { student_id, admin_username, admin_password }
  */
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   try {
     const { student_id, admin_username, admin_password } = await req.json();
     if (!student_id) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });

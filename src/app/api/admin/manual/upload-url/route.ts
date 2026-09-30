@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,9 @@ const FOLDER = 'manuais';
  * bypassing any proxy body-size limits.
  */
 export async function POST(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   const { filename } = await req.json();
   if (!filename) return NextResponse.json({ error: 'filename required' }, { status: 400 });
 

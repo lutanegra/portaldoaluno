@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
@@ -27,6 +28,9 @@ const LANGUAGES: Record<string, string> = {
 
 /** GET /api/admin/manual/translate?name=xxx — check if translations exist */
 export async function GET(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   const name = req.nextUrl.searchParams.get('name');
   if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 });
 

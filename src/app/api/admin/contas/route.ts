@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePanelAdmin } from '@/lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,9 @@ async function loadFromStorage(key: string): Promise<Record<string, unknown>> {
 // GET /api/admin/contas          → list all accounts (safe fields only)
 // GET /api/admin/contas?displayIds=1 → return the student_id → display_id map
 export async function GET(req: NextRequest) {
+  const __g = requirePanelAdmin(req);
+  if (!__g.ok) return __g.res;
+
   try {
     const displayIds = req.nextUrl.searchParams.get('displayIds');
 

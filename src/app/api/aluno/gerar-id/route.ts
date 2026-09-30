@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { readPanelSession } from '@/lib/panelSession';
+import { verifyAlunoSession } from '@/lib/alunoSession';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -89,8 +91,20 @@ export async function GET(req: NextRequest) {
 
 // POST: assign ID to a student (or generate for all without one)
 export async function POST(req: NextRequest) {
+  // Painel (qualquer papel) ou aluno logado consigo atribuir para si mesmo;
+  // anônimo: recusado.
+  const admin = readPanelSession(req);
+  const cookieHeader = req.headers.get('cookie') || '';
+  const m = cookieHeader.match(/(?:^|;\s*)pa_session=([^;]+)/);
+  const aluno = m ? verifyAlunoSession(decodeURIComponent(m[1])) : null;
+  if (!admin && !aluno) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
+  }
   const body = await req.json();
   const { action, student_id } = body;
+  if (!admin && aluno && student_id !== aluno.sid) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 403 });
+  }
 
   if (action === 'assign') {
     if (!student_id) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });

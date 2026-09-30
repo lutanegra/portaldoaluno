@@ -19,7 +19,6 @@ export async function carregarLocais(): Promise<Local[]> {
   try {
     // Carrega nucleos do banco - eles tem as coordenadas
     const res = await fetch('/api/admin/nucleos', { 
-      headers: { 'x-admin-auth': 'geral' },
       cache: 'no-store' 
     });
     if (res.ok) {

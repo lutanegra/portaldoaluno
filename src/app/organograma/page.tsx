@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
-const SUPER_ADMIN_CPF = '09856925703';
+// Portão de edição verificado no servidor (nenhuma credencial no frontend).
 const BUCKET = 'photos';
 
 interface Membro { nome: string; foto_url?: string | null; }
@@ -107,7 +107,9 @@ export default function OrganogramaPage() {
   const [draft, setDraft] = useState<Organograma>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
-  const [adminCpf, setAdminCpf] = useState('');
+  const [adminUser, setAdminUser] = useState('');
+  const [adminPass, setAdminPass] = useState('');
+  const [adminChecking, setAdminChecking] = useState(false);
   const [adminErr, setAdminErr] = useState('');
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -123,15 +125,25 @@ export default function OrganogramaPage() {
     }).catch(() => setLoading(false));
   }, []);
 
+  const adminCredsRef = useRef<{ u: string; p: string } | null>(null);
+
   const handleAdminLogin = () => {
-    if (adminCpf.replace(/\D/g, '') === SUPER_ADMIN_CPF) {
-      setIsAdmin(true);
-      setShowAdminModal(false);
-      setEditMode(true);
-      setAdminErr('');
-    } else {
-      setAdminErr('CPF não autorizado.');
-    }
+    setAdminChecking(true); setAdminErr('');
+    fetch('/api/admin/panel-auth', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'verify-login', username: adminUser, password: adminPass }),
+    })
+      .then(async r => ({ ok: r.ok }))
+      .then(({ ok }) => {
+        if (ok) {
+          adminCredsRef.current = { u: adminUser, p: adminPass };
+          setIsAdmin(true); setShowAdminModal(false); setAdminUser(''); setAdminPass(''); setAdminErr('');
+        } else {
+          setAdminErr('Credenciais inválidas ou conta sem permissão de gestão.');
+        }
+        setAdminChecking(false);
+      })
+      .catch(() => { setAdminErr('Erro de conexão.'); setAdminChecking(false); });
   };
 
   const uploadFoto = async (file: File, key: string): Promise<string | null> => {
@@ -174,7 +186,18 @@ export default function OrganogramaPage() {
   const saveDraft = async () => {
     setSaving(true);
     try {
-      const res = await fetch('/api/organograma', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(draft) });
+      const creds = adminCredsRef.current;
+      const payload = creds ? { ...draft, admin_username: creds.u, admin_password: creds.p } : draft;
+      const res = await fetch('/api/organograma', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (res.status === 401) {
+        adminCredsRef.current = null;
+        setIsAdmin(false);
+        setShowAdminModal(true);
+        setSaving(false);
+        setSaveMsg('Sessão expirada — informe suas credenciais de gestão para salvar.');
+        setTimeout(() => setSaveMsg(''), 6000);
+        return;
+      }
       const json = await res.json();
       if (res.ok && json.ok) {
         setData(json.data);
@@ -373,14 +396,18 @@ export default function OrganogramaPage() {
           <div style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, padding: '28px 24px', width: '100%', maxWidth: 340 }} onClick={e => e.stopPropagation()}>
             <h3 style={{ color: '#fff', fontWeight: 800, margin: '0 0 6px', fontSize: '1rem' }}>🔒 Acesso Administrativo</h3>
             <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.78rem', margin: '0 0 14px' }}>Somente o Administrador Geral pode editar o organograma.</p>
-            <input type="password" value={adminCpf} onChange={e => setAdminCpf(e.target.value.replace(/\D/g,''))}
+            <input type="text" value={adminUser} onChange={e => setAdminUser(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
-              placeholder="CPF do administrador" autoFocus
+              placeholder="Login ou e-mail do Owner/Admin Geral" autoFocus
+              style={{ width: '100%', padding: '10px 12px', background: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
+            <input type="password" value={adminPass} onChange={e => setAdminPass(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
+              placeholder="Senha"
               style={{ width: '100%', padding: '10px 12px', background: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', marginBottom: 10 }} />
             {adminErr && <div style={{ color: '#f87171', fontSize: '0.78rem', marginBottom: 8 }}>{adminErr}</div>}
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => { setShowAdminModal(false); setAdminCpf(''); setAdminErr(''); }} style={{ flex: 1, padding: '9px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', borderRadius: 8, cursor: 'pointer', fontSize: '0.85rem' }}>Cancelar</button>
-              <button onClick={handleAdminLogin} style={{ flex: 2, padding: '9px', background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', border: 'none', color: '#fff', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>Entrar</button>
+              <button onClick={() => { setShowAdminModal(false); setAdminUser(''); setAdminPass(''); setAdminErr(''); }} style={{ flex: 1, padding: '9px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', borderRadius: 8, cursor: 'pointer', fontSize: '0.85rem' }}>Cancelar</button>
+              <button onClick={handleAdminLogin} disabled={adminChecking} style={{ flex: 2, padding: '9px', background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', border: 'none', color: '#fff', borderRadius: 8, cursor: adminChecking ? 'wait' : 'pointer', fontWeight: 700, fontSize: '0.85rem', opacity: adminChecking ? 0.7 : 1 }}>{adminChecking ? 'Verificando…' : 'Entrar'}</button>
             </div>
           </div>
         </div>
