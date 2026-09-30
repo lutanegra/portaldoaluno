@@ -5,6 +5,54 @@ import Carteirinha from '@/components/Carteirinha';
 import DocumentsBar from '@/components/DocumentsBar';
 import PhotoEditor from '@/components/PhotoEditor';
 import { graduacoes as GRADUACOES_ALL, nomenclaturaGraduacao, getCordaColors } from '@/lib/graduacoes';
+import {
+  IconHome, IconIdCard, IconMapPin, IconWallet, IconMedal, IconPencil, IconChart,
+  IconCamera, IconFolder, IconNote, IconMusic, IconGear, IconDoc, IconMenu, IconX,
+  IconLogout, IconUser, IconChevron, IconBell, IconImage, IconEye, IconTrend,
+  IconFlame, IconStar, IconWarn, IconClock, IconBerimbau,
+} from '@/components/icons';
+import FrequenciaCard from './FrequenciaCard';
+
+/** Título de seção com ícone SVG à esquerda (substitui os h2 com emoji). */
+function SectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 9, fontSize: '1.08rem', fontWeight: 800, color: '#f5f5f4', letterSpacing: '-0.01em' }}>
+      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 10, background: 'rgba(255,146,0,0.12)', color: '#FF9200', flexShrink: 0 }}>
+        {icon}
+      </span>
+      {children}
+    </h2>
+  );
+}
+
+// Ícone SVG de cada aba do app (substitui os emojis antigos)
+const TAB_ICONS: Record<string, (p: { size?: number; style?: React.CSSProperties }) => React.JSX.Element> = {
+  dashboard: IconHome,
+  dados: IconPencil,
+  termo: IconDoc,
+  evolucao: IconChart,
+  carteirinha: IconIdCard,
+  presenca: IconMapPin,
+  financeiro: IconWallet,
+  graduacao: IconMedal,
+  fotos: IconCamera,
+  docs: IconFolder,
+  justificativas: IconNote,
+  playlist: IconMusic,
+  conta: IconGear,
+};
+
+type MuralItem = {
+  id: string;
+  tipo: 'cartaz' | 'aviso';
+  titulo: string;
+  texto?: string;
+  imagem_path?: string;
+  autor: string;
+  autor_login: string;
+  nucleo?: string;
+  created_at: string;
+};
 
 type Student = {
   id: string;
@@ -86,8 +134,14 @@ export default function AlunoPage() {
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [lockedUntil, setLockedUntil] = useState(0);
 
-  // Gaveta "Mais" (navegação inferior)
-  const [showMore, setShowMore] = useState(false);
+  // Sidebar (menu hambúrguer)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // ── Mural de avisos ─────────────────────────────────────────────────────────
+  const [muralItems, setMuralItems] = useState<MuralItem[]>([]);
+  const [muralLoading, setMuralLoading] = useState(false);
+  const [muralUrls, setMuralUrls] = useState<Record<string, string>>({});
+  const muralLoadedRef = useRef(false);
 
   // ── Register ──────────────────────────────────────────────────────────────
   const [showRegister, setShowRegister] = useState(false);
@@ -351,6 +405,24 @@ export default function AlunoPage() {
           .then(r => r.json())
           .then(d => { setEventos(Array.isArray(d) ? d.filter((e: any) => !e.finalizado) : []); })
           .catch(() => {});
+      }
+      if (activeTab === 'dashboard' && !muralLoadedRef.current) {
+        muralLoadedRef.current = true;
+        setMuralLoading(true);
+        fetch('/api/mural', { cache: 'no-store' })
+          .then(r => r.json())
+          .then(d => {
+            const itens: MuralItem[] = Array.isArray(d.items) ? d.items : [];
+            setMuralItems(itens);
+            setMuralLoading(false);
+            itens.filter(i => i.imagem_path).forEach(i => {
+              fetch(`/api/mural/imagem?path=${encodeURIComponent(i.imagem_path!)}`)
+                .then(r => r.json())
+                .then(u => { if (u.url) setMuralUrls(prev => ({ ...prev, [i.imagem_path!]: u.url })); })
+                .catch(() => {});
+            });
+          })
+          .catch(() => setMuralLoading(false));
       }
       if (activeTab === 'fotos') loadFotos(session.student_id);
       if (activeTab === 'docs') loadDocs(session.student_id);
@@ -979,19 +1051,19 @@ export default function AlunoPage() {
 
   // ── TABS NAVIGATION ───────────────────────────────────────────────────────
   const tabs: { id: Tab; icon: string; label: string; badge?: boolean }[] = [
-    { id: 'dashboard',      icon: '🏠', label: 'Início' },
-    { id: 'dados',          icon: '✏️', label: 'Meus Dados', badge: !!(student && (!student.nucleo || !student.graduacao || !student.email)) },
-    { id: 'termo',          icon: '📄', label: 'Termo', badge: !!(student && student.menor_de_idade && !student.assinatura_responsavel) },
-    { id: 'evolucao',       icon: '📊', label: 'Evolução' },
-    { id: 'carteirinha',    icon: '🪪', label: 'Carteirinha' },
-    { id: 'presenca',       icon: '📍', label: 'Presença' },
-    { id: 'financeiro',     icon: '💰', label: 'Financeiro' },
-    { id: 'graduacao',      icon: '🎖️', label: 'Graduação' },
-    { id: 'fotos',          icon: '📸', label: 'Fotos' },
-    { id: 'docs',           icon: '📂', label: 'Docs' },
-    { id: 'justificativas', icon: '📝', label: 'Justific.' },
-    { id: 'playlist',       icon: '🎵', label: 'Playlist' },
-    { id: 'conta',          icon: '⚙️', label: 'Conta' },
+    { id: 'dashboard',      icon: '', label: 'Início' },
+    { id: 'dados',          icon: '', label: 'Meus Dados', badge: !!(student && (!student.nucleo || !student.graduacao || !student.email)) },
+    { id: 'termo',          icon: '', label: 'Termo', badge: !!(student && student.menor_de_idade && !student.assinatura_responsavel) },
+    { id: 'evolucao',       icon: '', label: 'Evolução' },
+    { id: 'carteirinha',    icon: '', label: 'Carteirinha' },
+    { id: 'presenca',       icon: '', label: 'Presença' },
+    { id: 'financeiro',     icon: '', label: 'Financeiro' },
+    { id: 'graduacao',      icon: '', label: 'Graduação' },
+    { id: 'fotos',          icon: '', label: 'Fotos' },
+    { id: 'docs',           icon: '', label: 'Docs' },
+    { id: 'justificativas', icon: '', label: 'Justific.' },
+    { id: 'playlist',       icon: '', label: 'Playlist' },
+    { id: 'conta',          icon: '', label: 'Conta' },
   ];
   // Barra inferior: as 4 seções mais usadas + gaveta "Mais" com o restante
   const primaryTabIds: Tab[] = ['dashboard', 'carteirinha', 'presenca', 'financeiro'];
@@ -1016,44 +1088,39 @@ export default function AlunoPage() {
         </div>
       )}
 
-      {/* Header do app — preto com detalhes laranja */}
+      {/* Header do app — hambúrguer + marca; perfil e saída vivem na sidebar */}
       <header style={{
         color: '#fff',
         background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
         borderBottom: '1px solid #262626',
         position: 'sticky', top: 0, zIndex: 60,
       }}>
-        <div style={{ maxWidth: 560, margin: '0 auto', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-            {student?.foto_url ? (
-              <span style={{ display: 'inline-flex', flexShrink: 0, padding: 2, borderRadius: '50%', background: 'linear-gradient(135deg, #FF9200, #b45309)' }}>
-                <img src={student.foto_url} alt={displayName} style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', border: '2px solid #0a0a0a', display: 'block' }} />
-              </span>
-            ) : (
-              <span style={{ display: 'inline-flex', flexShrink: 0, width: 46, height: 46, borderRadius: '50%', background: 'linear-gradient(135deg, #FF9200, #b45309)', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="26" height="26" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="32" cy="10" r="7" fill="#0a0a0a" />
-                  <path d="M32 17 C26 20 22 28 24 36 L20 54" stroke="#0a0a0a" strokeWidth="3.5" strokeLinecap="round" />
-                  <path placeholder-color="#0a0a0a" d="M32 17 C38 20 42 28 40 36 L44 54" stroke="#0a0a0a" strokeWidth="3.5" strokeLinecap="round" />
-                  <path d="M24 36 L14 44" stroke="#0a0a0a" strokeWidth="3.5" strokeLinecap="round" />
-                  <path d="M40 36 L50 32" stroke="#0a0a0a" strokeWidth="3.5" strokeLinecap="round" />
-                </svg>
-              </span>
-            )}
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
-              {student?.apelido && student.apelido !== student.nome_completo?.split(' ')[0] && (
-                <div style={{ fontSize: '0.68rem', color: '#8f8f8f', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{student.nome_completo}</div>
-              )}
-              <div style={{ fontSize: '0.72rem', color: '#FF9200', fontWeight: 600, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {student?.graduacao || 'Aluno'} {student?.nucleo ? `· ${student.nucleo}` : ''}
-              </div>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <button onClick={() => setSidebarOpen(true)} aria-label="Abrir menu" aria-expanded={sidebarOpen}
+            style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 42, height: 42, borderRadius: 12, border: '1px solid #2e2e2e', background: '#161616', color: '#e5e5e5', cursor: 'pointer' }}>
+            <IconMenu size={21} />
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-portal-aluno.png" alt="" style={{ width: 30, height: 30, borderRadius: 8, display: 'block' }} />
+            <div style={{ fontWeight: 800, fontSize: '0.98rem', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
+              Portal <span style={{ color: '#FF9200' }}>Aluno</span>
             </div>
           </div>
           {isAdminPreview ? (
-            <span style={{ flexShrink: 0, background: 'rgba(255,146,0,0.15)', border: '1px solid rgba(255,146,0,0.4)', borderRadius: 8, padding: '6px 12px', color: '#FF9200', fontSize: '0.75rem', fontWeight: 700 }}>🔭 Visualização</span>
+            <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,146,0,0.15)', border: '1px solid rgba(255,146,0,0.4)', borderRadius: 8, padding: '7px 11px', color: '#FF9200', fontSize: '0.72rem', fontWeight: 700 }}>
+              <IconEye size={14} /> Visualização
+            </span>
           ) : (
-            <button onClick={handleLogout} style={{ flexShrink: 0, background: '#161616', border: '1px solid #2e2e2e', borderRadius: 10, padding: '8px 14px', color: '#d4d4d4', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>Sair</button>
+            <button onClick={() => setSidebarOpen(true)} aria-label="Abrir perfil"
+              style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 42, height: 42, borderRadius: '50%', border: '2px solid rgba(255,146,0,0.55)', background: '#161616', color: '#FF9200', cursor: 'pointer', overflow: 'hidden', padding: 0 }}>
+              {student?.foto_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={student.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              ) : (
+                <IconUser size={19} />
+              )}
+            </button>
           )}
         </div>
       </header>
@@ -1067,7 +1134,7 @@ export default function AlunoPage() {
 
             {student && (student.menor_de_idade as boolean) && !student.assinatura_responsavel && (
               <div style={{ background: 'rgba(239,68,68,0.09)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ fontSize: '1.4rem', flexShrink: 0, marginTop: 1 }}>📄</div>
+                <span style={{ display: 'flex', color: '#fca5a5', flexShrink: 0, marginTop: 2 }}><IconWarn size={22} /></span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fca5a5', marginBottom: 3 }}>Termo de Responsabilidade pendente</div>
                   <div style={{ fontSize: '0.8rem', color: '#fca5a5', lineHeight: 1.5, marginBottom: 10 }}>
@@ -1075,7 +1142,7 @@ export default function AlunoPage() {
                   </div>
                   <button onClick={() => setActiveTab('termo')}
                     style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
-                    ✍️ Assinar Termo
+                    Assinar Termo
                   </button>
                 </div>
               </div>
@@ -1142,9 +1209,9 @@ export default function AlunoPage() {
                   `}</style>
                   {/* Topo vermelho com sirene */}
                   <div style={{ background: 'linear-gradient(90deg,#dc2626,#b91c1c)', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ animation: 'sirenBlink 0.7s ease-in-out infinite', fontSize: '1rem' }}>🚨</span>
+                    <span style={{ animation: 'sirenBlink 0.7s ease-in-out infinite', display: 'flex', color: '#fff' }}><IconWarn size={16} /></span>
                     <span style={{ fontWeight: 800, fontSize: '0.82rem', color: '#fff', letterSpacing: '0.04em', flex: 1 }}>CADASTRO INCOMPLETO</span>
-                    <span style={{ animation: 'sirenBlink 0.7s ease-in-out infinite 0.35s', fontSize: '1rem' }}>🚨</span>
+                    <span style={{ animation: 'sirenBlink 0.7s ease-in-out infinite 0.35s', display: 'flex', color: '#fff' }}><IconWarn size={16} /></span>
                   </div>
                   {/* Corpo branco */}
                   <div style={{ background: '#161616', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1157,11 +1224,11 @@ export default function AlunoPage() {
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                      <span style={{ fontSize: '1.3rem', animation: 'bounce 1s ease-in-out infinite' }}>👇</span>
+                      <span style={{ display: 'flex', justifyContent: 'center', color: '#f87171', animation: 'bounce 1s ease-in-out infinite' }}><IconWarn size={20} /></span>
                       <button
                         onClick={() => setActiveTab('dados')}
                         style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 16px', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 3px 10px rgba(220,38,38,0.4)' }}>
-                        ✏️ Completar agora
+                        Completar agora
                       </button>
                     </div>
                   </div>
@@ -1169,33 +1236,75 @@ export default function AlunoPage() {
               )}
             </div>
 
-            {/* Quick actions grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-              {([
-                { tab: 'carteirinha'    as Tab, icon: '🪪', label: 'Carteirinha',   color: 'rgba(59,130,246,0.10)', iconBg: 'rgba(59,130,246,0.22)', textColor: '#93c5fd' },
-                { tab: 'presenca'       as Tab, icon: '📍', label: 'Presença',      color: 'rgba(34,197,94,0.08)', iconBg: 'rgba(34,197,94,0.22)', textColor: '#86efac' },
-                { tab: 'financeiro'     as Tab, icon: '💰', label: 'Financeiro',    color: '#fef9c3', iconBg: 'rgba(250,204,21,0.22)', textColor: '#fde047' },
-                { tab: 'graduacao'      as Tab, icon: '🎖️', label: 'Graduação',     color: 'rgba(168,85,247,0.10)', iconBg: 'rgba(168,85,247,0.22)', textColor: '#d8b4fe' },
-                { tab: 'fotos'          as Tab, icon: '📸', label: 'Fotos/Vídeos', color: 'rgba(236,72,153,0.10)', iconBg: 'rgba(236,72,153,0.22)', textColor: '#f9a8d4' },
-                { tab: 'justificativas' as Tab, icon: '📝', label: 'Justificativas',color: 'rgba(255,146,0,0.10)', iconBg: 'rgba(255,146,0,0.22)', textColor: '#fdba74' },
-              ] as { tab: Tab; icon: string; label: string; color: string; iconBg: string; textColor: string }[]).map(item => (
-                <button key={item.tab} onClick={() => setActiveTab(item.tab)}
-                  style={{ background: item.color, borderRadius: 14, padding: '14px 10px', border: 'none', cursor: 'pointer', textAlign: 'center', transition: 'transform 0.15s, box-shadow 0.15s' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: item.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', margin: '0 auto 8px' }}>{item.icon}</div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: item.textColor }}>{item.label}</div>
-                </button>
-              ))}
+            {/* ── Mural de avisos ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ display: 'flex', color: '#FF9200' }}><IconBell size={15} /></span>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mural</span>
+                <span style={{ flex: 1, height: 1, background: '#262626' }} />
+              </div>
+              {muralLoading ? (
+                <div style={{ textAlign: 'center', color: '#8f8f8f', fontSize: '0.8rem', padding: '18px 0' }}>Carregando avisos...</div>
+              ) : muralItems.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px 16px', background: '#141414', border: '1.5px dashed #2a2a2a', borderRadius: 14, color: '#8f8f8f', fontSize: '0.8rem', lineHeight: 1.5 }}>
+                  Sem avisos no momento.<br />Comunicados dos instrutores aparecem aqui.
+                </div>
+              ) : (
+                muralItems.slice(0, 6).map(item => (
+                  <div key={item.id} style={{ background: '#151515', borderRadius: 16, border: '1px solid #282828', overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 14px 0', flexWrap: 'wrap' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: item.tipo === 'cartaz' ? 'rgba(255,146,0,0.13)' : 'rgba(59,130,246,0.12)', color: item.tipo === 'cartaz' ? '#fdba74' : '#93c5fd', borderRadius: 6, padding: '2.5px 8px', fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {item.tipo === 'cartaz' ? <IconImage size={10} /> : <IconBell size={10} />}
+                        {item.tipo === 'cartaz' ? 'Cartaz' : 'Aviso'}
+                      </span>
+                      {item.nucleo && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#1e1e1e', color: '#a3a3a3', borderRadius: 6, padding: '2.5px 8px', fontSize: '0.6rem', fontWeight: 700 }}>
+                          <IconMapPin size={10} /> {item.nucleo}
+                        </span>
+                      )}
+                      <span style={{ marginLeft: 'auto', fontSize: '0.64rem', color: '#6b6b6b' }}>
+                        {new Date(item.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                      </span>
+                    </div>
+                    <div style={{ padding: '8px 14px 13px' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#f5f5f4', lineHeight: 1.3 }}>{item.titulo}</div>
+                      {item.texto && <div style={{ fontSize: '0.8rem', color: '#c9c9c9', lineHeight: 1.55, marginTop: 5, whiteSpace: 'pre-wrap' }}>{item.texto}</div>}
+                      {item.tipo === 'cartaz' && item.imagem_path && (
+                        muralUrls[item.imagem_path] ? (
+                          <a href={muralUrls[item.imagem_path]} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 10, borderRadius: 12, overflow: 'hidden', border: '1px solid #2a2a2a' }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={muralUrls[item.imagem_path]} alt={item.titulo} loading="lazy"
+                              style={{ width: '100%', display: 'block', maxHeight: 380, objectFit: 'cover' }} />
+                          </a>
+                        ) : (
+                          <div style={{ marginTop: 10, height: 130, borderRadius: 12, background: '#1c1c1c', border: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5a5a5a' }}>
+                            <IconImage size={22} />
+                          </div>
+                        )
+                      )}
+                      <div style={{ marginTop: 8, fontSize: '0.66rem', color: '#6b6b6b' }}>Publicado por {item.autor}</div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
+
+            {/* ── Frequência individual (gráfico) ── */}
+            <FrequenciaCard studentId={session?.student_id || ''} cordaColors={cordaColors} graduacao={student?.graduacao} />
 
             {/* Próximos eventos */}
             {eventos.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Próximos Eventos</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ display: 'flex', color: '#FF9200' }}><IconClock size={15} /></span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Próximos Eventos</span>
+                  <span style={{ flex: 1, height: 1, background: '#262626' }} />
+                </div>
                 {eventos.slice(0, 3).map((ev: any) => (
-                  <div key={ev.id} style={{ background: '#161616', borderRadius: 14, padding: '14px 16px', border: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 42, height: 42, borderRadius: 10, background: ev.tipo === 'batizado' ? 'rgba(250,204,21,0.12)' : 'rgba(168,85,247,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>
-                      {ev.tipo === 'batizado' ? '🥋' : '🎖️'}
-                    </div>
+                  <div key={ev.id} style={{ background: '#151515', borderRadius: 14, padding: '13px 15px', border: '1px solid #282828', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 42, height: 42, borderRadius: 12, background: 'rgba(255,146,0,0.10)', color: '#FF9200', flexShrink: 0 }}>
+                      <IconBerimbau size={21} />
+                    </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f5f5f4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.nome}</div>
                       <div style={{ fontSize: '0.75rem', color: '#a3a3a3', marginTop: 2 }}>
@@ -1204,7 +1313,7 @@ export default function AlunoPage() {
                         {ev.local ? ` · ${ev.local}` : ''}
                       </div>
                     </div>
-                    <span style={{ flexShrink: 0, background: ev.tipo === 'batizado' ? 'rgba(250,204,21,0.12)' : 'rgba(168,85,247,0.12)', color: ev.tipo === 'batizado' ? '#92400e' : '#5b21b6', borderRadius: 8, padding: '3px 9px', fontSize: '0.7rem', fontWeight: 700 }}>
+                    <span style={{ flexShrink: 0, background: ev.tipo === 'batizado' ? 'rgba(250,204,21,0.12)' : 'rgba(168,85,247,0.12)', color: ev.tipo === 'batizado' ? '#fde047' : '#d8b4fe', borderRadius: 8, padding: '3px 9px', fontSize: '0.7rem', fontWeight: 700 }}>
                       {ev.tipo === 'batizado' ? 'Batizado' : 'Troca'}
                     </span>
                   </div>
@@ -1217,17 +1326,23 @@ export default function AlunoPage() {
 
             {/* Links institucionais */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>CCLN</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ display: 'flex', color: '#FF9200' }}><IconFolder size={15} /></span>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Institucional</span>
+                <span style={{ flex: 1, height: 1, background: '#262626' }} />
+              </div>
               {([
-                { href: '/hierarquia', icon: '🥋', label: 'Hierarquia', color: 'rgba(239,68,68,0.09)', iconBg: 'rgba(239,68,68,0.22)', textColor: '#fca5a5' },
-                { href: '/organograma', icon: '🏛️', label: 'Organograma', color: 'rgba(59,130,246,0.10)', iconBg: 'rgba(59,130,246,0.18)', textColor: '#93c5fd' },
-                { href: '/documentos', icon: '📚', label: 'Documentos Históricos da Capoeira', color: 'rgba(34,197,94,0.08)', iconBg: 'rgba(34,197,94,0.18)', textColor: '#86efac' },
-              ]).map(item => (
-                <a key={item.href} href={item.href}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, background: item.color, borderRadius: 12, padding: '12px 14px', textDecoration: 'none', border: `1px solid ${item.iconBg}` }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: item.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>{item.icon}</div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: item.textColor }}>{item.label}</div>
-                  <span style={{ marginLeft: 'auto', color: item.textColor, opacity: 0.5, fontSize: '0.9rem' }}>›</span>
+                { href: '/hierarquia', Icon: IconMedal, label: 'Hierarquia' },
+                { href: '/organograma', Icon: IconFolder, label: 'Organograma' },
+                { href: '/documentos', Icon: IconDoc, label: 'Documentos Históricos da Capoeira' },
+              ] as const).map(({ href, Icon, label }) => (
+                <a key={href} href={href}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#151515', borderRadius: 13, padding: '12px 14px', textDecoration: 'none', border: '1px solid #282828' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 11, background: 'rgba(255,146,0,0.10)', color: '#FF9200', flexShrink: 0 }}>
+                    <Icon size={18} />
+                  </span>
+                  <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: 700, color: '#e5e5e5' }}>{label}</span>
+                  <span style={{ display: 'flex', color: '#6b6b6b' }}><IconChevron size={16} /></span>
                 </a>
               ))}
             </div>
@@ -1237,33 +1352,13 @@ export default function AlunoPage() {
               <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Documentos da Associação</div>
               <DocumentsBar readOnly studentPhone={student?.telefone} studentName={student?.nome_completo} />
             </div>
-
-            {/* Student info card */}
-            {student && (
-              <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#d4d4d4', marginBottom: 12 }}>Meus Dados</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {[
-                    { label: 'Graduação', value: student.graduacao },
-                    { label: 'Núcleo', value: student.nucleo },
-                    { label: 'Telefone', value: student.telefone },
-                    { label: 'E-mail', value: student.email as string },
-                  ].map(({ label, value }) => value ? (
-                    <div key={label}>
-                      <div style={{ fontSize: '0.72rem', color: '#8f8f8f', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f5f5f4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(value)}</div>
-                    </div>
-                  ) : null)}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
         {/* ── CARTEIRINHA ── */}
         {activeTab === 'carteirinha' && cartData && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>🪪 Minha Carteirinha</h2>
+            <SectionTitle icon={<IconIdCard size={17} />}>Minha Carteirinha</SectionTitle>
             <div ref={carteirinhaRef} style={{ display: 'flex', justifyContent: 'center' }}>
               <Carteirinha data={cartData} />
             </div>
@@ -1309,10 +1404,10 @@ export default function AlunoPage() {
         {/* ── PRESENÇA ── */}
         {activeTab === 'presenca' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>📍 Registrar Presença</h2>
+            <SectionTitle icon={<IconMapPin size={17} />}>Registrar Presença</SectionTitle>
 
             <div style={{ background: '#161616', borderRadius: 16, padding: '24px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.05)', textAlign: 'center' }}>
-              <div style={{ fontSize: 56, marginBottom: 12 }}>📍</div>
+              <div style={{ color: '#FF9200', marginBottom: 12, display: 'flex', justifyContent: 'center' }}><IconMapPin size={52} strokeWidth={1.6} /></div>
               <h3 style={{ margin: '0 0 8px', fontSize: '1rem', fontWeight: 700, color: '#f5f5f4' }}>Presença do dia de hoje</h3>
               <p style={{ margin: '0 0 20px', fontSize: '0.83rem', color: '#a3a3a3', lineHeight: 1.5 }}>
                 Sua presença será registrada automaticamente ao clicar no botão abaixo.<br />
@@ -1323,10 +1418,10 @@ export default function AlunoPage() {
               {student?.nucleo && (
                 <div style={{ textAlign: 'left', marginBottom: 18 }}>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#d4d4d4', marginBottom: 6 }}>
-                    🏫 Seu Núcleo
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconFolder size={13} /> Seu Núcleo</span>
                   </label>
                   <div style={{ background: '#141414', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', color: '#f5f5f4', fontWeight: 600 }}>
-                    📍 {student.nucleo}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconMapPin size={12} /> {student.nucleo}</span>
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#a3a3a3', marginTop: 4, fontWeight: 400 }}>
                     A presença é registrada sempre no seu núcleo de cadastro.
@@ -1336,7 +1431,7 @@ export default function AlunoPage() {
 
               {!student?.nucleo && (
                 <div style={{ background: 'rgba(239,68,68,0.09)', border: '1.5px solid #fecaca', borderRadius: 12, padding: '14px 16px', marginBottom: 18, textAlign: 'left' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fca5a5', marginBottom: 4 }}>🚫 Presença bloqueada</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', fontWeight: 800, color: '#fca5a5', marginBottom: 4 }}><IconWarn size={14} /> Presença bloqueada</div>
                   <div style={{ fontSize: '0.78rem', color: '#b91c1c', lineHeight: 1.5 }}>
                     Você ainda não está vinculado a um núcleo. Escolha seu núcleo na aba <strong>Meus Dados</strong> para destravar o registro de presença.
                   </div>
@@ -1351,7 +1446,7 @@ export default function AlunoPage() {
 
               <button onClick={handlePresenca} disabled={presencaLoading}
                 style={{ background: presencaLoading ? '#3a3a3a' : 'linear-gradient(135deg, #FF9200, #d97706)', color: '#fff', border: 'none', borderRadius: 14, padding: '16px 32px', fontWeight: 800, fontSize: '1rem', cursor: presencaLoading ? 'not-allowed' : 'pointer', boxShadow: presencaLoading ? 'none' : '0 6px 20px rgba(255,146,0,0.35)', transition: 'all 0.2s' }}>
-                {presencaLoading ? '📍 Obtendo localização...' : '📍 Registrar Presença Agora'}
+                {presencaLoading ? 'Obtendo localização...' : 'Registrar Presença Agora'}
               </button>
 
               <p style={{ margin: '14px 0 0', fontSize: '0.72rem', color: '#8f8f8f' }}>
@@ -1360,7 +1455,7 @@ export default function AlunoPage() {
             </div>
 
             <div style={{ background: 'rgba(234,179,8,0.10)', borderRadius: 12, padding: '12px 16px', border: '1px solid rgba(234,179,8,0.35)', fontSize: '0.8rem', color: '#fcd34d' }}>
-              ⚠️ O registro de presença só pode ser feito no dia atual. Se precisar justificar uma falta, use a aba <strong>Justificativas</strong>.
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconWarn size={13} /> O registro de presença só pode ser feito no dia atual.</span> Se precisar justificar uma falta, use a aba <strong>Justificativas</strong>.
             </div>
           </div>
         )}
@@ -1369,7 +1464,7 @@ export default function AlunoPage() {
         {activeTab === 'financeiro' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>💰 Ficha Financeira</h2>
+              <SectionTitle icon={<IconWallet size={17} />}>Ficha Financeira</SectionTitle>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => { if (!session) return; setFichaFinLoading(true); fetch(`/api/financeiro?student_id=${session.student_id}`).then(r=>r.json()).then(d=>{setFichaFin(d);setFichaFinLoading(false);}).catch(()=>setFichaFinLoading(false)); }}
                   style={{ background: 'none', border: '1px solid rgba(255,146,0,0.45)', color: '#FF9200', borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>🔄 Atualizar</button>
@@ -1617,7 +1712,7 @@ export default function AlunoPage() {
         {activeTab === 'graduacao' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>🎖️ Histórico de Graduação</h2>
+              <SectionTitle icon={<IconMedal size={17} />}>Histórico de Graduação</SectionTitle>
               <button onClick={() => student && loadHistorico(student.id)} style={{ background: 'none', border: '1px solid rgba(255,146,0,0.45)', color: '#FF9200', borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>🔄 Atualizar</button>
             </div>
 
@@ -1629,7 +1724,7 @@ export default function AlunoPage() {
                 {!eventosLoading && eventos.map((ev: any) => (
                   <div key={ev.id} style={{ background: '#161616', borderRadius: 14, padding: '14px 16px', border: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 10, background: ev.tipo === 'batizado' ? 'rgba(250,204,21,0.12)' : 'rgba(168,85,247,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>
-                      {ev.tipo === 'batizado' ? '🥋' : '🎖️'}
+                      <IconBerimbau size={20} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#f5f5f4' }}>{ev.nome}</div>
@@ -1639,7 +1734,7 @@ export default function AlunoPage() {
                           {ev.hora ? ` · ${ev.hora}` : ''}
                         </div>
                       )}
-                      {ev.local && <div style={{ fontSize: '0.75rem', color: '#a3a3a3', marginTop: 1 }}>📍 {ev.local}</div>}
+                      {ev.local && <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: '#a3a3a3', marginTop: 1 }}><IconMapPin size={11} /> {ev.local}</div>}
                       {ev.nucleo && <div style={{ fontSize: '0.72rem', color: '#8f8f8f', marginTop: 1 }}>Núcleo: {ev.nucleo}</div>}
                     </div>
                     <div style={{ flexShrink: 0, textAlign: 'center' }}>
@@ -1665,7 +1760,7 @@ export default function AlunoPage() {
               const c = getGradColor(student.graduacao);
               return (
                 <div style={{ background: c.bg, border: `2px solid ${c.border}`, borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: c.border, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>🎖️</div>
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: c.border, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}><IconMedal size={26} /></div>
                   <div>
                     <div style={{ fontSize: '0.72rem', color: c.text, opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Graduação Atual</div>
                     <div style={{ fontSize: '1.2rem', fontWeight: 800, color: c.text }}>{student.graduacao}</div>
@@ -1698,7 +1793,7 @@ export default function AlunoPage() {
                       <div key={reg.id} style={{ display: 'flex', gap: 16, paddingBottom: 20, paddingLeft: 4 }}>
                         {/* Timeline dot */}
                         <div style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', background: c.bg, border: `2.5px solid ${c.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', zIndex: 1, marginTop: 4 }}>
-                          {idx === 0 ? '⭐' : '🎖️'}
+                          {idx === 0 ? <IconStar size={18} /> : <IconMedal size={18} />}
                         </div>
 
                         {/* Card */}
@@ -1746,7 +1841,7 @@ export default function AlunoPage() {
         {/* ── JUSTIFICATIVAS ── */}
         {activeTab === 'justificativas' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>📝 Justificativas de Falta</h2>
+            <SectionTitle icon={<IconNote size={17} />}>Justificativas de Falta</SectionTitle>
 
             {/* Form */}
             <div style={{ background: '#161616', borderRadius: 16, padding: '20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
@@ -1818,12 +1913,12 @@ export default function AlunoPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>📸 Registro de Fotos e Vídeos</h2>
+                <SectionTitle icon={<IconCamera size={17} />}>Registro de Fotos e Vídeos</SectionTitle>
                 <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>Gerencie suas fotos e vídeos de treinos</p>
               </div>
               <button onClick={() => fotosFileRef.current?.click()} disabled={fotosUploading}
                 style={{ background: `linear-gradient(135deg, #86198f, #9d174d)`, color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', opacity: fotosUploading ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-                {fotosUploading ? '⏳ Enviando...' : '⬆ Enviar Arquivo'}
+                {fotosUploading ? 'Enviando...' : 'Enviar Arquivo'}
               </button>
               <input ref={fotosFileRef} type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={async e => {
                 const file = e.target.files?.[0]; if (!file || !session) return;
@@ -1852,7 +1947,7 @@ export default function AlunoPage() {
               <div style={{ textAlign: 'center', padding: '40px 0', color: '#8f8f8f', fontSize: '0.9rem' }}>Carregando arquivos...</div>
             ) : fotosMedia.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px 20px', background: 'rgba(236,72,153,0.10)', borderRadius: 16, border: '2px dashed #f0abfc' }}>
-                <div style={{ fontSize: '3rem', marginBottom: 12 }}>📷</div>
+                <div style={{ color: '#f9a8d4', marginBottom: 12, display: 'flex', justifyContent: 'center' }}><IconCamera size={46} strokeWidth={1.4} /></div>
                 <div style={{ fontWeight: 700, color: '#86198f', fontSize: '0.95rem' }}>Nenhum arquivo ainda</div>
                 <div style={{ fontSize: '0.78rem', color: '#8f8f8f', marginTop: 6 }}>Clique em "Enviar Arquivo" para adicionar fotos ou vídeos de treino</div>
               </div>
@@ -1900,14 +1995,14 @@ export default function AlunoPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>📂 Meus Documentos</h2>
+                <SectionTitle icon={<IconFolder size={17} />}>Meus Documentos</SectionTitle>
                 <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>PDF, Word, imagens, planilhas e qualquer formato — máx. 50 MB</p>
               </div>
               <button
                 onClick={() => docsFileRef.current?.click()}
                 disabled={docsUploading}
                 style={{ background: docsUploading ? '#3a3a3a' : 'linear-gradient(135deg, #FF9200, #d97706)', color: docsUploading ? '#8f8f8f' : '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', cursor: docsUploading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                {docsUploading ? '⏳ Enviando...' : '⬆ Enviar Documento'}
+                {docsUploading ? 'Enviando...' : 'Enviar Documento'}
               </button>
               <input ref={docsFileRef} type="file" accept="*/*" style={{ display: 'none' }} onChange={async e => {
                 const file = e.target.files?.[0];
@@ -1940,7 +2035,7 @@ export default function AlunoPage() {
               <div style={{ textAlign: 'center', padding: '40px 0', color: '#8f8f8f', fontSize: '0.9rem' }}>Carregando documentos...</div>
             ) : docsItems.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '50px 20px', background: 'rgba(14,165,233,0.10)', borderRadius: 16, border: '2px dashed #bae6fd' }}>
-                <div style={{ fontSize: '3rem', marginBottom: 12 }}>📂</div>
+                <div style={{ color: '#93c5fd', marginBottom: 12, display: 'flex', justifyContent: 'center' }}><IconFolder size={46} strokeWidth={1.4} /></div>
                 <div style={{ fontWeight: 700, color: '#7dd3fc', fontSize: '0.95rem' }}>Nenhum documento ainda</div>
                 <div style={{ fontSize: '0.78rem', color: '#8f8f8f', marginTop: 6, lineHeight: 1.5 }}>Clique em <strong>Enviar Documento</strong> para adicionar PDFs, imagens,<br/>contratos ou qualquer arquivo</div>
               </div>
@@ -1983,7 +2078,7 @@ export default function AlunoPage() {
             {contaSection === 'main' && (
               <>
                 <div>
-                  <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>⚙️ Minha Conta</h2>
+                  <SectionTitle icon={<IconGear size={17} />}>Minha Conta</SectionTitle>
                   <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>Gerencie suas credenciais de acesso</p>
                 </div>
 
@@ -2009,7 +2104,7 @@ export default function AlunoPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <button onClick={() => { setContaSection('edit-profile'); setContaForm(f => ({ ...f, new_username: session.username, new_email: student?.email || '' })); setContaMsg(''); }}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.35)', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left' }}>
-                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(59,130,246,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>✏️</div>
+                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(59,130,246,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#93c5fd', flexShrink: 0 }}><IconPencil size={17} /></div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#93c5fd' }}>Editar Perfil</div>
                       <div style={{ fontSize: '0.73rem', color: '#a3a3a3', marginTop: 1 }}>Alterar usuário e e-mail de recuperação</div>
@@ -2046,7 +2141,7 @@ export default function AlunoPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <button onClick={() => setContaSection('main')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#a3a3a3', padding: '4px 6px', borderRadius: 8 }}>←</button>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f5f5f4' }}>✏️ Editar Perfil</h2>
+                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f5f5f4' }}>Editar Perfil</h2>
                     <p style={{ margin: 0, fontSize: '0.72rem', color: '#a3a3a3' }}>Confirme sua senha para alterar</p>
                   </div>
                 </div>
@@ -2095,7 +2190,7 @@ export default function AlunoPage() {
                       } catch { setContaMsg('Erro de conexão.'); setContaMsgType('error'); }
                       setContaLoading(false);
                     }} style={{ background: 'linear-gradient(135deg,#1d4ed8,#1e40af)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontWeight: 700, fontSize: '0.9rem', cursor: contaLoading ? 'wait' : 'pointer', opacity: contaLoading ? 0.7 : 1 }}>
-                      {contaLoading ? '⏳ Salvando...' : '💾 Salvar Alterações'}
+                      {contaLoading ? '⏳ Salvando...' : 'Salvar Alterações'}
                     </button>
                   </div>
                 </div>
@@ -2108,7 +2203,7 @@ export default function AlunoPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <button onClick={() => setContaSection('main')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#a3a3a3', padding: '4px 6px', borderRadius: 8 }}>←</button>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f5f5f4' }}>🔒 Alterar Senha</h2>
+                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f5f5f4' }}>Alterar Senha</h2>
                     <p style={{ margin: 0, fontSize: '0.72rem', color: '#a3a3a3' }}>Escolha uma senha forte</p>
                   </div>
                 </div>
@@ -2154,12 +2249,12 @@ export default function AlunoPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <button onClick={() => setContaSection('main')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#a3a3a3', padding: '4px 6px', borderRadius: 8 }}>←</button>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f87171' }}>⚠️ Excluir Conta</h2>
+                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f87171' }}>Excluir Conta</h2>
                     <p style={{ margin: 0, fontSize: '0.72rem', color: '#a3a3a3' }}>Esta ação é irreversível</p>
                   </div>
                 </div>
                 <div style={{ background: 'rgba(239,68,68,0.09)', border: '1.5px solid #fecaca', borderRadius: 14, padding: '16px 18px' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fca5a5', marginBottom: 8 }}>⚠️ O que acontece ao excluir:</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fca5a5', marginBottom: 8 }}>O que acontece ao excluir:</div>
                   <ul style={{ margin: 0, padding: '0 0 0 18px', fontSize: '0.82rem', color: '#fca5a5', lineHeight: 1.7 }}>
                     <li>Seu login e senha são <strong>removidos permanentemente</strong></li>
                     <li>Seu histórico de presenças e graduações <strong>é mantido</strong></li>
@@ -2199,7 +2294,7 @@ export default function AlunoPage() {
                       } catch { setContaMsg('Erro de conexão.'); setContaMsgType('error'); }
                       setContaLoading(false);
                     }} style={{ background: deleteConfirmText === 'EXCLUIR' ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : '#2e2e2e', color: deleteConfirmText === 'EXCLUIR' ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: '12px', fontWeight: 700, fontSize: '0.9rem', cursor: (contaLoading || deleteConfirmText !== 'EXCLUIR') ? 'not-allowed' : 'pointer', opacity: contaLoading ? 0.7 : 1 }}>
-                      {contaLoading ? '⏳ Excluindo...' : '🗑️ Excluir Minha Conta Definitivamente'}
+                      {contaLoading ? '⏳ Excluindo...' : 'Excluir Minha Conta Definitivamente'}
                     </button>
                   </div>
                 </div>
@@ -2291,13 +2386,13 @@ export default function AlunoPage() {
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>🎵 Minha Playlist</h2>
+                <SectionTitle icon={<IconMusic size={17} />}>Minha Playlist</SectionTitle>
                 <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>Adicione links do Spotify, Deezer, YouTube, TikTok e Kwai</p>
               </div>
 
               {/* Formulário para adicionar */}
               <div style={{ background: '#161616', borderRadius: 16, padding: '18px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f5f5f4', marginBottom: 12 }}>➕ Adicionar link</div>
+                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f5f5f4', marginBottom: 12 }}>Adicionar link</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <input
                     type="url"
@@ -2321,7 +2416,7 @@ export default function AlunoPage() {
                   )}
                   <button onClick={handleAddPlaylist} disabled={playlistAdding || !playlistAddUrl.trim()}
                     style={{ background: playlistAdding || !playlistAddUrl.trim() ? '#3a3a3a' : 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px', fontWeight: 700, fontSize: '0.88rem', cursor: playlistAdding || !playlistAddUrl.trim() ? 'not-allowed' : 'pointer' }}>
-                    {playlistAdding ? '⏳ Adicionando...' : '➕ Adicionar à Playlist'}
+                    {playlistAdding ? '⏳ Adicionando...' : 'Adicionar à Playlist'}
                   </button>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
@@ -2338,7 +2433,7 @@ export default function AlunoPage() {
                 <div style={{ textAlign: 'center', padding: '40px 0', color: '#8f8f8f', fontSize: '0.9rem' }}>Carregando playlist...</div>
               ) : playlistItems.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px 20px', background: 'rgba(139,92,246,0.10)', borderRadius: 16, border: '2px dashed #a78bfa' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: 12 }}>🎵</div>
+                  <div style={{ color: '#c4b5fd', marginBottom: 12, display: 'flex', justifyContent: 'center' }}><IconMusic size={46} strokeWidth={1.4} /></div>
                   <div style={{ fontWeight: 700, color: '#c4b5fd', fontSize: '0.95rem' }}>Playlist vazia</div>
                   <div style={{ fontSize: '0.78rem', color: '#8f8f8f', marginTop: 6 }}>Adicione links acima para criar sua playlist personalizada.</div>
                 </div>
@@ -2553,7 +2648,7 @@ export default function AlunoPage() {
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>✏️ Meus Dados</h2>
+                <SectionTitle icon={<IconPencil size={17} />}>Meus Dados</SectionTitle>
                 <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>Complete ou atualize suas informações de cadastro</p>
               </div>
 
@@ -2581,7 +2676,7 @@ export default function AlunoPage() {
                   <input ref={fotoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFotoPick(f); e.target.value = ''; }} />
                   <button onClick={() => fotoInputRef.current?.click()} disabled={fotoUploading}
                     style={{ background: fotoUploading ? '#3a3a3a' : 'rgba(255,146,0,0.10)', color: fotoUploading ? '#8f8f8f' : '#FF9200', border: '1.5px solid rgba(255,146,0,0.4)', borderRadius: 8, padding: '7px 16px', fontWeight: 700, fontSize: '0.8rem', cursor: fotoUploading ? 'not-allowed' : 'pointer' }}>
-                    {fotoUploading ? '⏳ Enviando...' : student.foto_url ? '🔄 Trocar Foto' : '📷 Adicionar Foto'}
+                    {fotoUploading ? 'Enviando...' : student.foto_url ? 'Trocar Foto' : 'Adicionar Foto'}
                   </button>
                 </div>
               </div>
@@ -2601,7 +2696,7 @@ export default function AlunoPage() {
               {/* ── Matrícula ── */}
               {(student.ordem_inscricao || alunoInscricaoNum) && (
                 <div style={{ background: 'rgba(255,146,0,0.06)', border: '1px solid rgba(255,146,0,0.30)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,146,0,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>🪪</div>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,146,0,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FF9200', flexShrink: 0 }}><IconIdCard size={16} /></div>
                   <div>
                     <div style={{ fontSize: '0.7rem', color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 1 }}>Matrícula</div>
                     <div style={{ fontWeight: 800, fontSize: '1.1rem', color: nucleoColor, fontFamily: 'monospace' }}>
@@ -2614,7 +2709,7 @@ export default function AlunoPage() {
 
               {/* Aviso de completude obrigatório */}
               <div style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.35)', borderRadius: 12, padding: '12px 16px', fontSize: '0.82rem', color: '#93c5fd', fontWeight: 600, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>📝</span>
+                <span style={{ display: 'flex', color: '#FF9200', flexShrink: 0 }}><IconNote size={18} /></span>
                 <div>
                   <div>Por favor, complete e atualize todos os dados do seu cadastro.</div>
                   <div style={{ fontWeight: 400, fontSize: '0.75rem', marginTop: 3, color: '#3b82f6' }}>
@@ -2625,7 +2720,7 @@ export default function AlunoPage() {
 
               {isMissing && (
                 <div style={{ background: 'rgba(234,179,8,0.10)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 12, padding: '12px 16px', fontSize: '0.8rem', color: '#fcd34d' }}>
-                  ⚠️ Dados incompletos. Preencha os campos abaixo para finalizar seu cadastro.
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconWarn size={13} /> Dados incompletos. Preencha os campos abaixo para finalizar seu cadastro.</span>
                 </div>
               )}
 
@@ -2866,7 +2961,7 @@ export default function AlunoPage() {
                 </div>
                 {(autoTipo === 'Infantil' || (student.menor_de_idade as boolean)) && (
                   <div style={{ marginTop: 10, background: 'rgba(59,130,246,0.10)', borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: '#93c5fd' }}>
-                    ℹ️ Como aluno(a) menor de idade, o Termo de Responsabilidade também deve ser assinado. Acesse a aba <strong>📄 Termo</strong>.
+                    Como aluno(a) menor de idade, o Termo de Responsabilidade também deve ser assinado. Acesse a aba <strong>Termo</strong>.
                     <button onClick={() => setActiveTab('termo')} style={{ marginLeft: 8, background: '#FF9200', color: '#fff', border: 'none', borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>Ver Termo</button>
                   </div>
                 )}
@@ -2916,7 +3011,7 @@ export default function AlunoPage() {
 
               <button onClick={handleSaveDados} disabled={dadosLoading}
                 style={{ background: dadosLoading ? '#3a3a3a' : 'linear-gradient(135deg, #FF9200, #d97706)', color: '#fff', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: dadosLoading ? 'not-allowed' : 'pointer', boxShadow: dadosLoading ? 'none' : '0 4px 14px rgba(255,146,0,0.35)' }}>
-                {dadosLoading ? '⏳ Salvando...' : '💾 Salvar Meus Dados'}
+                {dadosLoading ? '⏳ Salvando...' : 'Salvar Meus Dados'}
               </button>
 
               <div style={{ fontSize: '0.72rem', color: '#8f8f8f', textAlign: 'center', lineHeight: 1.5 }}>
@@ -2988,9 +3083,9 @@ export default function AlunoPage() {
 
           if (!isMenor) return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>📄 Termo de Responsabilidade</h2>
+              <SectionTitle icon={<IconDoc size={17} />}>Termo de Responsabilidade</SectionTitle>
               <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 16, padding: '32px 20px', textAlign: 'center' }}>
-                <div style={{ fontSize: '3rem', marginBottom: 12 }}>✅</div>
+                <div style={{ color: '#4ade80', marginBottom: 12, display: 'flex', justifyContent: 'center' }}><IconStar size={48} strokeWidth={1.6} /></div>
                 <div style={{ fontWeight: 700, fontSize: '1rem', color: '#86efac', marginBottom: 6 }}>Não aplicável</div>
                 <div style={{ fontSize: '0.82rem', color: '#4ade80', lineHeight: 1.5 }}>
                   Este aluno é maior de idade e não necessita de Termo de Responsabilidade.<br />
@@ -3003,13 +3098,13 @@ export default function AlunoPage() {
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>📄 Termo de Responsabilidade</h2>
+                <SectionTitle icon={<IconDoc size={17} />}>Termo de Responsabilidade</SectionTitle>
                 <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>Autorização para prática de capoeira — menor de idade</p>
               </div>
 
               {/* Status badge */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: termoSaved ? '#f0fdf4' : '#fffbeb', border: `1px solid ${termoSaved ? '#bbf7d0' : '#fde68a'}`, borderRadius: 12, padding: '12px 16px' }}>
-                <span style={{ fontSize: '1.4rem' }}>{termoSaved ? '✅' : '⏳'}</span>
+                <span style={{ display: 'flex', color: termoSaved ? '#4ade80' : '#FF9200' }}>{termoSaved ? <IconStar size={26} /> : <IconClock size={26} />}</span>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '0.88rem', color: termoSaved ? '#166534' : '#92400e' }}>
                     {termoSaved ? 'Termo assinado' : 'Assinatura pendente'}
@@ -3035,7 +3130,7 @@ export default function AlunoPage() {
               <div style={{ background: '#161616', border: '2px solid rgba(255,146,0,0.45)', borderRadius: 16, overflow: 'hidden' }}>
                 <div style={{ background: '#FF9200', padding: '14px 20px', textAlign: 'center' }}>
                   <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    ⚠️ Autorização de Participação — Menor de Idade
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconWarn size={14} /> Autorização de Participação — Menor de Idade</span>
                   </div>
                 </div>
                 <div style={{ padding: '24px 22px', fontFamily: 'Georgia, serif' }}>
@@ -3082,7 +3177,7 @@ export default function AlunoPage() {
               {!termoSaved ? (
                 <button onClick={handleSaveTermo} disabled={termoSaving || !termoForm.nome_responsavel.trim()}
                   style={{ background: termoForm.nome_responsavel.trim() ? `linear-gradient(135deg, #dc2626, #b91c1c)` : '#2e2e2e', color: termoForm.nome_responsavel.trim() ? '#fff' : '#9ca3af', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: termoForm.nome_responsavel.trim() ? 'pointer' : 'not-allowed', boxShadow: termoForm.nome_responsavel.trim() ? '0 4px 14px rgba(220,38,38,0.35)' : 'none' }}>
-                  {termoSaving ? '⏳ Salvando...' : '✍️ Confirmar e Assinar Termo'}
+                  {termoSaving ? '⏳ Salvando...' : 'Confirmar e Assinar Termo'}
                 </button>
               ) : (
                 <button onClick={handlePrint}
@@ -3155,7 +3250,7 @@ export default function AlunoPage() {
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>📊 Dashboard de Evolução</h2>
+                <SectionTitle icon={<IconChart size={17} />}>Dashboard de Evolução</SectionTitle>
                 <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>Acompanhe sua frequência e evolução nos treinos</p>
               </div>
 
@@ -3166,13 +3261,13 @@ export default function AlunoPage() {
                   {/* Stats cards */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
                     {[
-                      { label: 'Total de treinos', value: totalDays, icon: '🥋', color: '#FF9200', bg: 'rgba(255,146,0,0.10)', border: 'rgba(255,146,0,0.30)' },
-                      { label: 'Este mês', value: thisMonthCount, icon: '📅', color: '#c4b5fd', bg: '#f5f3ff', border: '#e9d5ff' },
-                      { label: 'Mês passado', value: lastMonthCount, icon: '📆', color: '#67e8f9', bg: '#f0f9ff', border: '#bae6fd' },
-                      { label: 'Sequência atual', value: `${streak}d`, icon: '🔥', color: '#f87171', bg: '#fef2f2', border: '#fecaca' },
+                      { label: 'Total de treinos', value: totalDays, Icon: IconBerimbau, color: '#FF9200', bg: 'rgba(255,146,0,0.10)', border: 'rgba(255,146,0,0.30)' },
+                      { label: 'Este mês', value: thisMonthCount, Icon: IconClock, color: '#c4b5fd', bg: 'rgba(139,92,246,0.10)', border: 'rgba(139,92,246,0.30)' },
+                      { label: 'Mês passado', value: lastMonthCount, Icon: IconChart, color: '#67e8f9', bg: 'rgba(34,211,238,0.08)', border: 'rgba(34,211,238,0.28)' },
+                      { label: 'Sequência atual', value: `${streak}d`, Icon: IconFlame, color: '#f87171', bg: 'rgba(239,68,68,0.09)', border: 'rgba(248,113,113,0.3)' },
                     ].map(s => (
                       <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ fontSize: '1.6rem', lineHeight: 1 }}>{s.icon}</div>
+                        <span style={{ display: 'flex', color: s.color }}><s.Icon size={26} strokeWidth={1.7} /></span>
                         <div>
                           <div style={{ fontSize: '1.4rem', fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</div>
                           <div style={{ fontSize: '0.7rem', color: '#a3a3a3', marginTop: 2 }}>{s.label}</div>
@@ -3265,7 +3360,7 @@ export default function AlunoPage() {
 
                   {evolucaoDates.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '40px 20px', background: '#141414', borderRadius: 16, border: '2px dashed #2e2e2e' }}>
-                      <div style={{ fontSize: '3rem', marginBottom: 10 }}>🥋</div>
+                      <div style={{ color: '#FF9200', marginBottom: 10, display: 'flex', justifyContent: 'center' }}><IconBerimbau size={48} strokeWidth={1.4} /></div>
                       <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#d4d4d4' }}>Nenhuma presença registrada</div>
                       <div style={{ fontSize: '0.78rem', color: '#8f8f8f', marginTop: 6, lineHeight: 1.5 }}>
                         Use a aba <strong>Presença</strong> para registrar seus treinos. Eles aparecerão aqui automaticamente.
@@ -3277,13 +3372,13 @@ export default function AlunoPage() {
                   {totalDays > 0 && (
                     <div style={{ background: `${nucleoColor}10`, borderRadius: 12, padding: '14px 16px', border: `1px solid ${nucleoColor}30`, fontSize: '0.8rem', color: '#d4d4d4', lineHeight: 1.6 }}>
                       {streak >= 7 ? (
-                        <span>🔥 <strong>Incrível!</strong> Você está em sequência há {streak} dias. Continue assim!</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconFlame size={15} /> <strong>Incrível!</strong> Você está em sequência há {streak} dias. Continue assim!</span>
                       ) : thisMonthCount >= 8 ? (
-                        <span>⭐ <strong>Ótima frequência</strong> este mês! {thisMonthCount} treinos registrados.</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconStar size={15} /> <strong>Ótima frequência</strong> este mês! {thisMonthCount} treinos registrados.</span>
                       ) : thisMonthCount >= 4 ? (
-                        <span>💪 Você treinou {thisMonthCount} vezes este mês. Tente aumentar a frequência para evoluir mais rápido!</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconTrend size={15} /> Você treinou {thisMonthCount} vezes este mês. Tente aumentar a frequência para evoluir mais rápido!</span>
                       ) : (
-                        <span>📈 Frequência regular é chave para a evolução na capoeira. Tente treinar pelo menos 2x por semana.</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconTrend size={15} /> Frequência regular é chave para a evolução na capoeira. Tente treinar pelo menos 2x por semana.</span>
                       )}
                     </div>
                   )}
@@ -3294,6 +3389,100 @@ export default function AlunoPage() {
         })()}
 
       </main>
+
+      {/* ── Sidebar (menu hambúrguer) ── */}
+      {sidebarOpen && (
+        <div onClick={e => { if (e.target === e.currentTarget) setSidebarOpen(false); }}
+          role="dialog" aria-modal="true" aria-label="Menu"
+          style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.65)', display: 'flex' }}>
+          <aside onClick={e => e.stopPropagation()}
+            style={{
+              width: 'min(310px, 86vw)', height: '100%', background: '#141414', borderRight: '1px solid #262626',
+              display: 'flex', flexDirection: 'column', animation: 'sidebarIn 0.22s ease-out',
+              boxShadow: '14px 0 40px rgba(0,0,0,0.5)',
+            }}>
+            <style>{`@keyframes sidebarIn { from { transform: translateX(-24px); opacity: 0 } to { transform: translateX(0); opacity: 1 } }`}</style>
+            {/* Perfil */}
+            <div style={{ padding: '18px 16px 14px', background: 'linear-gradient(150deg, #1f1f1f 0%, #141414 100%)', borderBottom: '1px solid #262626', position: 'relative' }}>
+              <div aria-hidden="true" style={{ position: 'absolute', top: -46, right: -46, width: 130, height: 130, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,146,0,0.20) 0%, rgba(255,146,0,0) 70%)', pointerEvents: 'none' }} />
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+                  {student?.foto_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={student.foto_url} alt="" style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,146,0,0.65)', flexShrink: 0 }} />
+                  ) : (
+                    <span style={{ width: 50, height: 50, borderRadius: '50%', background: 'rgba(255,146,0,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FF9200', flexShrink: 0 }}>
+                      <IconUser size={24} />
+                    </span>
+                  )}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.98rem', color: '#f5f5f4', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#FF9200', fontWeight: 600, marginTop: 1 }}>
+                      {student?.graduacao || 'Aluno'}{student?.nucleo ? ` · ${student.nucleo}` : ''}
+                    </div>
+                  </div>
+                </div>
+                <button onClick={() => setSidebarOpen(false)} aria-label="Fechar menu"
+                  style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, border: '1px solid #2e2e2e', background: '#1c1c1c', color: '#d4d4d4', cursor: 'pointer' }}>
+                  <IconX size={16} />
+                </button>
+              </div>
+              {alunoInscricaoNum != null && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid #2a2a2a', borderRadius: 8, padding: '4px 10px' }}>
+                  <span style={{ fontSize: '0.6rem', color: '#8f8f8f', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>ID</span>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#f5f5f4', letterSpacing: '0.06em' }}>{`CCLN-${String(alunoInscricaoNum).padStart(3, '0')}`}</span>
+                </div>
+              )}
+            </div>
+            {/* Navegação */}
+            <nav style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 14px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {tabs.filter(t => t.id !== 'conta').map(tab => {
+                const TabIcon = TAB_ICONS[tab.id] || IconDoc;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
+                    aria-current={isActive ? 'page' : undefined}
+                    style={{
+                      position: 'relative', display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                      padding: '11px 12px', borderRadius: 12, border: 'none', cursor: 'pointer', textAlign: 'left',
+                      background: isActive ? 'rgba(255,146,0,0.13)' : 'transparent',
+                      color: isActive ? '#FF9200' : '#d4d4d4',
+                    }}>
+                    <span style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                      background: isActive ? 'rgba(255,146,0,0.16)' : '#1e1e1e', color: isActive ? '#FF9200' : '#a3a3a3',
+                    }}>
+                      <TabIcon size={18} />
+                    </span>
+                    <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: isActive ? 700 : 600 }}>{tab.label}</span>
+                    {tab.badge && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', flexShrink: 0 }} />}
+                    {isActive && <span style={{ width: 4, height: 18, borderRadius: 2, background: '#FF9200', flexShrink: 0 }} />}
+                  </button>
+                );
+              })}
+            </nav>
+            {/* Rodapé: conta e sair */}
+            <div style={{ borderTop: '1px solid #262626', padding: '10px 10px calc(12px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <button onClick={() => { setActiveTab('conta'); setSidebarOpen(false); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', borderRadius: 12, border: 'none', background: 'transparent', color: '#d4d4d4', cursor: 'pointer', textAlign: 'left' }}>
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: '#1e1e1e', color: '#a3a3a3' }}>
+                  <IconGear size={18} />
+                </span>
+                <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 600 }}>Minha Conta</span>
+              </button>
+              {!isAdminPreview && (
+                <button onClick={handleLogout}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', borderRadius: 12, border: 'none', background: 'transparent', color: '#f87171', cursor: 'pointer', textAlign: 'left' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: 'rgba(239,68,68,0.10)', color: '#f87171' }}>
+                    <IconLogout size={18} />
+                  </span>
+                  <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 700 }}>Sair da conta</span>
+                </button>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
 
       {/* Navegação inferior fixa, estilo aplicativo */}
       <nav
@@ -3314,47 +3503,21 @@ export default function AlunoPage() {
                 <span style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 28, borderRadius: 999,
                   background: isActive ? 'rgba(255,146,0,0.16)' : 'transparent',
-                  fontSize: '1.2rem', lineHeight: 1, transition: 'background 0.15s',
-                }}>{tab.icon}</span>
+                  fontSize: '1.2rem', lineHeight: 1, transition: 'background 0.15s', color: isActive ? '#FF9200' : '#8f8f8f',
+                }}>{(() => { const Ic = TAB_ICONS[tab.id] || IconDoc; return <Ic size={20} />; })()}</span>
                 <span style={{ fontSize: '0.62rem', fontWeight: isActive ? 700 : 500, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>{tab.label}</span>
                 {tab.badge && <span style={{ position: 'absolute', top: 4, right: 'calc(50% - 22px)', width: 8, height: 8, borderRadius: '50%', background: '#ef4444', border: '1.5px solid #0c0c0c' }} />}
               </button>
             );
           })}
-          <button onClick={() => setShowMore(true)} aria-label="Mais seções"
+          <button onClick={() => setSidebarOpen(true)} aria-label="Mais seções"
             style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '7px 2px', border: 'none', background: 'none', cursor: 'pointer', color: '#8f8f8f', WebkitTapHighlightColor: 'transparent' }}>
-            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 28, borderRadius: 999, fontSize: '1.2rem', lineHeight: 1 }}>⋯</span>
-            <span style={{ fontSize: '0.62rem', fontWeight: 500, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>Mais</span>
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 28, borderRadius: 999, color: '#8f8f8f' }}><IconMenu size={20} /></span>
+            <span style={{ fontSize: '0.62rem', fontWeight: 500, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>Menu</span>
             {tabs.filter(t => !primaryTabIds.includes(t.id)).some(t => t.badge) && <span style={{ position: 'absolute', top: 4, right: 'calc(50% - 22px)', width: 8, height: 8, borderRadius: '50%', background: '#ef4444', border: '1.5px solid #0c0c0c' }} />}
           </button>
         </div>
       </nav>
-
-      {/* Gaveta "Mais" — todas as seções */}
-      {showMore && (
-        <div onClick={e => { if (e.target === e.currentTarget) setShowMore(false); }}
-          style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end' }}>
-          <div role="dialog" aria-label="Todas as seções" style={{
-            width: '100%', maxWidth: 560, margin: '0 auto', background: '#141414',
-            borderRadius: '20px 20px 0 0', border: '1px solid #262626', borderBottom: 'none',
-            padding: '14px 18px calc(18px + env(safe-area-inset-bottom, 0px))',
-            maxHeight: '72vh', overflowY: 'auto',
-          }}>
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#3a3a3a', margin: '0 auto 14px' }} />
-            <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Todas as seções</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-              {tabs.map(tab => (
-                <button key={tab.id} onClick={() => { setActiveTab(tab.id); setShowMore(false); }}
-                  style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 4px', background: '#1c1c1c', border: '1px solid #262626', borderRadius: 14, cursor: 'pointer', color: activeTab === tab.id ? '#FF9200' : '#d4d4d4' }}>
-                  <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>{tab.icon}</span>
-                  <span style={{ fontSize: '0.62rem', fontWeight: 600, textAlign: 'center', lineHeight: 1.25 }}>{tab.label}</span>
-                  {tab.badge && <span style={{ position: 'absolute', top: 6, right: 8, width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

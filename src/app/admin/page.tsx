@@ -11,6 +11,7 @@ import AlunoViewer from '@/components/AlunoViewer';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { getTenantIdByKey } from '@/lib/tenants';
 import WhatsappFilaPanel from '@/components/WhatsappFilaPanel';
+import MuralAdmin from '@/components/MuralAdmin';
 import { invalidateConfigCache } from '@/hooks/useSystemConfig';
 import EditAccountModal from '@/components/EditAccountModal';
 import MyAccountCard from '@/components/MyAccountCard';
@@ -648,6 +649,8 @@ function DbStatusPanel({ ds, dbCopied, setDbCopied }: { ds: Record<string,unknow
   );
 }
 
+type MuralItem = { id: string; tipo: 'cartaz' | 'aviso'; titulo: string; texto?: string; imagem_path?: string; autor: string; autor_login: string; nucleo?: string; created_at: string };
+
 export default function AdminPage() {
   const { t, lang } = useLanguage();
   const contentAreaRef = useRef<HTMLDivElement>(null);
@@ -907,7 +910,7 @@ export default function AdminPage() {
   const [deleteAdminPass, setDeleteAdminPass] = useState('');
   const [matriculaEditNum, setMatriculaEditNum] = useState('');
   const [matriculaEditPass, setMatriculaEditPass] = useState('');
-  const [activeTab, setActiveTab] = useState<'alunos' | 'presencas' | 'relatorio' | 'ranking' | 'certificado' | 'financeiro' | 'doacoes' | 'editais' | 'materiais' | 'patrimonio' | 'rascunhos' | 'dados-faltantes' | 'manual' | 'eventos' | 'lixeira' | 'justificativas' | 'contas' | 'auditoria' | 'responsaveis' | 'docs-historicos' | 'bibliografia' | 'estatuto' | 'regimento' | 'informacoes' | 'playlist' | 'minha-conta' | 'email-config' | 'aluno-view' | 'restauracao' | 'organograma' | 'hierarquia' | 'nucleos' | 'system-config'>('alunos');
+  const [activeTab, setActiveTab] = useState<'alunos' | 'presencas' | 'relatorio' | 'ranking' | 'certificado' | 'financeiro' | 'doacoes' | 'editais' | 'materiais' | 'patrimonio' | 'rascunhos' | 'dados-faltantes' | 'manual' | 'eventos' | 'lixeira' | 'justificativas' | 'contas' | 'auditoria' | 'responsaveis' | 'docs-historicos' | 'bibliografia' | 'estatuto' | 'regimento' | 'informacoes' | 'playlist' | 'minha-conta' | 'email-config' | 'mural' | 'aluno-view' | 'restauracao' | 'organograma' | 'hierarquia' | 'nucleos' | 'system-config'>('alunos');
   const [institucionalExpanded, setInstitucionalExpanded] = useState(false);
   // Área do Aluno — visualização pelo admin
   const [alunoViewStudentId, setAlunoViewStudentId] = useState('');
@@ -976,6 +979,7 @@ export default function AdminPage() {
   // ── Gerenciamento de Núcleos (tenants) ────────────────────────────────────
   type NucleoTenant = { id: string; nome: string; slug: string; endereco?: string; cidade?: string; estado?: string; telefone?: string; email?: string; logo_url?: string; ativo: boolean; created_at: string; dias_treino?: string[]; admin_login?: string; lat?: number; lng?: number };
   const [nucleosList, setNucleosList] = useState<NucleoTenant[]>([]);
+  const [muralItems, setMuralItems] = useState<MuralItem[]>([]);
   const [loadingNucleos, setLoadingNucleos] = useState(false);
   const [showCreateNucleoModal, setShowCreateNucleoModal] = useState(false);
   const [nucleoForm, setNucleoForm] = useState<{ nome: string; endereco: string; cidade: string; estado: string; telefone: string; email: string; lat: string; lng: string; dias_treino: string[]; admin_login: string; admin_senha: string; admin_nome: string; admin_email: string; admin_cpf: string }>({ nome: '', endereco: '', cidade: '', estado: '', telefone: '', email: '', lat: '', lng: '', dias_treino: [], admin_login: '', admin_senha: '', admin_nome: '', admin_email: '', admin_cpf: '' });
@@ -2251,6 +2255,9 @@ export default function AdminPage() {
                 if (d.authenticated) { setMyAccountEmail(d.email || ''); setMyAccountCpf(d.cpf || ''); setMyAccountNome(d.nome || ''); }
               }).catch(() => {});
             }
+            if (key === 'mural') {
+              fetch('/api/mural').then(r => r.json()).then(d => { setMuralItems(Array.isArray(d.items) ? d.items : []); }).catch(() => {});
+            }
             if (key === 'email-config') {
               if (!emailCfgLoaded) { fetch('/api/admin/email-config').then(r => r.json()).then(d => { setEmailCfg(d); setEmailCfgLoaded(true); }).catch(() => {}); }
             }
@@ -2298,6 +2305,7 @@ export default function AdminPage() {
                 { key: 'alunos',        icon: '🎓', label: 'Alunos' },
                 { key: 'responsaveis',  icon: '🔐', label: 'Contas de Acesso', geralOnly: true },
                 { key: 'minha-conta',   icon: '👤', label: 'Minha Conta' },
+                { key: 'mural',         icon: '📌', label: 'Mural do Aluno' },
                 { key: 'rascunhos',     icon: '📝', label: 'Cadastro dos Responsáveis', badge: rascunhosCount > 0 ? rascunhosCount : undefined },
                 { key: 'justificativas',icon: '📋', label: 'Justificativas', badge: justPendCount > 0 ? justPendCount : undefined },
               ],
@@ -12755,6 +12763,13 @@ Suporte Ginga Gestão.`
               }).catch(() => {});
             }}
           />
+        </div>
+      )}
+
+      {/* ===== ABA MURAL DO ALUNO (qualquer admin) ===== */}
+      {activeTab === 'mural' && (
+        <div style={{ paddingTop: 24, maxWidth: 980, margin: '0 auto' }}>
+          <MuralAdmin nucleos={dynamicNucleos.map(n => ({ nome: n.nome }))} />
         </div>
       )}
 
