@@ -50,6 +50,30 @@ export const IconWallet = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
 export const IconMedal = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
   base(size, style, strokeWidth, <><circle cx="12" cy="14.5" r="5.5" /><path d="m8.5 9.5-3-6.5h4L12 8l2.5-5h4l-3 6.5" /><path d="m12 12.2.9 1.9 2 .3-1.4 1.4.3 2-1.8-1-1.8 1 .3-2-1.4-1.4 2-.3Z" /></>);
 
+export const IconCheck = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
+  base(size, style, strokeWidth, <path d="m4.5 12.5 5 5 10-11" />);
+
+export const IconInfo = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
+  base(size, style, strokeWidth, <><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 7.8v.4" /></>);
+
+export const IconLock = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
+  base(size, style, strokeWidth, <><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /><path d="M12 14.5v2.5" /></>);
+
+export const IconTrash = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
+  base(size, style, strokeWidth, <><path d="M4 7h16" /><path d="M9.5 7V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v2" /><path d="M6.5 7 7.3 19a2 2 0 0 0 2 1.9h5.4a2 2 0 0 0 2-1.9L17.5 7" /><path d="M10 11v6" /><path d="M14 11v6" /></>);
+
+export const IconBag = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
+  base(size, style, strokeWidth, <><path d="M5 8h14l-1 12.5a1.5 1.5 0 0 1-1.5 1.4h-9A1.5 1.5 0 0 1 6 20.5Z" /><path d="M8.5 10.5V6.8a3.5 3.5 0 0 1 7 0v3.7" /></>);
+
+export const IconLink = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
+  base(size, style, strokeWidth, <><path d="M9.5 14.5 14.5 9.5" /><path d="M11 6.5 12.8 4.7a4 4 0 0 1 5.7 5.7L16.6 12.3" /><path d="M13 17.5 11.2 19.3a4 4 0 0 1-5.7-5.7L7.4 11.7" /></>);
+
+export const IconRefresh = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
+  base(size, style, strokeWidth, <><path d="M20 11a8 8 0 1 0-1.2 6" /><path d="M20 5v6h-6" /></>);
+
+export const IconPrinter = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
+  base(size, style, strokeWidth, <><path d="M7 8V3.5h10V8" /><rect x="4" y="8" width="16" height="8.5" rx="2" /><path d="M7 13.5h10v7H7z" /></>);
+
 export const IconPencil = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
   base(size, style, strokeWidth, <><path d="M14.5 5.5 18.5 9.5" /><path d="M4.5 19.5 5.5 15 16.7 3.8a1.6 1.6 0 0 1 2.3 0l1.2 1.2a1.6 1.6 0 0 1 0 2.3L9 18.5l-4.5 1Z" /></>);
 

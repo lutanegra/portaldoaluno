@@ -93,17 +93,17 @@ export default function FrequenciaCard({ studentId, cordaColors, graduacao }: Pr
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ display: 'flex', color: '#FF9200' }}><IconTrend size={15} /></span>
         <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Minha Frequência</span>
-        <span style={{ flex: 1, height: 1, background: '#262626' }} />
+        <span style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(255,146,0,0.25), rgba(255,255,255,0.06))' }} />
       </div>
 
-      <div style={{ background: 'linear-gradient(160deg, #181818 0%, #111 100%)', borderRadius: 18, border: '1px solid #2a2a2a', padding: '16px 16px 14px' }}>
+      <div className="glass" style={{ borderRadius: 18, padding: '16px 16px 14px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', color: '#8f8f8f', fontSize: '0.8rem', padding: '18px 0' }}>Carregando frequência...</div>
         ) : (
           <>
             {/* Resumo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: 12, background: thisMonth >= 8 ? 'rgba(255,146,0,0.16)' : 'rgba(255,255,255,0.06)', color: thisMonth >= 8 ? '#FF9200' : '#a3a3a3', flexShrink: 0 }}>
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: 12, background: 'radial-gradient(circle at 32% 26%, rgba(255,146,0,0.30), rgba(255,146,0,0.08))', border: '1px solid rgba(255,146,0,0.32)', color: thisMonth >= 8 ? '#FF9200' : '#a3a3a3', flexShrink: 0, boxShadow: thisMonth >= 8 ? '0 0 16px rgba(255,146,0,0.22)' : 'none' }}>
                 {thisMonth >= 8 ? <IconFlame size={20} /> : <IconTrend size={20} />}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -138,8 +138,8 @@ export default function FrequenciaCard({ studentId, cordaColors, graduacao }: Pr
                     width: '100%', maxWidth: 30, borderRadius: '6px 6px 3px 3px',
                     height: `${Math.max((m.count / maxCount) * 100, m.count > 0 ? 8 : 3)}%`,
                     background: m.count > 0
-                      ? 'linear-gradient(180deg, #FF9200 0%, rgba(255,146,0,0.35) 100%)'
-                      : '#232323',
+                      ? 'linear-gradient(180deg, #ffb84d 0%, #FF9200 45%, rgba(255,146,0,0.30) 100%)'
+                      : 'rgba(255,255,255,0.07)',
                     transition: 'height 0.3s ease',
                   }} />
                 </div>
@@ -160,8 +160,8 @@ export default function FrequenciaCard({ studentId, cordaColors, graduacao }: Pr
                       title={day.active ? `Presença em ${day.date.split('-').reverse().slice(0, 2).join('/')}` : undefined}
                       style={{
                         flex: 1, aspectRatio: '1', maxWidth: 26, borderRadius: '50%',
-                        background: day.active ? '#FF9200' : '#232323',
-                        boxShadow: day.active ? '0 0 8px rgba(255,146,0,0.45)' : 'none',
+                        background: day.active ? '#FF9200' : 'rgba(255,255,255,0.08)',
+                        boxShadow: day.active ? '0 0 10px rgba(255,146,0,0.5)' : 'none',
                       }} />
                   ))}
                 </div>
@@ -170,14 +170,14 @@ export default function FrequenciaCard({ studentId, cordaColors, graduacao }: Pr
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
               <span style={{ fontSize: '0.62rem', color: '#6b6b6b' }}>Últimos 28 dias</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.62rem', color: '#6b6b6b' }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FF9200', display: 'inline-block' }} /> presente
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#232323', display: 'inline-block', marginLeft: 6 }} /> sem registro
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FF9200', boxShadow: '0 0 8px rgba(255,146,0,0.5)', display: 'inline-block' }} /> presente
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', display: 'inline-block', marginLeft: 6 }} /> sem registro
               </span>
             </div>
 
             {/* Rodapé com graduação */}
             {graduacao && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid #242424' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                 <span style={{ display: 'inline-flex', height: 10, borderRadius: 5, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.45)', flexShrink: 0, minWidth: 26 }}>
                   {cordaColors.map((c: string, i: number) => (
                     <span key={i} style={{ flex: 1, background: c === '#FFFFFF' ? '#e5e7eb' : c }} />

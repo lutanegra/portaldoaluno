@@ -10,18 +10,30 @@ import {
   IconCamera, IconFolder, IconNote, IconMusic, IconGear, IconDoc, IconMenu, IconX,
   IconLogout, IconUser, IconChevron, IconBell, IconImage, IconEye, IconTrend,
   IconFlame, IconStar, IconWarn, IconClock, IconBerimbau,
+  IconCheck, IconInfo, IconLock, IconTrash, IconBag, IconLink, IconRefresh, IconPrinter,
 } from '@/components/icons';
 import FrequenciaCard from './FrequenciaCard';
 
 /** Título de seção com ícone SVG à esquerda (substitui os h2 com emoji). */
 function SectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 9, fontSize: '1.08rem', fontWeight: 800, color: '#f5f5f4', letterSpacing: '-0.01em' }}>
-      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 10, background: 'rgba(255,146,0,0.12)', color: '#FF9200', flexShrink: 0 }}>
+    <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 10, fontSize: '1.06rem', fontWeight: 800, color: '#f5f5f4', letterSpacing: '-0.01em' }}>
+      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 33, height: 33, borderRadius: 11, background: 'radial-gradient(circle at 32% 26%, rgba(255,146,0,0.30), rgba(255,146,0,0.08))', border: '1px solid rgba(255,146,0,0.32)', color: '#FF9200', flexShrink: 0, boxShadow: '0 0 16px rgba(255,146,0,0.18)' }}>
         {icon}
       </span>
       {children}
     </h2>
+  );
+}
+
+/** Rótulo pequeno de grupo (Mural, Eventos...) com ícone e linha em degradê. */
+function SectionLabel({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ display: 'flex', color: '#FF9200' }}>{icon}</span>
+      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{children}</span>
+      <span style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(255,146,0,0.25), rgba(255,255,255,0.06))' }} />
+    </div>
   );
 }
 
@@ -602,7 +614,7 @@ export default function AlunoPage() {
         const data = await res.json();
         if (!res.ok) { setPresencaMsg(data.error || 'Não foi possível registrar presença.'); setPresencaStatus('error'); }
         else if (data.alreadyRegistered) { setPresencaMsg('Presença já registrada hoje!'); setPresencaStatus('success'); }
-        else { setPresencaMsg('✅ Presença registrada com sucesso!'); setPresencaStatus('success'); }
+        else { setPresencaMsg('Presença registrada com sucesso!'); setPresencaStatus('success'); }
       } catch { setPresencaMsg('Erro ao registrar presença.'); setPresencaStatus('error'); }
       finally { setPresencaLoading(false); }
     }, () => { setPresencaMsg('Permissão de localização negada. Por favor, permita o acesso à localização.'); setPresencaStatus('error'); setPresencaLoading(false); });
@@ -774,14 +786,14 @@ export default function AlunoPage() {
             <div className="pa-steps-label">Passo 2 de 3 — seus dados de acesso</div>
 
             {registerError && (
-              <div className="pa-alert pa-alert-error">⚠️ {registerError}</div>
+              <div className="pa-alert pa-alert-error">{registerError}</div>
             )}
             {registerSuccess && (
               <div className="pa-alert pa-alert-success">✅ {registerSuccess}</div>
             )}
 
             <div className="pa-alert pa-alert-info">
-              📋 Sua conta já cria o cadastro na associação. Depois, complete o que faltar (núcleo, endereço, documentos) na aba <strong>Meus Dados</strong>.
+              Sua conta já cria o cadastro na associação. Depois, complete o que faltar (núcleo, endereço, documentos) na aba <strong>Meus Dados</strong>.
             </div>
 
             <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -871,7 +883,7 @@ export default function AlunoPage() {
                 className="pa-btn"
                 disabled={registerLoading || !!registerSuccess}
                 style={{ marginTop: 8 }}>
-                {registerLoading ? '⏳ Criando conta...' : registerSuccess ? '✅ Preparando seu acesso...' : 'Criar minha conta'}
+                {registerLoading ? 'Criando conta...' : registerSuccess ? 'Preparando seu acesso...' : 'Criar minha conta'}
               </button>
             </form>
 
@@ -887,16 +899,16 @@ export default function AlunoPage() {
 
   // ── FORGOT PASSWORD ───────────────────────────────────────────────────────
   if (showForgot) {
-    const inpStyle = { width: '100%', background: '#111111', color: '#f5f5f4', borderColor: '#2e2e2e', borderStyle: 'solid' as const, borderWidth: 1.5, borderRadius: 10, padding: '11px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' as const };
+    const inpStyle = { width: '100%', background: 'rgba(10,10,12,0.6)', color: '#f5f5f4', border: '1.5px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '11px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' as const };
     const lblStyle = { display: 'block', fontSize: '0.8rem', fontWeight: 600 as const, color: '#d4d4d4', marginBottom: 5 };
 
     return (
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#0f172a,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-        <div style={{ background: '#161616', borderRadius: 20, padding: '32px 28px', width: '100%', maxWidth: 400, boxShadow: '0 25px 60px rgba(0,0,0,0.4)' }}>
+        <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 20, padding: '32px 28px', width: '100%', maxWidth: 400, boxShadow: '0 25px 60px rgba(0,0,0,0.4)' }}>
 
           {forgotStep === 'done' ? (
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '3.5rem', marginBottom: 12 }}>✅</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}><span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: '50%', background: 'radial-gradient(circle at 32% 28%, rgba(34,197,94,0.30), rgba(34,197,94,0.08))', border: '1px solid rgba(34,197,94,0.4)', color: '#4ade80' }}><IconCheck size={30} /></span></div>
               <h2 style={{ margin: '0 0 8px', fontSize: '1.2rem', fontWeight: 800, color: '#f5f5f4' }}>Senha redefinida!</h2>
               <p style={{ fontSize: '0.85rem', color: '#a3a3a3', marginBottom: 20 }}>Sua nova senha foi salva com sucesso. Você já pode fazer login.</p>
               <button onClick={() => { setShowForgot(false); setForgotStep('lookup'); setForgotInput(''); setForgotMsg(''); setResetMsg(''); setResetPassword(''); setResetConfirmPassword(''); setResetOtp(''); }}
@@ -907,7 +919,7 @@ export default function AlunoPage() {
           ) : forgotStep === 'reset' ? (
             <>
               <div style={{ textAlign: 'center', marginBottom: 22 }}>
-                <div style={{ fontSize: 38, marginBottom: 6 }}>📨</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}><span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 60, height: 60, borderRadius: '50%', background: 'radial-gradient(circle at 32% 28%, rgba(255,146,0,0.30), rgba(255,146,0,0.08))', border: '1px solid rgba(255,146,0,0.4)', color: '#FF9200' }}><IconBell size={28} /></span></div>
                 <h2 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 700 }}>Digite o código</h2>
                 <p style={{ margin: 0, fontSize: '0.78rem', color: '#a3a3a3' }}>Enviamos um código de 6 dígitos para os canais vinculados à sua conta. Ele expira em 15 minutos.</p>
               </div>
@@ -962,7 +974,7 @@ export default function AlunoPage() {
                 </div>
                 <button type="submit" disabled={forgotLoading || resetPassword.length < 6 || resetPassword !== resetConfirmPassword || resetOtp.replace(/\D/g, '').length !== 6}
                   style={{ background: (resetPassword.length >= 6 && resetPassword === resetConfirmPassword && resetOtp.replace(/\D/g, '').length === 6) ? 'linear-gradient(135deg,#FF9200,#c86a00)' : '#2e2e2e', color: (resetPassword.length >= 6 && resetPassword === resetConfirmPassword && resetOtp.replace(/\D/g, '').length === 6) ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: 13, fontWeight: 700, fontSize: '0.95rem', cursor: forgotLoading ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
-                  {forgotLoading ? '⏳ Salvando...' : '✅ Salvar Nova Senha'}
+                  {forgotLoading ? 'Salvando...' : 'Salvar Nova Senha'}
                 </button>
               </form>
               <button onClick={async () => {
@@ -983,7 +995,7 @@ export default function AlunoPage() {
           ) : (
             <>
               <div style={{ textAlign: 'center', marginBottom: 22 }}>
-                <div style={{ fontSize: 38, marginBottom: 6 }}>🔑</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}><span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 60, height: 60, borderRadius: '50%', background: 'radial-gradient(circle at 32% 28%, rgba(255,146,0,0.30), rgba(255,146,0,0.08))', border: '1px solid rgba(255,146,0,0.4)', color: '#FF9200' }}><IconLock size={28} /></span></div>
                 <h2 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 700 }}>Recuperar Senha</h2>
                 <p style={{ margin: 0, fontSize: '0.78rem', color: '#a3a3a3' }}>Informe seu e-mail ou usuário para localizar sua conta.</p>
               </div>
@@ -1024,7 +1036,7 @@ export default function AlunoPage() {
                 </div>
                 <button type="submit" disabled={forgotLoading || !forgotInput.trim()}
                   style={{ background: forgotInput.trim() ? 'linear-gradient(135deg,#FF9200,#c86a00)' : '#2e2e2e', color: forgotInput.trim() ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: 13, fontWeight: 700, fontSize: '0.95rem', cursor: forgotLoading ? 'not-allowed' : 'pointer' }}>
-                  {forgotLoading ? '⏳ Enviando código...' : '📨 Enviar código de verificação'}
+                  {forgotLoading ? 'Enviando código...' : 'Enviar código de verificação'}
                 </button>
               </form>
               <button onClick={() => { setShowForgot(false); setForgotMsg(''); setForgotInput(''); }} style={{ width: '100%', marginTop: 12, background: 'none', border: 'none', color: '#8f8f8f', cursor: 'pointer', fontSize: '0.82rem' }}>← Voltar ao login</button>
@@ -1072,48 +1084,56 @@ export default function AlunoPage() {
   // ── DASHBOARD (LOGGED IN) ─────────────────────────────────────────────────
   const displayName = student?.apelido || student?.nome_social || student?.nome_completo?.split(' ')[0] || 'Aluno';
   const welcomeGreeting = student?.sexo === 'M'
-    ? `Seja bem-vindo, ${displayName}! 👋`
+    ? `Seja bem-vindo, ${displayName}`
     : student?.sexo === 'F'
-    ? `Seja bem-vinda, ${displayName}! 👋`
-    : `Seja bem-vindo(a), ${displayName}! 👋`;
+    ? `Seja bem-vinda, ${displayName}`
+    : `Seja bem-vindo(a), ${displayName}`;
 
   return (
-    <div className="pa-app" style={{ minHeight: '100vh', background: '#0a0a0a', fontFamily: 'var(--font-sans), system-ui, -apple-system, sans-serif' }}>
+    <div className="pa-app" style={{ minHeight: '100vh', background: 'transparent', fontFamily: 'var(--font-sans), system-ui, -apple-system, sans-serif', position: 'relative' }}>
+
+      {/* Fundo ambiente — gradientes radiais sutis (não rola com o conteúdo) */}
+      <div aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `
+        radial-gradient(900px 600px at 85% -10%, rgba(255,146,0,0.13) 0%, transparent 62%),
+        radial-gradient(700px 520px at -15% 30%, rgba(255,183,77,0.07) 0%, transparent 60%),
+        radial-gradient(800px 600px at 50% 115%, rgba(255,146,0,0.09) 0%, transparent 60%),
+        linear-gradient(180deg, #0d0d0f 0%, #08080a 100%)` }} />
 
       {/* Admin preview banner */}
       {isAdminPreview && (
-        <div style={{ background: '#b45309', color: '#fff', fontSize: '0.75rem', padding: '6px 20px', textAlign: 'center', fontWeight: 600, letterSpacing: '0.01em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <div style={{ position: 'relative', zIndex: 2, background: 'linear-gradient(90deg, rgba(255,146,0,0.22), rgba(255,146,0,0.12))', borderBottom: '1px solid rgba(255,146,0,0.3)', color: '#ffd9a8', fontSize: '0.75rem', padding: '6px 20px', textAlign: 'center', fontWeight: 600, letterSpacing: '0.01em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           Modo visualização admin — você está vendo a área do aluno como <strong style={{ marginLeft: 4 }}>{student?.nome_completo || '...'}</strong>
         </div>
       )}
 
       {/* Header do app — hambúrguer + marca; perfil e saída vivem na sidebar */}
-      <header style={{
+      <header className="glass-nav" style={{
         color: '#fff',
-        background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
-        borderBottom: '1px solid #262626',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
         position: 'sticky', top: 0, zIndex: 60,
+        borderRadius: '0 0 22px 22px',
+        marginBottom: -22,
       }}>
         <div style={{ maxWidth: 560, margin: '0 auto', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <button onClick={() => setSidebarOpen(true)} aria-label="Abrir menu" aria-expanded={sidebarOpen}
-            style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 42, height: 42, borderRadius: 12, border: '1px solid #2e2e2e', background: '#161616', color: '#e5e5e5', cursor: 'pointer' }}>
+          <button onClick={() => setSidebarOpen(true)} aria-label="Abrir menu" aria-expanded={sidebarOpen} className="press"
+            style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 42, height: 42, borderRadius: 13, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.05)', color: '#e5e5e5', cursor: 'pointer' }}>
             <IconMenu size={21} />
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-portal-aluno.png" alt="" style={{ width: 30, height: 30, borderRadius: 8, display: 'block' }} />
+            <img src="/logo-portal-aluno.png" alt="" style={{ width: 32, height: 32, borderRadius: 9, display: 'block', filter: 'drop-shadow(0 2px 10px rgba(255,146,0,0.35))' }} />
             <div style={{ fontWeight: 800, fontSize: '0.98rem', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
               Portal <span style={{ color: '#FF9200' }}>Aluno</span>
             </div>
           </div>
           {isAdminPreview ? (
-            <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,146,0,0.15)', border: '1px solid rgba(255,146,0,0.4)', borderRadius: 8, padding: '7px 11px', color: '#FF9200', fontSize: '0.72rem', fontWeight: 700 }}>
+            <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,146,0,0.14)', border: '1px solid rgba(255,146,0,0.4)', borderRadius: 9, padding: '7px 11px', color: '#FF9200', fontSize: '0.72rem', fontWeight: 700 }}>
               <IconEye size={14} /> Visualização
             </span>
           ) : (
-            <button onClick={() => setSidebarOpen(true)} aria-label="Abrir perfil"
-              style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 42, height: 42, borderRadius: '50%', border: '2px solid rgba(255,146,0,0.55)', background: '#161616', color: '#FF9200', cursor: 'pointer', overflow: 'hidden', padding: 0 }}>
+            <button onClick={() => setSidebarOpen(true)} aria-label="Abrir perfil" className="press"
+              style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 42, height: 42, borderRadius: '50%', border: '2px solid rgba(255,146,0,0.6)', background: 'rgba(255,146,0,0.12)', color: '#FF9200', cursor: 'pointer', overflow: 'hidden', padding: 0, boxShadow: '0 0 14px rgba(255,146,0,0.25)' }}>
               {student?.foto_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={student.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -1126,67 +1146,82 @@ export default function AlunoPage() {
       </header>
 
       {/* Content */}
-      <main style={{ maxWidth: 560, margin: '0 auto', padding: '18px 16px 96px' }}>
+      <main style={{ maxWidth: 560, margin: '0 auto', padding: '26px 16px 122px', position: 'relative', zIndex: 1 }}>
 
         {/* ── DASHBOARD ── */}
         {activeTab === 'dashboard' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             {student && (student.menor_de_idade as boolean) && !student.assinatura_responsavel && (
-              <div style={{ background: 'rgba(239,68,68,0.09)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{ background: 'linear-gradient(160deg, rgba(239,68,68,0.13) 0%, rgba(239,68,68,0.05) 100%)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 16, padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 12, backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}>
                 <span style={{ display: 'flex', color: '#fca5a5', flexShrink: 0, marginTop: 2 }}><IconWarn size={22} /></span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fca5a5', marginBottom: 3 }}>Termo de Responsabilidade pendente</div>
-                  <div style={{ fontSize: '0.8rem', color: '#fca5a5', lineHeight: 1.5, marginBottom: 10 }}>
+                  <div style={{ fontSize: '0.8rem', color: 'rgba(254,202,202,0.8)', lineHeight: 1.5, marginBottom: 10 }}>
                     Como aluno menor de idade, o termo de autorização ainda não foi assinado.
                   </div>
-                  <button onClick={() => setActiveTab('termo')}
-                    style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+                  <button onClick={() => setActiveTab('termo')} className="press"
+                    style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.85), rgba(185,28,28,0.85))', color: '#fff', border: '1px solid rgba(239,68,68,0.5)', borderRadius: 10, padding: '8px 16px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
                     Assinar Termo
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Welcome card — identidade Portal Aluno */}
-            <div style={{ background: 'linear-gradient(150deg, #1d1d1d 0%, #111111 100%)', borderRadius: 20, padding: '22px 22px', color: '#fff', border: '1px solid #2a2a2a', boxShadow: '0 10px 30px rgba(0,0,0,0.45)', position: 'relative', overflow: 'hidden' }}>
-              <div aria-hidden="true" style={{ position: 'absolute', top: -70, right: -70, width: 190, height: 190, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,146,0,0.22) 0%, rgba(255,146,0,0) 70%)', pointerEvents: 'none' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-                {student?.foto_url ? (
-                  <img src={student.foto_url} alt={displayName} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.5)', flexShrink: 0 }} />
-                ) : (
-                  <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,146,0,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <svg width="38" height="38" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="32" cy="10" r="7" fill="rgba(255,255,255,0.9)"/>
-                      <path d="M32 17 C26 20 22 28 24 36 L20 54" stroke="rgba(255,255,255,0.9)" strokeWidth="3.5" strokeLinecap="round"/>
-                      <path d="M32 17 C38 20 42 28 40 36 L44 54" stroke="rgba(255,255,255,0.9)" strokeWidth="3.5" strokeLinecap="round"/>
-                      <path d="M24 36 L14 44" stroke="rgba(255,255,255,0.9)" strokeWidth="3.5" strokeLinecap="round"/>
-                      <path d="M40 36 L50 32" stroke="rgba(255,255,255,0.9)" strokeWidth="3.5" strokeLinecap="round"/>
-                    </svg>
+            {/* Welcome card premium — glassmorphism com borda em degradê */}
+            <div style={{
+              borderRadius: 26, padding: 1.2, position: 'relative',
+              background: 'linear-gradient(140deg, rgba(255,146,0,0.55) 0%, rgba(255,255,255,0.10) 36%, rgba(255,255,255,0.06) 64%, rgba(255,183,77,0.42) 100%)',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.55), 0 0 36px rgba(255,146,0,0.10)',
+            }}>
+            <div className="glass" style={{ borderRadius: 25, padding: '22px 20px 18px', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+              <div aria-hidden="true" style={{ position: 'absolute', top: -90, right: -60, width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,146,0,0.20) 0%, rgba(255,146,0,0) 68%)', pointerEvents: 'none' }} />
+              <div aria-hidden="true" style={{ position: 'absolute', bottom: -110, left: -70, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,183,77,0.10) 0%, rgba(255,183,77,0) 70%)', pointerEvents: 'none' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 16, position: 'relative' }}>
+                <span style={{ position: 'relative', flexShrink: 0, display: 'inline-flex' }}>
+                  {student?.foto_url ? (
+                    <>
+                      <span aria-hidden="true" style={{ position: 'absolute', inset: -7, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,146,0,0.45) 0%, rgba(255,146,0,0) 72%)', filter: 'blur(6px)' }} />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={student.foto_url} alt={displayName} style={{ position: 'relative', width: 62, height: 62, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,146,0,0.65)', boxShadow: '0 6px 20px rgba(0,0,0,0.5)' }} />
+                    </>
+                  ) : (
+                    <span style={{ width: 62, height: 62, borderRadius: '50%', background: 'radial-gradient(circle at 32% 28%, rgba(255,146,0,0.32), rgba(255,146,0,0.10))', border: '1.5px solid rgba(255,146,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <svg width="38" height="38" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="32" cy="10" r="7" fill="rgba(255,255,255,0.9)"/>
+                        <path d="M32 17 C26 20 22 28 24 36 L20 54" stroke="rgba(255,255,255,0.9)" strokeWidth="3.5" strokeLinecap="round"/>
+                        <path d="M32 17 C38 20 42 28 40 36 L44 54" stroke="rgba(255,255,255,0.9)" strokeWidth="3.5" strokeLinecap="round"/>
+                        <path d="M24 36 L14 44" stroke="rgba(255,255,255,0.9)" strokeWidth="3.5" strokeLinecap="round"/>
+                        <path d="M40 36 L50 32" stroke="rgba(255,255,255,0.9)" strokeWidth="3.5" strokeLinecap="round"/>
+                      </svg>
+                    </span>
+                  )}
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '0.64rem', color: 'rgba(255,146,0,0.95)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.14em', display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span aria-hidden="true" style={{ width: 16, height: 1.5, borderRadius: 1, background: 'linear-gradient(90deg, rgba(255,146,0,0.9), rgba(255,146,0,0))' }} />
+                    Portal Aluno
                   </div>
-                )}
-                <div>
-                  <div style={{ fontSize: '0.7rem', color: '#FF9200', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Portal Aluno</div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 800, lineHeight: 1.3 }}>{welcomeGreeting}</div>
+                  <div style={{ fontSize: '1.28rem', fontWeight: 800, lineHeight: 1.25, letterSpacing: '-0.01em', textShadow: '0 1px 18px rgba(255,146,0,0.16)' }}>{welcomeGreeting}</div>
                   {student?.apelido && student.nome_completo && student.apelido !== student.nome_completo.split(' ')[0] && (
-                    <div style={{ fontSize: '0.78rem', opacity: 0.75, marginTop: 2 }}>{student.nome_completo}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>{student.nome_completo}</div>
                   )}
                 </div>
               </div>
               {/* Identity strip */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '8px 12px' }}>
-                  <div style={{ fontSize: '0.62rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Nome Completo</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, position: 'relative' }}>
+                <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '9px 12px' }}>
+                  <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Nome Completo</div>
                   <div style={{ fontSize: '0.82rem', fontWeight: 700, lineHeight: 1.2 }}>{student?.nome_completo || '—'}</div>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '8px 12px' }}>
-                  <div style={{ fontSize: '0.62rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Meu ID</div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 800, letterSpacing: '0.08em' }}>{alunoInscricaoNum != null ? `CCLN-${String(alunoInscricaoNum).padStart(3, '0')}` : '—'}</div>
+                <div style={{ background: 'rgba(255,146,0,0.07)', border: '1px solid rgba(255,146,0,0.25)', borderRadius: 12, padding: '9px 12px' }}>
+                  <div style={{ fontSize: '0.6rem', color: 'rgba(255,146,0,0.8)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Meu ID</div>
+                  <div style={{ fontSize: '0.86rem', fontWeight: 800, letterSpacing: '0.1em', color: '#ffb84d', textShadow: '0 0 12px rgba(255,146,0,0.35)' }}>{alunoInscricaoNum != null ? `CCLN-${String(alunoInscricaoNum).padStart(3, '0')}` : '—'}</div>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '8px 12px' }}>
-                  <div style={{ fontSize: '0.62rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Graduação</div>
+                <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '9px 12px' }}>
+                  <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Graduação</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span style={{ display: 'inline-flex', height: 12, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.55)', flexShrink: 0, minWidth: 28 }}>
+                    <span style={{ display: 'inline-flex', height: 12, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.45)', flexShrink: 0, minWidth: 28, boxShadow: '0 0 10px rgba(255,255,255,0.08)' }}>
                       {cordaColors.map((c: string, i: number) => (
                         <span key={i} style={{ flex: 1, background: c === '#FFFFFF' ? '#e5e7eb' : c }} />
                       ))}
@@ -1194,40 +1229,38 @@ export default function AlunoPage() {
                     <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>{student?.graduacao || 'Não informada'}</span>
                   </div>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '8px 12px' }}>
-                  <div style={{ fontSize: '0.62rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Núcleo</div>
+                <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '9px 12px' }}>
+                  <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Núcleo</div>
                   <div style={{ fontSize: '0.82rem', fontWeight: 700 }}>{student?.nucleo || 'CCLN'}</div>
                 </div>
               </div>
-              {/* ── Banner cadastro incompleto DENTRO do card verde ── */}
+              {/* ── Banner cadastro incompleto ── */}
               {cadastroIncompleto && (
-                <div style={{ marginTop: 14, borderRadius: 14, overflow: 'hidden', border: '2px solid rgba(239,68,68,0.55)', boxShadow: '0 4px 18px rgba(0,0,0,0.4)', animation: 'pulseCard 1.6s ease-in-out infinite' }}>
+                <div style={{ marginTop: 14, borderRadius: 15, overflow: 'hidden', border: '1px solid rgba(239,68,68,0.42)', background: 'linear-gradient(160deg, rgba(239,68,68,0.14) 0%, rgba(239,68,68,0.05) 100%)', boxShadow: '0 10px 30px rgba(0,0,0,0.35)', position: 'relative', animation: 'pulseCard 1.6s ease-in-out infinite' }}>
                   <style>{`
-                    @keyframes pulseCard { 0%,100%{box-shadow:0 4px 18px rgba(0,0,0,0.25),0 0 0 0 rgba(255,255,255,0.4)} 50%{box-shadow:0 4px 28px rgba(0,0,0,0.35),0 0 0 6px rgba(255,255,255,0)} }
+                    @keyframes pulseCard { 0%,100%{box-shadow:0 10px 30px rgba(0,0,0,0.35),0 0 0 0 rgba(239,68,68,0.35)} 50%{box-shadow:0 10px 34px rgba(0,0,0,0.4),0 0 0 7px rgba(239,68,68,0)} }
                     @keyframes sirenBlink { 0%,100%{opacity:1} 50%{opacity:0.2} }
                     @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
                   `}</style>
-                  {/* Topo vermelho com sirene */}
-                  <div style={{ background: 'linear-gradient(90deg,#dc2626,#b91c1c)', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ animation: 'sirenBlink 0.7s ease-in-out infinite', display: 'flex', color: '#fff' }}><IconWarn size={16} /></span>
-                    <span style={{ fontWeight: 800, fontSize: '0.82rem', color: '#fff', letterSpacing: '0.04em', flex: 1 }}>CADASTRO INCOMPLETO</span>
-                    <span style={{ animation: 'sirenBlink 0.7s ease-in-out infinite 0.35s', display: 'flex', color: '#fff' }}><IconWarn size={16} /></span>
+                  <div style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid rgba(239,68,68,0.25)' }}>
+                    <span style={{ animation: 'sirenBlink 0.7s ease-in-out infinite', display: 'flex', color: '#fca5a5' }}><IconWarn size={15} /></span>
+                    <span style={{ fontWeight: 800, fontSize: '0.78rem', color: '#fecaca', letterSpacing: '0.08em', flex: 1 }}>CADASTRO INCOMPLETO</span>
+                    <span style={{ animation: 'sirenBlink 0.7s ease-in-out infinite 0.35s', display: 'flex', color: '#fca5a5' }}><IconWarn size={15} /></span>
                   </div>
-                  {/* Corpo branco */}
-                  <div style={{ background: '#161616', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#f5f5f4', marginBottom: 3 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#fee2e2', marginBottom: 3 }}>
                         Seus dados estão incompletos!
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#a3a3a3', lineHeight: 1.5 }}>
+                      <div style={{ fontSize: '0.75rem', color: 'rgba(254,202,202,0.75)', lineHeight: 1.5 }}>
                         Preencha os dados obrigatórios: núcleo, graduação, data de nascimento, telefone, e-mail, sexo e autorização de uso de imagem.
                       </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                      <span style={{ display: 'flex', justifyContent: 'center', color: '#f87171', animation: 'bounce 1s ease-in-out infinite' }}><IconWarn size={20} /></span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      <span style={{ display: 'flex', justifyContent: 'center', color: '#f87171', animation: 'bounce 1s ease-in-out infinite' }}><IconWarn size={18} /></span>
                       <button
                         onClick={() => setActiveTab('dados')}
-                        style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 16px', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 3px 10px rgba(220,38,38,0.4)' }}>
+                        style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.85), rgba(185,28,28,0.85))', color: '#fff', border: '1px solid rgba(239,68,68,0.5)', borderRadius: 10, padding: '8px 15px', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 16px rgba(239,68,68,0.3)' }}>
                         Completar agora
                       </button>
                     </div>
@@ -1235,30 +1268,27 @@ export default function AlunoPage() {
                 </div>
               )}
             </div>
+            </div>
 
             {/* ── Mural de avisos ── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ display: 'flex', color: '#FF9200' }}><IconBell size={15} /></span>
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mural</span>
-                <span style={{ flex: 1, height: 1, background: '#262626' }} />
-              </div>
+              <SectionLabel icon={<IconBell size={13} />}>Mural</SectionLabel>
               {muralLoading ? (
                 <div style={{ textAlign: 'center', color: '#8f8f8f', fontSize: '0.8rem', padding: '18px 0' }}>Carregando avisos...</div>
               ) : muralItems.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '20px 16px', background: '#141414', border: '1.5px dashed #2a2a2a', borderRadius: 14, color: '#8f8f8f', fontSize: '0.8rem', lineHeight: 1.5 }}>
+                <div className="glass-soft" style={{ textAlign: 'center', padding: '20px 16px', borderStyle: 'dashed', borderRadius: 16, color: '#8f8f8f', fontSize: '0.8rem', lineHeight: 1.5 }}>
                   Sem avisos no momento.<br />Comunicados dos instrutores aparecem aqui.
                 </div>
               ) : (
                 muralItems.slice(0, 6).map(item => (
-                  <div key={item.id} style={{ background: '#151515', borderRadius: 16, border: '1px solid #282828', overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 14px 0', flexWrap: 'wrap' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: item.tipo === 'cartaz' ? 'rgba(255,146,0,0.13)' : 'rgba(59,130,246,0.12)', color: item.tipo === 'cartaz' ? '#fdba74' : '#93c5fd', borderRadius: 6, padding: '2.5px 8px', fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div key={item.id} className="glass-soft" style={{ borderRadius: 18, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '11px 14px 0', flexWrap: 'wrap' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(255,146,0,0.10)', border: '1px solid rgba(255,146,0,0.28)', color: '#fdba74', borderRadius: 7, padding: '2.5px 8px', fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         {item.tipo === 'cartaz' ? <IconImage size={10} /> : <IconBell size={10} />}
                         {item.tipo === 'cartaz' ? 'Cartaz' : 'Aviso'}
                       </span>
                       {item.nucleo && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#1e1e1e', color: '#a3a3a3', borderRadius: 6, padding: '2.5px 8px', fontSize: '0.6rem', fontWeight: 700 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#a3a3a3', borderRadius: 7, padding: '2.5px 8px', fontSize: '0.6rem', fontWeight: 700 }}>
                           <IconMapPin size={10} /> {item.nucleo}
                         </span>
                       )}
@@ -1271,13 +1301,13 @@ export default function AlunoPage() {
                       {item.texto && <div style={{ fontSize: '0.8rem', color: '#c9c9c9', lineHeight: 1.55, marginTop: 5, whiteSpace: 'pre-wrap' }}>{item.texto}</div>}
                       {item.tipo === 'cartaz' && item.imagem_path && (
                         muralUrls[item.imagem_path] ? (
-                          <a href={muralUrls[item.imagem_path]} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 10, borderRadius: 12, overflow: 'hidden', border: '1px solid #2a2a2a' }}>
+                          <a href={muralUrls[item.imagem_path]} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 10, borderRadius: 13, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.09)' }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={muralUrls[item.imagem_path]} alt={item.titulo} loading="lazy"
                               style={{ width: '100%', display: 'block', maxHeight: 380, objectFit: 'cover' }} />
                           </a>
                         ) : (
-                          <div style={{ marginTop: 10, height: 130, borderRadius: 12, background: '#1c1c1c', border: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5a5a5a' }}>
+                          <div style={{ marginTop: 10, height: 130, borderRadius: 13, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5a5a5a' }}>
                             <IconImage size={22} />
                           </div>
                         )
@@ -1295,14 +1325,10 @@ export default function AlunoPage() {
             {/* Próximos eventos */}
             {eventos.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ display: 'flex', color: '#FF9200' }}><IconClock size={15} /></span>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Próximos Eventos</span>
-                  <span style={{ flex: 1, height: 1, background: '#262626' }} />
-                </div>
+                <SectionLabel icon={<IconClock size={13} />}>Próximos Eventos</SectionLabel>
                 {eventos.slice(0, 3).map((ev: any) => (
-                  <div key={ev.id} style={{ background: '#151515', borderRadius: 14, padding: '13px 15px', border: '1px solid #282828', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 42, height: 42, borderRadius: 12, background: 'rgba(255,146,0,0.10)', color: '#FF9200', flexShrink: 0 }}>
+                  <div key={ev.id} className="glass-soft" style={{ borderRadius: 16, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 42, height: 42, borderRadius: 13, background: 'radial-gradient(circle at 32% 26%, rgba(255,146,0,0.28), rgba(255,146,0,0.08))', border: '1px solid rgba(255,146,0,0.3)', color: '#FF9200', flexShrink: 0, boxShadow: '0 0 16px rgba(255,146,0,0.16)' }}>
                       <IconBerimbau size={21} />
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -1313,8 +1339,8 @@ export default function AlunoPage() {
                         {ev.local ? ` · ${ev.local}` : ''}
                       </div>
                     </div>
-                    <span style={{ flexShrink: 0, background: ev.tipo === 'batizado' ? 'rgba(250,204,21,0.12)' : 'rgba(168,85,247,0.12)', color: ev.tipo === 'batizado' ? '#fde047' : '#d8b4fe', borderRadius: 8, padding: '3px 9px', fontSize: '0.7rem', fontWeight: 700 }}>
-                      {ev.tipo === 'batizado' ? 'Batizado' : 'Troca'}
+                    <span style={{ flexShrink: 0, background: 'rgba(255,146,0,0.10)', border: '1px solid rgba(255,146,0,0.28)', color: '#fdba74', borderRadius: 8, padding: '3px 9px', fontSize: '0.7rem', fontWeight: 700 }}>
+                      {ev.tipo === 'batizado' ? 'Batizado' : ev.tipo === 'troca' ? 'Troca' : 'Evento'}
                     </span>
                   </div>
                 ))}
@@ -1326,19 +1352,15 @@ export default function AlunoPage() {
 
             {/* Links institucionais */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ display: 'flex', color: '#FF9200' }}><IconFolder size={15} /></span>
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Institucional</span>
-                <span style={{ flex: 1, height: 1, background: '#262626' }} />
-              </div>
+                <SectionLabel icon={<IconFolder size={13} />}>Institucional</SectionLabel>
               {([
                 { href: '/hierarquia', Icon: IconMedal, label: 'Hierarquia' },
                 { href: '/organograma', Icon: IconFolder, label: 'Organograma' },
                 { href: '/documentos', Icon: IconDoc, label: 'Documentos Históricos da Capoeira' },
               ] as const).map(({ href, Icon, label }) => (
-                <a key={href} href={href}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#151515', borderRadius: 13, padding: '12px 14px', textDecoration: 'none', border: '1px solid #282828' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 11, background: 'rgba(255,146,0,0.10)', color: '#FF9200', flexShrink: 0 }}>
+                <a key={href} href={href} className="press"
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, borderRadius: 15, padding: '12px 14px', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.07)', background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 12, background: 'radial-gradient(circle at 32% 26%, rgba(255,146,0,0.26), rgba(255,146,0,0.07))', border: '1px solid rgba(255,146,0,0.28)', color: '#FF9200', flexShrink: 0 }}>
                     <Icon size={18} />
                   </span>
                   <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: 700, color: '#e5e5e5' }}>{label}</span>
@@ -1396,7 +1418,7 @@ export default function AlunoPage() {
               Compartilhar via WhatsApp
             </button>
             <div style={{ background: 'rgba(14,165,233,0.10)', borderRadius: 12, padding: '12px 16px', border: '1px solid rgba(14,165,233,0.35)', fontSize: '0.78rem', color: '#7dd3fc' }}>
-              💡 Use esta carteirinha para identificação nas aulas. Você pode imprimir ou salvar como PDF.
+              Use esta carteirinha para identificação nas aulas. Você pode imprimir ou salvar como PDF.
             </div>
           </div>
         )}
@@ -1406,7 +1428,7 @@ export default function AlunoPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <SectionTitle icon={<IconMapPin size={17} />}>Registrar Presença</SectionTitle>
 
-            <div style={{ background: '#161616', borderRadius: 16, padding: '24px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+            <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '24px 20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.05)', textAlign: 'center' }}>
               <div style={{ color: '#FF9200', marginBottom: 12, display: 'flex', justifyContent: 'center' }}><IconMapPin size={52} strokeWidth={1.6} /></div>
               <h3 style={{ margin: '0 0 8px', fontSize: '1rem', fontWeight: 700, color: '#f5f5f4' }}>Presença do dia de hoje</h3>
               <p style={{ margin: '0 0 20px', fontSize: '0.83rem', color: '#a3a3a3', lineHeight: 1.5 }}>
@@ -1420,7 +1442,7 @@ export default function AlunoPage() {
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#d4d4d4', marginBottom: 6 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconFolder size={13} /> Seu Núcleo</span>
                   </label>
-                  <div style={{ background: '#141414', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', color: '#f5f5f4', fontWeight: 600 }}>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', color: '#f5f5f4', fontWeight: 600 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconMapPin size={12} /> {student.nucleo}</span>
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#a3a3a3', marginTop: 4, fontWeight: 400 }}>
@@ -1430,7 +1452,7 @@ export default function AlunoPage() {
               )}
 
               {!student?.nucleo && (
-                <div style={{ background: 'rgba(239,68,68,0.09)', border: '1.5px solid #fecaca', borderRadius: 12, padding: '14px 16px', marginBottom: 18, textAlign: 'left' }}>
+                <div style={{ background: 'rgba(239,68,68,0.09)', border: '1.5px solid rgba(239,68,68,0.4)', borderRadius: 12, padding: '14px 16px', marginBottom: 18, textAlign: 'left' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', fontWeight: 800, color: '#fca5a5', marginBottom: 4 }}><IconWarn size={14} /> Presença bloqueada</div>
                   <div style={{ fontSize: '0.78rem', color: '#b91c1c', lineHeight: 1.5 }}>
                     Você ainda não está vinculado a um núcleo. Escolha seu núcleo na aba <strong>Meus Dados</strong> para destravar o registro de presença.
@@ -1439,13 +1461,13 @@ export default function AlunoPage() {
               )}
 
               {presencaMsg && (
-                <div style={{ background: presencaStatus === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${presencaStatus === 'success' ? '#bbf7d0' : '#fecaca'}`, color: presencaStatus === 'success' ? '#166534' : '#991b1b', borderRadius: 12, padding: '12px 16px', marginBottom: 18, fontSize: '0.85rem', fontWeight: 500 }}>
-                  {presencaStatus === 'success' ? '✅ ' : '❌ '}{presencaMsg}
+                <div style={{ background: presencaStatus === 'success' ? 'rgba(34,197,94,0.10)' : 'rgba(239,68,68,0.10)', border: `1px solid ${presencaStatus === 'success' ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)'}`, color: presencaStatus === 'success' ? '#86efac' : '#fca5a5', borderRadius: 12, padding: '12px 16px', marginBottom: 18, fontSize: '0.85rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {presencaStatus === 'success' ? <IconCheck size={15} /> : <IconWarn size={15} />}{presencaMsg}
                 </div>
               )}
 
               <button onClick={handlePresenca} disabled={presencaLoading}
-                style={{ background: presencaLoading ? '#3a3a3a' : 'linear-gradient(135deg, #FF9200, #d97706)', color: '#fff', border: 'none', borderRadius: 14, padding: '16px 32px', fontWeight: 800, fontSize: '1rem', cursor: presencaLoading ? 'not-allowed' : 'pointer', boxShadow: presencaLoading ? 'none' : '0 6px 20px rgba(255,146,0,0.35)', transition: 'all 0.2s' }}>
+                style={{ background: presencaLoading ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #ffb84d 0%, #FF9200 55%, #f07f00 100%)', color: presencaLoading ? '#a3a3a3' : '#141414', border: presencaLoading ? '1px solid rgba(255,255,255,0.09)' : 'none', borderRadius: 15, padding: '16px 32px', fontWeight: 800, fontSize: '1rem', cursor: presencaLoading ? 'not-allowed' : 'pointer', boxShadow: presencaLoading ? 'none' : '0 8px 26px rgba(255,146,0,0.4), 0 0 18px rgba(255,146,0,0.25)', transition: 'all 0.2s' }}>
                 {presencaLoading ? 'Obtendo localização...' : 'Registrar Presença Agora'}
               </button>
 
@@ -1454,7 +1476,7 @@ export default function AlunoPage() {
               </p>
             </div>
 
-            <div style={{ background: 'rgba(234,179,8,0.10)', borderRadius: 12, padding: '12px 16px', border: '1px solid rgba(234,179,8,0.35)', fontSize: '0.8rem', color: '#fcd34d' }}>
+            <div style={{ background: 'rgba(255,146,0,0.08)', borderRadius: 12, padding: '12px 16px', border: '1px solid rgba(255,146,0,0.28)', fontSize: '0.8rem', color: '#fdba74', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconWarn size={13} /> O registro de presença só pode ser feito no dia atual.</span> Se precisar justificar uma falta, use a aba <strong>Justificativas</strong>.
             </div>
           </div>
@@ -1467,7 +1489,7 @@ export default function AlunoPage() {
               <SectionTitle icon={<IconWallet size={17} />}>Ficha Financeira</SectionTitle>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => { if (!session) return; setFichaFinLoading(true); fetch(`/api/financeiro?student_id=${session.student_id}`).then(r=>r.json()).then(d=>{setFichaFin(d);setFichaFinLoading(false);}).catch(()=>setFichaFinLoading(false)); }}
-                  style={{ background: 'none', border: '1px solid rgba(255,146,0,0.45)', color: '#FF9200', borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>🔄 Atualizar</button>
+                  style={{ background: 'none', border: '1px solid rgba(255,146,0,0.45)', color: '#FF9200', borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}><IconRefresh size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5 }} />Atualizar</button>
                 <a href={`/financeiro?student_id=${session?.student_id}`} target="_blank" rel="noreferrer"
                   style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff', textDecoration: 'none', borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600 }}>↗ Portal completo</a>
               </div>
@@ -1480,9 +1502,9 @@ export default function AlunoPage() {
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 {/* Solicitar Batizado — só se ainda não tem modalidade */}
                 {(!fichaFin || (fichaFin as any)?.batizado?.modalidade === 'nao_definido' || !(fichaFin as any)?.batizado) && (
-                  <div style={{ background: '#161616', border: `1.5px solid ${showSolBatizado ? '#7c3aed' : '#2e2e2e'}`, borderRadius: 14, padding: '14px 16px', flex: 1, minWidth: 240 }}>
+                  <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: `1.5px solid ${showSolBatizado ? '#7c3aed' : '#2e2e2e'}`, borderRadius: 14, padding: '14px 16px', flex: 1, minWidth: 240 }}>
                     <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#c4b5fd', marginBottom: showSolBatizado ? 12 : 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span>🥋 Solicitar Batizado</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconMedal size={14} /> Solicitar Batizado</span>
                       <button onClick={() => { setShowSolBatizado(v=>!v); setSolBatizadoMsg(''); }}
                         style={{ background: showSolBatizado ? 'rgba(124,58,237,0.12)' : 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.3)', color: '#c4b5fd', borderRadius: 8, padding: '3px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
                         {showSolBatizado ? '✕ Fechar' : '+ Solicitar'}
@@ -1497,7 +1519,7 @@ export default function AlunoPage() {
                             {(['integral','parcelado'] as const).map(m => (
                               <button key={m} onClick={() => setSolBatizadoModalidade(m)}
                                 style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: `1.5px solid ${solBatizadoModalidade === m ? '#7c3aed' : '#2e2e2e'}`, background: solBatizadoModalidade === m ? 'rgba(124,58,237,0.08)' : '#141414', color: solBatizadoModalidade === m ? '#7c3aed' : '#6b7280', fontWeight: solBatizadoModalidade === m ? 700 : 500, cursor: 'pointer', fontSize: '0.8rem' }}>
-                                {m === 'integral' ? '💳 À vista' : '📅 Parcelado'}
+                                {m === 'integral' ? 'À vista' : 'Parcelado'}
                               </button>
                             ))}
                           </div>
@@ -1506,7 +1528,7 @@ export default function AlunoPage() {
                           <div>
                             <label style={{ display: 'block', fontSize: '0.75rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 4 }}>Número de parcelas</label>
                             <input type="number" min={2} max={12} value={solBatizadoParcelas} onChange={e => setSolBatizadoParcelas(Math.max(2, Math.min(12, parseInt(e.target.value)||2)))}
-                              style={{ width: '100%', background: '#141414', border: '1px solid #2a2a2a', borderRadius: 8, padding: '6px 10px', fontSize: '0.85rem', outline: 'none' }} />
+                              style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 10px', fontSize: '0.85rem', outline: 'none' }} />
                           </div>
                         )}
                         {solBatizadoMsg && <div style={{ fontSize: '0.78rem', color: solBatizadoMsg.startsWith('✅') ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{solBatizadoMsg}</div>}
@@ -1541,9 +1563,9 @@ export default function AlunoPage() {
                 )}
 
                 {/* Solicitar Uniforme */}
-                <div style={{ background: '#161616', border: `1.5px solid ${showSolUniforme ? '#d97706' : '#2e2e2e'}`, borderRadius: 14, padding: '14px 16px', flex: 1, minWidth: 240 }}>
+                <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: `1.5px solid ${showSolUniforme ? '#d97706' : '#2e2e2e'}`, borderRadius: 14, padding: '14px 16px', flex: 1, minWidth: 240 }}>
                   <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fb923c', marginBottom: showSolUniforme ? 12 : 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <span>👕 Solicitar Uniforme</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconBag size={14} /> Solicitar Uniforme</span>
                     <button onClick={() => { setShowSolUniforme(v=>!v); setSolUnifMsg(''); }}
                       style={{ background: showSolUniforme ? 'rgba(217,119,6,0.12)' : 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.3)', color: '#fb923c', borderRadius: 8, padding: '3px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
                       {showSolUniforme ? '✕ Fechar' : '+ Solicitar'}
@@ -1555,20 +1577,20 @@ export default function AlunoPage() {
                       <div>
                         <label style={{ display: 'block', fontSize: '0.75rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 4 }}>Item</label>
                         <input value={solUnifItem} onChange={e => setSolUnifItem(e.target.value)} placeholder="Ex: Camiseta, Bermuda..."
-                          style={{ width: '100%', background: '#141414', border: '1px solid #2a2a2a', borderRadius: 8, padding: '6px 10px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }} />
+                          style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 10px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }} />
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <div style={{ flex: 1 }}>
                           <label style={{ display: 'block', fontSize: '0.75rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 4 }}>Tamanho</label>
                           <select value={solUnifTam} onChange={e => setSolUnifTam(e.target.value)}
-                            style={{ width: '100%', background: '#141414', border: '1px solid #2a2a2a', borderRadius: 8, padding: '6px 8px', fontSize: '0.85rem', outline: 'none' }}>
+                            style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 8px', fontSize: '0.85rem', outline: 'none' }}>
                             {['PP','P','M','G','GG','XGG'].map(t => <option key={t} value={t}>{t}</option>)}
                           </select>
                         </div>
                         <div style={{ width: 80 }}>
                           <label style={{ display: 'block', fontSize: '0.75rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 4 }}>Qtd.</label>
                           <input type="number" min={1} max={10} value={solUnifQtd} onChange={e => setSolUnifQtd(Math.max(1, parseInt(e.target.value)||1))}
-                            style={{ width: '100%', background: '#141414', border: '1px solid #2a2a2a', borderRadius: 8, padding: '6px 8px', fontSize: '0.85rem', outline: 'none' }} />
+                            style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 8px', fontSize: '0.85rem', outline: 'none' }} />
                         </div>
                       </div>
                       {solUnifMsg && <div style={{ fontSize: '0.78rem', color: solUnifMsg.startsWith('✅') ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{solUnifMsg}</div>}
@@ -1600,8 +1622,8 @@ export default function AlunoPage() {
             )}
 
             {!fichaFinLoading && !fichaFin && (
-              <div style={{ background: '#161616', borderRadius: 14, padding: '28px 20px', border: '1px solid #2a2a2a', textAlign: 'center' }}>
-                <div style={{ fontSize: 36, marginBottom: 8 }}>📋</div>
+              <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 14, padding: '28px 20px', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}><span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: '#6b6b6b' }}><IconNote size={26} /></span></div>
                 <div style={{ fontWeight: 700, color: '#d4d4d4', marginBottom: 4 }}>Nenhuma informação financeira registrada</div>
                 <div style={{ fontSize: '0.8rem', color: '#8f8f8f' }}>O administrador ainda não configurou sua ficha financeira.</div>
               </div>
@@ -1616,17 +1638,17 @@ export default function AlunoPage() {
 
                   {/* ── Batizado ── */}
                   {fin.batizado && fin.batizado.modalidade !== 'nao_definido' && (
-                    <div style={{ background: '#161616', borderRadius: 14, padding: '16px 18px', border: '1px solid #2a2a2a' }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 10 }}>🥋 Batizado / Troca de Graduação</div>
+                    <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 14, padding: '16px 18px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 7 }}><IconMedal size={15} /> Batizado / Troca de Graduação</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: '0.78rem', background: '#1c1c1c', borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>Modalidade: {fin.batizado.modalidade === 'integral' ? 'À vista' : 'Parcelado'}</span>
-                        <span style={{ fontSize: '0.78rem', background: '#1c1c1c', borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>Total: R$ {Number(fin.batizado.valor_total || 0).toFixed(2)}</span>
+                        <span style={{ fontSize: '0.78rem', background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>Modalidade: {fin.batizado.modalidade === 'integral' ? 'À vista' : 'Parcelado'}</span>
+                        <span style={{ fontSize: '0.78rem', background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>Total: R$ {Number(fin.batizado.valor_total || 0).toFixed(2)}</span>
                         <span style={{ fontSize: '0.78rem', background: statusColor(fin.batizado.status_geral) + '22', color: statusColor(fin.batizado.status_geral), borderRadius: 6, padding: '3px 10px', fontWeight: 700 }}>{statusLabel(fin.batizado.status_geral)}</span>
                       </div>
                       {fin.batizado.parcelas?.length > 0 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           {fin.batizado.parcelas.map((p: any, i: number) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', padding: '5px 8px', borderRadius: 6, background: '#141414' }}>
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', padding: '5px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.05)' }}>
                               <span>Parcela {p.numero} — R$ {Number(p.valor).toFixed(2)}</span>
                               <span style={{ color: statusColor(p.status), fontWeight: 700 }}>{statusLabel(p.status)}</span>
                             </div>
@@ -1638,14 +1660,14 @@ export default function AlunoPage() {
 
                   {/* ── Mensalidades ── */}
                   {fin.mensalidades?.length > 0 && (
-                    <div style={{ background: '#161616', borderRadius: 14, padding: '16px 18px', border: '1px solid #2a2a2a' }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 10 }}>📅 Mensalidades</div>
+                    <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 14, padding: '16px 18px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 10 }}><IconClock size={15} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 6 }} />Mensalidades</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {(fin.mensalidades as any[]).slice().reverse().map((m: any, i: number) => {
                           const [yr, mo] = (m.mes || '').split('-');
                           const label = yr && mo ? new Date(Number(yr), Number(mo)-1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : m.mes;
                           return (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', padding: '6px 8px', borderRadius: 6, background: '#141414' }}>
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', padding: '6px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.05)' }}>
                               <span style={{ textTransform: 'capitalize' }}>{label} — R$ {Number(m.valor).toFixed(2)}</span>
                               <span style={{ color: statusColor(m.status), fontWeight: 700 }}>{statusLabel(m.status)}</span>
                             </div>
@@ -1657,8 +1679,8 @@ export default function AlunoPage() {
 
                   {/* ── Contribuição mensal ── */}
                   {fin.contribuicao?.ativa && (
-                    <div style={{ background: '#161616', borderRadius: 14, padding: '16px 18px', border: '1px solid #2a2a2a' }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 8 }}>🤝 Contribuição Mensal</div>
+                    <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 14, padding: '16px 18px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 8 }}><IconWallet size={15} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 6 }} />Contribuição Mensal</div>
                       <div style={{ fontSize: '0.82rem', color: '#d4d4d4' }}>Valor mensal: <strong>R$ {Number(fin.contribuicao.valor_mensal || 0).toFixed(2)}</strong></div>
                       {fin.contribuicao.historico?.length > 0 && (
                         <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -1666,7 +1688,7 @@ export default function AlunoPage() {
                             const [yr, mo] = (h.mes || '').split('-');
                             const label = yr && mo ? new Date(Number(yr), Number(mo)-1).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : h.mes;
                             return (
-                              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', padding: '4px 8px', borderRadius: 6, background: '#141414' }}>
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', padding: '4px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.05)' }}>
                                 <span style={{ textTransform: 'capitalize' }}>{label}</span>
                                 <span style={{ color: statusColor(h.status), fontWeight: 700 }}>{statusLabel(h.status)}</span>
                               </div>
@@ -1679,11 +1701,11 @@ export default function AlunoPage() {
 
                   {/* ── Uniformes ── */}
                   {fin.uniformes?.length > 0 && (
-                    <div style={{ background: '#161616', borderRadius: 14, padding: '16px 18px', border: '1px solid #2a2a2a' }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 8 }}>👕 Uniformes</div>
+                    <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 14, padding: '16px 18px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 8 }}><IconBag size={15} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 6 }} />Uniformes</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {(fin.uniformes as any[]).map((u: any, i: number) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', padding: '6px 8px', borderRadius: 6, background: '#141414' }}>
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', padding: '6px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.05)' }}>
                             <span>{u.descricao}{u.tamanho ? ` (${u.tamanho})` : ''} × {u.quantidade}</span>
                             <span style={{ color: u.status === 'entregue' ? '#16a34a' : u.status === 'cancelado' ? '#dc2626' : '#f59e0b', fontWeight: 700 }}>
                               {u.status === 'entregue' ? '✅ Entregue' : u.status === 'confirmado' ? '✓ Confirmado' : u.status === 'cancelado' ? '✕ Cancelado' : '⏳ Solicitado'}
@@ -1696,8 +1718,8 @@ export default function AlunoPage() {
 
                   {/* empty state */}
                   {!fin.batizado?.valor_total && !fin.mensalidades?.length && !fin.contribuicao?.ativa && !fin.uniformes?.length && (
-                    <div style={{ background: '#161616', borderRadius: 14, padding: '28px 20px', border: '1px solid #2a2a2a', textAlign: 'center' }}>
-                      <div style={{ fontSize: 36, marginBottom: 8 }}>📋</div>
+                    <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 14, padding: '28px 20px', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}><span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: '#6b6b6b' }}><IconNote size={26} /></span></div>
                       <div style={{ fontWeight: 700, color: '#d4d4d4', marginBottom: 4 }}>Nenhuma informação financeira registrada</div>
                       <div style={{ fontSize: '0.8rem', color: '#8f8f8f' }}>O administrador ainda não configurou sua ficha financeira.</div>
                     </div>
@@ -1713,7 +1735,7 @@ export default function AlunoPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <SectionTitle icon={<IconMedal size={17} />}>Histórico de Graduação</SectionTitle>
-              <button onClick={() => student && loadHistorico(student.id)} style={{ background: 'none', border: '1px solid rgba(255,146,0,0.45)', color: '#FF9200', borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>🔄 Atualizar</button>
+              <button onClick={() => student && loadHistorico(student.id)} style={{ background: 'none', border: '1px solid rgba(255,146,0,0.45)', color: '#FF9200', borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}><IconRefresh size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5 }} />Atualizar</button>
             </div>
 
             {/* Próximos eventos */}
@@ -1722,7 +1744,7 @@ export default function AlunoPage() {
                 <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Próximos Eventos</div>
                 {eventosLoading && <div style={{ textAlign: 'center', padding: '12px 0', color: '#8f8f8f', fontSize: '0.82rem' }}>Carregando...</div>}
                 {!eventosLoading && eventos.map((ev: any) => (
-                  <div key={ev.id} style={{ background: '#161616', borderRadius: 14, padding: '14px 16px', border: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div key={ev.id} style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 14, padding: '14px 16px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 10, background: ev.tipo === 'batizado' ? 'rgba(250,204,21,0.12)' : 'rgba(168,85,247,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>
                       <IconBerimbau size={20} />
                     </div>
@@ -1730,7 +1752,7 @@ export default function AlunoPage() {
                       <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#f5f5f4' }}>{ev.nome}</div>
                       {ev.data && (
                         <div style={{ fontSize: '0.78rem', color: '#FF9200', fontWeight: 600, marginTop: 2 }}>
-                          📅 {new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                          <IconClock size={12} style={{ display: 'inline-block', verticalAlign: '-1px', marginRight: 5 }} />{new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
                           {ev.hora ? ` · ${ev.hora}` : ''}
                         </div>
                       )}
@@ -1748,7 +1770,7 @@ export default function AlunoPage() {
                   </div>
                 ))}
                 {!eventosLoading && eventos.length === 0 && (
-                  <div style={{ background: '#141414', borderRadius: 12, padding: '14px 16px', border: '1px solid #2a2a2a', textAlign: 'center', fontSize: '0.82rem', color: '#8f8f8f' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center', fontSize: '0.82rem', color: '#8f8f8f' }}>
                     Nenhum evento programado no momento.
                   </div>
                 )}
@@ -1774,8 +1796,8 @@ export default function AlunoPage() {
             {loadingHistorico ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: '#8f8f8f' }}>Carregando histórico...</div>
             ) : historico.length === 0 ? (
-              <div style={{ background: '#161616', borderRadius: 16, padding: '32px 20px', border: '1px solid #2a2a2a', textAlign: 'center' }}>
-                <div style={{ fontSize: 40, marginBottom: 10 }}>📋</div>
+              <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '32px 20px', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}><span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: '#6b6b6b' }}><IconNote size={26} /></span></div>
                 <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#d4d4d4', marginBottom: 4 }}>Nenhum registro encontrado</div>
                 <div style={{ fontSize: '0.8rem', color: '#8f8f8f', lineHeight: 1.5 }}>
                   Seu histórico de graduações aparecerá aqui após o administrador finalizar os lançamentos de batizados e trocas de corda.
@@ -1797,7 +1819,7 @@ export default function AlunoPage() {
                         </div>
 
                         {/* Card */}
-                        <div style={{ flex: 1, background: '#161616', borderRadius: 14, padding: '14px 16px', border: '1px solid #2a2a2a', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                        <div style={{ flex: 1, background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 14, padding: '14px 16px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -1820,7 +1842,7 @@ export default function AlunoPage() {
                             </div>
                           </div>
                           {reg.observacoes && (
-                            <div style={{ marginTop: 8, padding: '8px 10px', background: '#141414', borderRadius: 8, fontSize: '0.78rem', color: '#a3a3a3', fontStyle: 'italic' }}>
+                            <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: 8, fontSize: '0.78rem', color: '#a3a3a3', fontStyle: 'italic' }}>
                               &ldquo;{reg.observacoes}&rdquo;
                             </div>
                           )}
@@ -1833,7 +1855,7 @@ export default function AlunoPage() {
             )}
 
             <div style={{ background: 'rgba(14,165,233,0.10)', borderRadius: 12, padding: '12px 16px', border: '1px solid rgba(14,165,233,0.35)', fontSize: '0.78rem', color: '#7dd3fc', lineHeight: 1.5 }}>
-              ℹ️ O histórico é atualizado automaticamente quando o administrador finaliza um evento de batizado ou troca de corda no painel.
+              <IconInfo size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5 }} />O histórico é atualizado automaticamente quando o administrador finaliza um evento de batizado ou troca de corda no painel.
             </div>
           </div>
         )}
@@ -1844,7 +1866,7 @@ export default function AlunoPage() {
             <SectionTitle icon={<IconNote size={17} />}>Justificativas de Falta</SectionTitle>
 
             {/* Form */}
-            <div style={{ background: '#161616', borderRadius: 16, padding: '20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+            <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 14 }}>Enviar nova justificativa</div>
               {justMsg && (
                 <div style={{ background: justMsgType === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${justMsgType === 'success' ? '#bbf7d0' : '#fecaca'}`, color: justMsgType === 'success' ? '#166534' : '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: '0.83rem' }}>
@@ -1857,13 +1879,13 @@ export default function AlunoPage() {
                   <input type="date" value={justForm.data_falta} onChange={e => setJustForm(p => ({ ...p, data_falta: e.target.value }))}
                     max={new Date().toISOString().split('T')[0]}
                     min={new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                    style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} required />
+                    style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} required />
                   <div style={{ fontSize: '0.72rem', color: '#8f8f8f', marginTop: 3 }}>Apenas os últimos 30 dias</div>
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#d4d4d4', marginBottom: 5 }}>Motivo da Falta *</label>
                   <textarea value={justForm.motivo} onChange={e => setJustForm(p => ({ ...p, motivo: e.target.value }))}
-                    style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', resize: 'none' }}
+                    style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', resize: 'none' }}
                     rows={3} placeholder="Descreva o motivo da falta..." maxLength={500} required />
                   <div style={{ fontSize: '0.72rem', color: '#8f8f8f', textAlign: 'right', marginTop: 2 }}>{justForm.motivo.length}/500</div>
                 </div>
@@ -1875,14 +1897,14 @@ export default function AlunoPage() {
             </div>
 
             {/* List */}
-            <div style={{ background: '#161616', borderRadius: 16, padding: '20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+            <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 14 }}>Minhas justificativas</div>
               {justificativas.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '24px 0', color: '#8f8f8f', fontSize: '0.85rem' }}>Nenhuma justificativa enviada ainda.</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {justificativas.map(j => (
-                    <div key={j.id} style={{ border: '1px solid #2a2a2a', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                    <div key={j.id} style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f5f5f4' }}>
                           {new Date(j.data_falta + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
@@ -1890,7 +1912,7 @@ export default function AlunoPage() {
                         <div style={{ fontSize: '0.8rem', color: '#a3a3a3', marginTop: 3 }}>{j.motivo}</div>
                         {j.resposta_mestre && (
                           <div style={{ marginTop: 6, padding: '6px 10px', background: 'rgba(59,130,246,0.10)', borderRadius: 6, fontSize: '0.76rem', color: '#93c5fd' }}>
-                            💬 Mestre: {j.resposta_mestre}
+                            <IconNote size={12} style={{ display: 'inline-block', verticalAlign: '-1px', marginRight: 5 }} />Mestre: {j.resposta_mestre}
                           </div>
                         )}
                       </div>
@@ -1954,14 +1976,14 @@ export default function AlunoPage() {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
                 {fotosMedia.map(m => (
-                  <div key={m.name} style={{ background: '#161616', border: '1px solid #2a2a2a', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                  <div key={m.name} style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                     {m.type === 'foto' ? (
                       <a href={m.url} target="_blank" rel="noreferrer">
                         <img src={m.url} alt={m.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
                       </a>
                     ) : (
-                      <a href={m.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', aspectRatio: '1', background: '#1f2937', textDecoration: 'none' }}>
-                        <span style={{ fontSize: '2.5rem' }}>🎬</span>
+                      <a href={m.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', aspectRatio: '1', background: 'rgba(255,255,255,0.05)', textDecoration: 'none' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: '#6b6b6b' }}><IconCamera size={26} /></span>
                       </a>
                     )}
                     <div style={{ padding: '8px 10px' }}>
@@ -1975,8 +1997,8 @@ export default function AlunoPage() {
                           if (!confirm('Excluir este arquivo?')) return;
                           const res = await fetch('/api/aluno/media', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: session!.student_id, name: m.name }) });
                           if (res.ok) { setFotosMedia(prev => prev.filter(f => f.name !== m.name)); setFotosMsg('Arquivo excluído.'); }
-                        }} style={{ background: 'rgba(239,68,68,0.09)', color: '#f87171', border: 'none', borderRadius: 6, padding: '4px 7px', fontSize: '0.68rem', cursor: 'pointer', fontWeight: 700 }}>
-                          🗑
+                        }} style={{ background: 'rgba(239,68,68,0.09)', color: '#f87171', border: 'none', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontWeight: 700 }}>
+                          <IconTrash size={14} />
                         </button>
                       </div>
                     </div>
@@ -2042,7 +2064,7 @@ export default function AlunoPage() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {docsItems.map(doc => (
-                  <div key={doc.name} style={{ background: '#161616', border: '1px solid #2a2a2a', borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div key={doc.name} style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
                     <div style={{ fontSize: '2rem', flexShrink: 0 }}>{doc.icon}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f5f5f4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.displayName}</div>
@@ -2061,8 +2083,8 @@ export default function AlunoPage() {
                         if (res.ok) { setDocsItems(prev => prev.filter(d => d.name !== doc.name)); setDocsMsg('✓ Documento removido.'); setTimeout(() => setDocsMsg(''), 3000); }
                         else setDocsMsg('Erro ao remover documento.');
                       }}
-                        style={{ background: 'rgba(239,68,68,0.09)', color: '#f87171', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 10, padding: '8px 12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                        🗑
+                        style={{ background: 'rgba(239,68,68,0.09)', color: '#f87171', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 10, padding: '8px 10px', cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        <IconTrash size={14} />
                       </button>
                     </div>
                   </div>
@@ -2083,7 +2105,7 @@ export default function AlunoPage() {
                 </div>
 
                 {/* Current account info */}
-                <div style={{ background: '#161616', border: '1px solid #2a2a2a', borderRadius: 14, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Dados da Conta</div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
@@ -2114,7 +2136,7 @@ export default function AlunoPage() {
 
                   <button onClick={() => { setContaSection('change-password'); setContaForm(f => ({ ...f, current_password: '', new_password: '', confirm_password: '' })); setContaMsg(''); }}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(168,85,247,0.10)', border: '1px solid rgba(168,85,247,0.35)', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left' }}>
-                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>🔒</div>
+                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'radial-gradient(circle at 32% 28%, rgba(255,146,0,0.30), rgba(255,146,0,0.08))', border: '1px solid rgba(255,146,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#FF9200' }}><IconLock size={17} /></div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#7e22ce' }}>Alterar Senha</div>
                       <div style={{ fontSize: '0.73rem', color: '#a3a3a3', marginTop: 1 }}>Trocar sua senha de acesso</div>
@@ -2124,7 +2146,7 @@ export default function AlunoPage() {
 
                   <button onClick={() => { setContaSection('delete-account'); setContaForm(f => ({ ...f, current_password: '' })); setDeleteConfirmText(''); setContaMsg(''); }}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(239,68,68,0.09)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left' }}>
-                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(239,68,68,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>🗑️</div>
+                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#f87171' }}><IconTrash size={17} /></div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f87171' }}>Excluir Conta de Acesso</div>
                       <div style={{ fontSize: '0.73rem', color: '#a3a3a3', marginTop: 1 }}>Remove apenas o login — seu histórico é mantido</div>
@@ -2145,24 +2167,24 @@ export default function AlunoPage() {
                     <p style={{ margin: 0, fontSize: '0.72rem', color: '#a3a3a3' }}>Confirme sua senha para alterar</p>
                   </div>
                 </div>
-                <div style={{ background: '#161616', border: '1px solid #2a2a2a', borderRadius: 14, padding: '18px' }}>
+                <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '18px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#d4d4d4', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Novo Usuário</label>
                       <input type="text" value={contaForm.new_username} onChange={e => setContaForm(f => ({ ...f, new_username: e.target.value }))}
-                        style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+                        style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#d4d4d4', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>E-mail de Recuperação</label>
                       <input type="email" value={contaForm.new_email} onChange={e => setContaForm(f => ({ ...f, new_email: e.target.value }))}
                         placeholder="seu@email.com"
-                        style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+                        style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#d4d4d4', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Senha Atual <span style={{ color: '#f87171' }}>*</span></label>
                       <input type="password" value={contaForm.current_password} onChange={e => setContaForm(f => ({ ...f, current_password: e.target.value }))}
                         placeholder="Confirme sua senha atual"
-                        style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+                        style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     {contaMsg && (
                       <div style={{ padding: '10px 14px', borderRadius: 10, background: contaMsgType === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${contaMsgType === 'success' ? '#bbf7d0' : '#fecaca'}`, color: contaMsgType === 'success' ? '#166534' : '#991b1b', fontSize: '0.83rem', fontWeight: 600 }}>
@@ -2207,7 +2229,7 @@ export default function AlunoPage() {
                     <p style={{ margin: 0, fontSize: '0.72rem', color: '#a3a3a3' }}>Escolha uma senha forte</p>
                   </div>
                 </div>
-                <div style={{ background: '#161616', border: '1px solid #2a2a2a', borderRadius: 14, padding: '18px' }}>
+                <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '18px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     {(['current_password', 'new_password', 'confirm_password'] as const).map((field, i) => (
                       <div key={field}>
@@ -2215,7 +2237,7 @@ export default function AlunoPage() {
                           {['Senha Atual', 'Nova Senha', 'Confirmar Nova Senha'][i]} <span style={{ color: '#f87171' }}>*</span>
                         </label>
                         <input type="password" value={contaForm[field]} onChange={e => setContaForm(f => ({ ...f, [field]: e.target.value }))}
-                          style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+                          style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                       </div>
                     ))}
                     {contaMsg && (
@@ -2236,7 +2258,7 @@ export default function AlunoPage() {
                       } catch { setContaMsg('Erro de conexão.'); setContaMsgType('error'); }
                       setContaLoading(false);
                     }} style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontWeight: 700, fontSize: '0.9rem', cursor: contaLoading ? 'wait' : 'pointer', opacity: contaLoading ? 0.7 : 1 }}>
-                      {contaLoading ? '⏳ Alterando...' : '🔒 Alterar Senha'}
+                      {contaLoading ? 'Alterando...' : 'Alterar Senha'}
                     </button>
                   </div>
                 </div>
@@ -2253,7 +2275,7 @@ export default function AlunoPage() {
                     <p style={{ margin: 0, fontSize: '0.72rem', color: '#a3a3a3' }}>Esta ação é irreversível</p>
                   </div>
                 </div>
-                <div style={{ background: 'rgba(239,68,68,0.09)', border: '1.5px solid #fecaca', borderRadius: 14, padding: '16px 18px' }}>
+                <div style={{ background: 'rgba(239,68,68,0.09)', border: '1.5px solid rgba(239,68,68,0.4)', borderRadius: 14, padding: '16px 18px' }}>
                   <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fca5a5', marginBottom: 8 }}>O que acontece ao excluir:</div>
                   <ul style={{ margin: 0, padding: '0 0 0 18px', fontSize: '0.82rem', color: '#fca5a5', lineHeight: 1.7 }}>
                     <li>Seu login e senha são <strong>removidos permanentemente</strong></li>
@@ -2261,7 +2283,7 @@ export default function AlunoPage() {
                     <li>Você precisará de nova conta para acessar a plataforma</li>
                   </ul>
                 </div>
-                <div style={{ background: '#161616', border: '1px solid #2a2a2a', borderRadius: 14, padding: '18px' }}>
+                <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '18px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#d4d4d4', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Digite <strong>EXCLUIR</strong> para confirmar</label>
@@ -2273,7 +2295,7 @@ export default function AlunoPage() {
                       <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#d4d4d4', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Senha Atual <span style={{ color: '#f87171' }}>*</span></label>
                       <input type="password" value={contaForm.current_password} onChange={e => setContaForm(f => ({ ...f, current_password: e.target.value }))}
                         placeholder="Confirme sua senha"
-                        style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+                        style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     {contaMsg && (
                       <div style={{ padding: '10px 14px', borderRadius: 10, background: contaMsgType === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${contaMsgType === 'success' ? '#bbf7d0' : '#fecaca'}`, color: contaMsgType === 'success' ? '#166534' : '#991b1b', fontSize: '0.83rem', fontWeight: 600 }}>
@@ -2323,13 +2345,13 @@ export default function AlunoPage() {
             } catch {}
             return null;
           }
-          const platformMeta: Record<string, { icon: string; color: string; label: string }> = {
-            youtube: { icon: '▶', color: '#f87171', label: 'YouTube' },
-            spotify: { icon: '🎧', color: '#4ade80', label: 'Spotify' },
-            deezer:  { icon: '🎵', color: '#c4b5fd', label: 'Deezer' },
-            tiktok:  { icon: '🎶', color: '#67e8f9', label: 'TikTok' },
-            kwai:    { icon: '📱', color: '#ea580c', label: 'Kwai' },
-            link:    { icon: '🔗', color: '#64748b', label: 'Link' },
+          const platformMeta: Record<string, { icon: React.ReactNode; label: string }> = {
+            youtube: { icon: <IconCamera size={12} />, label: 'YouTube' },
+            spotify: { icon: <IconMusic size={12} />, label: 'Spotify' },
+            deezer:  { icon: <IconMusic size={12} />, label: 'Deezer' },
+            tiktok:  { icon: <IconMusic size={12} />, label: 'TikTok' },
+            kwai:    { icon: <IconMusic size={12} />, label: 'Kwai' },
+            link:    { icon: <IconLink size={12} />, label: 'Link' },
           };
 
           const handleAddPlaylist = async () => {
@@ -2391,7 +2413,7 @@ export default function AlunoPage() {
               </div>
 
               {/* Formulário para adicionar */}
-              <div style={{ background: '#161616', borderRadius: 16, padding: '18px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+              <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '18px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
                 <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f5f5f4', marginBottom: 12 }}>Adicionar link</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <input
@@ -2399,7 +2421,7 @@ export default function AlunoPage() {
                     value={playlistAddUrl}
                     onChange={e => setPlaylistAddUrl(e.target.value)}
                     placeholder="Cole aqui o link (Spotify, YouTube, TikTok, Deezer, Kwai...)"
-                    style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                     onKeyDown={e => e.key === 'Enter' && handleAddPlaylist()}
                   />
                   <input
@@ -2407,7 +2429,7 @@ export default function AlunoPage() {
                     value={playlistAddTitle}
                     onChange={e => setPlaylistAddTitle(e.target.value)}
                     placeholder="Título (opcional — será preenchido automaticamente)"
-                    style={{ width: '100%', border: '1.5px solid #2e2e2e', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                   {playlistMsg && (
                     <div style={{ padding: '8px 12px', borderRadius: 8, background: playlistMsgType === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${playlistMsgType === 'success' ? '#bbf7d0' : '#fecaca'}`, color: playlistMsgType === 'success' ? '#166534' : '#991b1b', fontSize: '0.82rem', fontWeight: 600 }}>
@@ -2421,7 +2443,7 @@ export default function AlunoPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
                   {Object.entries(platformMeta).map(([key, meta]) => (
-                    <span key={key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: `${meta.color}15`, color: meta.color, borderRadius: 20, padding: '3px 10px', fontSize: '0.7rem', fontWeight: 700 }}>
+                    <span key={key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(255,146,0,0.10)', border: '1px solid rgba(255,146,0,0.25)', color: '#fdba74', borderRadius: 20, padding: '3px 10px', fontSize: '0.7rem', fontWeight: 700 }}>
                       {meta.icon} {meta.label}
                     </span>
                   ))}
@@ -2445,43 +2467,43 @@ export default function AlunoPage() {
                     const embedH = item.platform === 'spotify' ? 80 : item.platform === 'deezer' ? 100 : 157;
                     const isEditing = playlistEditId === item.id;
                     return (
-                      <div key={item.id} style={{ background: '#161616', border: '1px solid #2a2a2a', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                      <div key={item.id} style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                         {isEditing ? (
                           <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                             <input type="text" value={playlistEditTitle} onChange={e => setPlaylistEditTitle(e.target.value)}
-                              placeholder="Título" style={{ border: '1.5px solid #2e2e2e', borderRadius: 8, padding: '8px 12px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', width: '100%' }} />
+                              placeholder="Título" style={{ border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 8, padding: '8px 12px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', width: '100%' }} />
                             <input type="url" value={playlistEditUrl} onChange={e => setPlaylistEditUrl(e.target.value)}
-                              placeholder="URL" style={{ border: '1.5px solid #2e2e2e', borderRadius: 8, padding: '8px 12px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', width: '100%' }} />
+                              placeholder="URL" style={{ border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 8, padding: '8px 12px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', width: '100%' }} />
                             <div style={{ display: 'flex', gap: 8 }}>
                               <button onClick={() => handleEditPlaylist(item.id)} style={{ flex: 1, background: '#FF9200', color: '#fff', border: 'none', borderRadius: 8, padding: '8px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>Salvar</button>
-                              <button onClick={() => setPlaylistEditId(null)} style={{ flex: 1, background: '#1c1c1c', color: '#d4d4d4', border: 'none', borderRadius: 8, padding: '8px', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}>Cancelar</button>
+                              <button onClick={() => setPlaylistEditId(null)} style={{ flex: 1, background: 'rgba(255,255,255,0.06)', color: '#d4d4d4', border: 'none', borderRadius: 8, padding: '8px', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}>Cancelar</button>
                             </div>
                           </div>
                         ) : (
                           <>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderBottom: embed ? '1px solid #1c1c1c' : 'none' }}>
-                              <span style={{ background: meta.color, color: '#fff', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', flexShrink: 0, fontWeight: 800 }}>{meta.icon}</span>
+                              <span style={{ background: 'rgba(255,146,0,0.14)', border: '1px solid rgba(255,146,0,0.35)', color: '#FF9200', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{meta.icon}</span>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f5f5f4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
-                                <div style={{ fontSize: '0.7rem', color: meta.color, fontWeight: 600, marginTop: 1 }}>{meta.label}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#fdba74', fontWeight: 600, marginTop: 1 }}>{meta.label}</div>
                               </div>
                               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                                 <a href={item.url} target="_blank" rel="noopener noreferrer"
-                                  style={{ padding: '5px 10px', borderRadius: 7, background: '#121212', border: '1px solid #2a2a2a', color: '#d4d4d4', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
+                                  style={{ padding: '5px 10px', borderRadius: 7, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#d4d4d4', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>
                                   Abrir
                                 </a>
                                 <button onClick={() => { setPlaylistEditId(item.id); setPlaylistEditTitle(item.title); setPlaylistEditUrl(item.url); }}
-                                  style={{ padding: '5px 8px', borderRadius: 7, background: 'rgba(59,130,246,0.10)', border: 'none', color: '#1d4ed8', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>✏️</button>
+                                  style={{ padding: '5px 8px', borderRadius: 7, background: 'rgba(255,146,0,0.10)', border: 'none', color: '#fdba74', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}><IconPencil size={12} /></button>
                                 <button onClick={() => handleDeletePlaylist(item.id)}
-                                  style={{ padding: '5px 8px', borderRadius: 7, background: 'rgba(239,68,68,0.09)', border: 'none', color: '#f87171', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>🗑</button>
+                                  style={{ padding: '5px 8px', borderRadius: 7, background: 'rgba(239,68,68,0.09)', border: 'none', color: '#f87171', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}><IconTrash size={14} /></button>
                               </div>
                             </div>
                             {embed && embed.type === 'iframe' && (
                               <iframe src={embed.src} height={embedH} width="100%" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style={{ display: 'block', border: 'none' }} />
                             )}
                             {!embed && (
-                              <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', textDecoration: 'none', color: meta.color, fontSize: '0.83rem', fontWeight: 600 }}>
-                                🔗 Abrir no {meta.label}
+                              <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', textDecoration: 'none', color: '#fdba74', fontSize: '0.83rem', fontWeight: 600 }}>
+                                <IconLink size={13} style={{ display: 'inline-block', verticalAlign: '-2px' }} /> Abrir no {meta.label}
                               </a>
                             )}
                           </>
@@ -2641,7 +2663,7 @@ export default function AlunoPage() {
           const sexo_opts = [{ v: 'M', l: 'Masculino' }, { v: 'F', l: 'Feminino' }, { v: 'O', l: 'Outro' }];
           const estados = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
           const isMissing = cadastroIncompleto;
-          const fs: React.CSSProperties = { width: '100%', borderColor: '#2e2e2e', borderStyle: 'solid', borderWidth: 1.5, borderRadius: 8, padding: '9px 11px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', background: '#161616' };
+          const fs: React.CSSProperties = { width: '100%', borderColor: 'rgba(255,255,255,0.12)', borderStyle: 'solid', borderWidth: 1.5, borderRadius: 8, padding: '9px 11px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))' };
           const ls: React.CSSProperties = { display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#d4d4d4', marginBottom: 4 };
           const sec: React.CSSProperties = { fontWeight: 800, fontSize: '0.78rem', color: '#a3a3a3', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid #1c1c1c' };
 
@@ -2653,7 +2675,7 @@ export default function AlunoPage() {
               </div>
 
               {/* ── Foto de Perfil ── */}
-              <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '18px 20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div style={{ flexShrink: 0, position: 'relative' }}>
                   {student.foto_url ? (
                     <img src={student.foto_url as string} alt={student.nome_completo} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,146,0,0.35)' }} />
@@ -2731,7 +2753,7 @@ export default function AlunoPage() {
               )}
 
               {/* ── Identificação na Associação ── */}
-              <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '18px 20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
                 <div style={sec}>Identificação na Associação</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div>
@@ -2749,7 +2771,7 @@ export default function AlunoPage() {
                       {(['Infantil', 'Adulto'] as const).map(t => (
                         <button key={t} type="button" onClick={() => setDadosForm(p => ({ ...p, tipo_graduacao: t, graduacao: '' }))}
                           style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: `2px solid ${tipoEfetivo === t ? 'rgba(255,146,0,0.6)' : '#2a2a2a'}`, background: tipoEfetivo === t ? 'rgba(255,146,0,0.10)' : '#161616', color: tipoEfetivo === t ? '#FF9200' : '#d4d4d4', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.15s' }}>
-                          {t === 'Infantil' ? '👦 Infantil' : '🧑 Adulto'}
+                          {t === 'Infantil' ? 'Infantil' : 'Adulto'}
                         </button>
                       ))}
                     </div>
@@ -2782,7 +2804,7 @@ export default function AlunoPage() {
               </div>
 
               {/* ── Dados Pessoais ── */}
-              <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '18px 20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
                 <div style={sec}>Dados Pessoais</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
@@ -2893,7 +2915,7 @@ export default function AlunoPage() {
               </div>
 
               {/* ── Endereço ── */}
-              <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '18px 20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
                 <div style={sec}>Endereço</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
@@ -2935,7 +2957,7 @@ export default function AlunoPage() {
               </div>
 
               {/* ── Filiação ── */}
-              <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '18px 20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
                 <div style={sec}>Filiação</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
@@ -2968,7 +2990,7 @@ export default function AlunoPage() {
               </div>
 
               {/* ── Desenvolvimento Atípico / Necessidades Específicas ── */}
-              <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '18px 20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
                 <div style={sec}>Desenvolvimento Atípico / Necessidades Específicas</div>
                 <p style={{ fontSize: '0.72rem', color: '#a3a3a3', marginTop: 0, marginBottom: 12 }}>Campo opcional. Selecione todas as condições que se aplicam.</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -3115,7 +3137,7 @@ export default function AlunoPage() {
                 </div>
                 {termoSaved && (
                   <button onClick={handlePrint} style={{ marginLeft: 'auto', background: '#FF9200', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
-                    🖨️ Imprimir / PDF
+                    <IconPrinter size={14} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 6 }} />Imprimir / PDF
                   </button>
                 )}
               </div>
@@ -3127,7 +3149,7 @@ export default function AlunoPage() {
               )}
 
               {/* Documento */}
-              <div style={{ background: '#161616', border: '2px solid rgba(255,146,0,0.45)', borderRadius: 16, overflow: 'hidden' }}>
+              <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: '2px solid rgba(255,146,0,0.45)', borderRadius: 16, overflow: 'hidden' }}>
                 <div style={{ background: '#FF9200', padding: '14px 20px', textAlign: 'center' }}>
                   <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconWarn size={14} /> Autorização de Participação — Menor de Idade</span>
@@ -3135,7 +3157,7 @@ export default function AlunoPage() {
                 </div>
                 <div style={{ padding: '24px 22px', fontFamily: 'Georgia, serif' }}>
                   {/* Dados do aluno */}
-                  <div style={{ background: '#141414', border: '1px solid #2a2a2a', borderRadius: 10, padding: '14px 18px', marginBottom: 22, fontFamily: 'sans-serif', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: '0.83rem' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '14px 18px', marginBottom: 22, fontFamily: 'sans-serif', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: '0.83rem' }}>
                     <div><span style={{ color: '#a3a3a3' }}>Aluno: </span><strong>{student.nome_completo}</strong></div>
                     <div><span style={{ color: '#a3a3a3' }}>Núcleo: </span><strong>{student.nucleo || '—'}</strong></div>
                     <div><span style={{ color: '#a3a3a3' }}>Nascimento: </span><strong>{student.data_nascimento ? new Date((student.data_nascimento as string)+'T12:00:00').toLocaleDateString('pt-BR') : '—'}</strong></div>
@@ -3182,7 +3204,7 @@ export default function AlunoPage() {
               ) : (
                 <button onClick={handlePrint}
                   style={{ background: 'linear-gradient(135deg, #1e40af, #1d4ed8)', color: '#fff', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(30,64,175,0.3)' }}>
-                  🖨️ Imprimir / Baixar PDF do Termo
+                  <IconPrinter size={14} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 6 }} />Imprimir / Baixar PDF do Termo
                 </button>
               )}
 
@@ -3277,7 +3299,7 @@ export default function AlunoPage() {
                   </div>
 
                   {/* Monthly frequency bar chart */}
-                  <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+                  <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '18px 20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
                     <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f5f5f4', marginBottom: 16 }}>Frequência Mensal</div>
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 100 }}>
                       {months6.map(m => {
@@ -3295,7 +3317,7 @@ export default function AlunoPage() {
                   </div>
 
                   {/* Last 30 days calendar grid */}
-                  <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+                  <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '18px 20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
                     <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f5f5f4', marginBottom: 12 }}>Últimos 30 Dias</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 5 }}>
                       {last30Arr.map(d => {
@@ -3311,14 +3333,14 @@ export default function AlunoPage() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: '0.7rem', color: '#8f8f8f' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: nucleoColor, display: 'inline-block' }} /> Treinou</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: '#1c1c1c', border: '1px solid #2a2a2a', display: 'inline-block' }} /> Não treinou</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', display: 'inline-block' }} /> Não treinou</span>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 12, height: 12, borderRadius: 3, border: '2px solid #FF9200', display: 'inline-block' }} /> Hoje</span>
                     </div>
                   </div>
 
                   {/* Attendance list — last 10 */}
                   {evolucaoDates.length > 0 && (
-                    <div style={{ background: '#161616', borderRadius: 16, padding: '18px 20px', border: '1px solid #2a2a2a', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+                    <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '18px 20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
                       <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f5f5f4', marginBottom: 12 }}>Histórico de Presenças</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {([...evolucaoEntries].length > 0
@@ -3327,7 +3349,7 @@ export default function AlunoPage() {
                         ).slice(0, 10).map(entry => {
                           const localLabel = entry.local_nome || entry.nucleo || null;
                           return (
-                            <div key={entry.date} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', background: '#121212', borderRadius: 10, borderLeft: `3px solid ${nucleoColor}` }}>
+                            <div key={entry.date} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 10, borderLeft: `3px solid ${nucleoColor}` }}>
                               <span style={{ width: 8, height: 8, borderRadius: '50%', background: nucleoColor, flexShrink: 0, marginTop: 5 }} />
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f5f5f4', textTransform: 'capitalize' }}>
@@ -3359,7 +3381,7 @@ export default function AlunoPage() {
                   )}
 
                   {evolucaoDates.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '40px 20px', background: '#141414', borderRadius: 16, border: '2px dashed #2e2e2e' }}>
+                    <div style={{ textAlign: 'center', padding: '40px 20px', background: 'rgba(255,255,255,0.05)', borderRadius: 16, border: '2px dashed #2e2e2e' }}>
                       <div style={{ color: '#FF9200', marginBottom: 10, display: 'flex', justifyContent: 'center' }}><IconBerimbau size={48} strokeWidth={1.4} /></div>
                       <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#d4d4d4' }}>Nenhuma presença registrada</div>
                       <div style={{ fontSize: '0.78rem', color: '#8f8f8f', marginTop: 6, lineHeight: 1.5 }}>
@@ -3390,28 +3412,34 @@ export default function AlunoPage() {
 
       </main>
 
-      {/* ── Sidebar (menu hambúrguer) ── */}
+      {/* ── Sidebar (menu hambúrguer) — drawer glass ── */}
       {sidebarOpen && (
         <div onClick={e => { if (e.target === e.currentTarget) setSidebarOpen(false); }}
           role="dialog" aria-modal="true" aria-label="Menu"
-          style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.65)', display: 'flex' }}>
+          style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(4,4,6,0.6)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex' }}>
           <aside onClick={e => e.stopPropagation()}
             style={{
-              width: 'min(310px, 86vw)', height: '100%', background: '#141414', borderRight: '1px solid #262626',
-              display: 'flex', flexDirection: 'column', animation: 'sidebarIn 0.22s ease-out',
-              boxShadow: '14px 0 40px rgba(0,0,0,0.5)',
+              width: 'min(312px, 86vw)', height: '100%', position: 'relative',
+              background: 'linear-gradient(165deg, rgba(24,24,27,0.94) 0%, rgba(10,10,12,0.96) 100%)',
+              backdropFilter: 'blur(22px) saturate(1.25)', WebkitBackdropFilter: 'blur(22px) saturate(1.25)',
+              borderRight: '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', flexDirection: 'column', animation: 'sidebarIn 0.24s cubic-bezier(0.22,1,0.36,1)',
+              boxShadow: '18px 0 60px rgba(0,0,0,0.6)',
             }}>
-            <style>{`@keyframes sidebarIn { from { transform: translateX(-24px); opacity: 0 } to { transform: translateX(0); opacity: 1 } }`}</style>
+            <style>{`@keyframes sidebarIn { from { transform: translateX(-28px); opacity: 0 } to { transform: translateX(0); opacity: 1 } }`}</style>
+            <div aria-hidden="true" style={{ position: 'absolute', top: -70, right: -70, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,146,0,0.16) 0%, rgba(255,146,0,0) 70%)', pointerEvents: 'none' }} />
             {/* Perfil */}
-            <div style={{ padding: '18px 16px 14px', background: 'linear-gradient(150deg, #1f1f1f 0%, #141414 100%)', borderBottom: '1px solid #262626', position: 'relative' }}>
-              <div aria-hidden="true" style={{ position: 'absolute', top: -46, right: -46, width: 130, height: 130, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,146,0,0.20) 0%, rgba(255,146,0,0) 70%)', pointerEvents: 'none' }} />
+            <div style={{ padding: '18px 16px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)', position: 'relative' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
                   {student?.foto_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={student.foto_url} alt="" style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,146,0,0.65)', flexShrink: 0 }} />
+                    <>
+                      <span aria-hidden="true" style={{ position: 'absolute', top: 12, left: 12, width: 58, height: 58, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,146,0,0.35) 0%, rgba(255,146,0,0) 70%)', filter: 'blur(5px)' }} />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={student.foto_url} alt="" style={{ position: 'relative', width: 50, height: 50, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,146,0,0.6)', flexShrink: 0, boxShadow: '0 4px 16px rgba(0,0,0,0.45)' }} />
+                    </>
                   ) : (
-                    <span style={{ width: 50, height: 50, borderRadius: '50%', background: 'rgba(255,146,0,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FF9200', flexShrink: 0 }}>
+                    <span style={{ width: 50, height: 50, borderRadius: '50%', background: 'radial-gradient(circle at 32% 28%, rgba(255,146,0,0.32), rgba(255,146,0,0.10))', border: '1.5px solid rgba(255,146,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FF9200', flexShrink: 0 }}>
                       <IconUser size={24} />
                     </span>
                   )}
@@ -3422,15 +3450,15 @@ export default function AlunoPage() {
                     </div>
                   </div>
                 </div>
-                <button onClick={() => setSidebarOpen(false)} aria-label="Fechar menu"
-                  style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, border: '1px solid #2e2e2e', background: '#1c1c1c', color: '#d4d4d4', cursor: 'pointer' }}>
+                <button onClick={() => setSidebarOpen(false)} aria-label="Fechar menu" className="press"
+                  style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.05)', color: '#d4d4d4', cursor: 'pointer' }}>
                   <IconX size={16} />
                 </button>
               </div>
               {alunoInscricaoNum != null && (
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid #2a2a2a', borderRadius: 8, padding: '4px 10px' }}>
-                  <span style={{ fontSize: '0.6rem', color: '#8f8f8f', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>ID</span>
-                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#f5f5f4', letterSpacing: '0.06em' }}>{`CCLN-${String(alunoInscricaoNum).padStart(3, '0')}`}</span>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, background: 'rgba(255,146,0,0.08)', border: '1px solid rgba(255,146,0,0.28)', borderRadius: 9, padding: '4px 10px' }}>
+                  <span style={{ fontSize: '0.6rem', color: 'rgba(255,146,0,0.85)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>ID</span>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#ffb84d', letterSpacing: '0.06em' }}>{`CCLN-${String(alunoInscricaoNum).padStart(3, '0')}`}</span>
                 </div>
               )}
             </div>
@@ -3441,39 +3469,42 @@ export default function AlunoPage() {
                 const isActive = activeTab === tab.id;
                 return (
                   <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
-                    aria-current={isActive ? 'page' : undefined}
+                    aria-current={isActive ? 'page' : undefined} className="press"
                     style={{
                       position: 'relative', display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-                      padding: '11px 12px', borderRadius: 12, border: 'none', cursor: 'pointer', textAlign: 'left',
-                      background: isActive ? 'rgba(255,146,0,0.13)' : 'transparent',
-                      color: isActive ? '#FF9200' : '#d4d4d4',
+                      padding: '11px 12px', borderRadius: 13, border: 'none', cursor: 'pointer', textAlign: 'left',
+                      background: isActive ? 'linear-gradient(90deg, rgba(255,146,0,0.16) 0%, rgba(255,146,0,0.05) 100%)' : 'transparent',
+                      boxShadow: isActive ? 'inset 2px 0 0 #FF9200' : 'none',
+                      color: isActive ? '#ffb84d' : '#d4d4d4',
                     }}>
                     <span style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                      background: isActive ? 'rgba(255,146,0,0.16)' : '#1e1e1e', color: isActive ? '#FF9200' : '#a3a3a3',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 11, flexShrink: 0,
+                      background: isActive ? 'radial-gradient(circle at 32% 26%, rgba(255,146,0,0.32), rgba(255,146,0,0.08))' : 'rgba(255,255,255,0.05)',
+                      border: isActive ? '1px solid rgba(255,146,0,0.35)' : '1px solid rgba(255,255,255,0.07)',
+                      color: isActive ? '#FF9200' : '#a3a3a3',
+                      boxShadow: isActive ? '0 0 14px rgba(255,146,0,0.18)' : 'none',
                     }}>
                       <TabIcon size={18} />
                     </span>
                     <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: isActive ? 700 : 600 }}>{tab.label}</span>
-                    {tab.badge && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', flexShrink: 0 }} />}
-                    {isActive && <span style={{ width: 4, height: 18, borderRadius: 2, background: '#FF9200', flexShrink: 0 }} />}
+                    {tab.badge && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', flexShrink: 0, boxShadow: '0 0 8px rgba(239,68,68,0.5)' }} />}
                   </button>
                 );
               })}
             </nav>
             {/* Rodapé: conta e sair */}
-            <div style={{ borderTop: '1px solid #262626', padding: '10px 10px calc(12px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <button onClick={() => { setActiveTab('conta'); setSidebarOpen(false); }}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', borderRadius: 12, border: 'none', background: 'transparent', color: '#d4d4d4', cursor: 'pointer', textAlign: 'left' }}>
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: '#1e1e1e', color: '#a3a3a3' }}>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '10px 10px calc(12px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <button onClick={() => { setActiveTab('conta'); setSidebarOpen(false); }} className="press"
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', borderRadius: 13, border: 'none', background: 'transparent', color: '#d4d4d4', cursor: 'pointer', textAlign: 'left' }}>
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 11, flexShrink: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', color: '#a3a3a3' }}>
                   <IconGear size={18} />
                 </span>
                 <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 600 }}>Minha Conta</span>
               </button>
               {!isAdminPreview && (
-                <button onClick={handleLogout}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', borderRadius: 12, border: 'none', background: 'transparent', color: '#f87171', cursor: 'pointer', textAlign: 'left' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: 'rgba(239,68,68,0.10)', color: '#f87171' }}>
+                <button onClick={handleLogout} className="press"
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', borderRadius: 13, border: 'none', background: 'transparent', color: '#f87171', cursor: 'pointer', textAlign: 'left' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 11, flexShrink: 0, background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>
                     <IconLogout size={18} />
                   </span>
                   <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 700 }}>Sair da conta</span>
@@ -3484,37 +3515,34 @@ export default function AlunoPage() {
         </div>
       )}
 
-      {/* Navegação inferior fixa, estilo aplicativo */}
+      {/* Navegação inferior flutuante (pill de vidro) */}
       <nav
         aria-label="Navegação principal"
-        style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 70,
-          background: 'rgba(12,12,12,0.92)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
-          borderTop: '1px solid #262626',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        }}
+        style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 70, padding: '0 14px', paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', pointerEvents: 'none' }}
       >
-        <div style={{ maxWidth: 560, margin: '0 auto', padding: '6px 4px 8px', display: 'flex', alignItems: 'stretch' }}>
+        <div className="glass-nav" style={{ maxWidth: 430, margin: '0 auto', borderRadius: 26, display: 'flex', alignItems: 'stretch', padding: '7px 8px', pointerEvents: 'auto', boxShadow: '0 1px 0 0 rgba(255,255,255,0.07) inset, 0 18px 44px rgba(0,0,0,0.6)' }}>
           {primaryTabs.map(tab => {
             const isActive = activeTab === tab.id;
             return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} aria-current={isActive ? 'page' : undefined}
-                style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '7px 2px', border: 'none', background: 'none', cursor: 'pointer', color: isActive ? '#FF9200' : '#8f8f8f', WebkitTapHighlightColor: 'transparent' }}>
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} aria-current={isActive ? 'page' : undefined} className="press"
+                style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '5px 2px', border: 'none', background: 'none', cursor: 'pointer', color: isActive ? '#fff' : '#8f8f8f', WebkitTapHighlightColor: 'transparent', borderRadius: 18 }}>
+                {isActive && (
+                  <span aria-hidden="true" style={{ position: 'absolute', top: 4, width: 44, height: 30, borderRadius: 999, background: 'linear-gradient(135deg, #ffb84d 0%, #FF9200 55%, #f07f00 100%)', boxShadow: '0 4px 18px rgba(255,146,0,0.45), 0 0 12px rgba(255,146,0,0.30)' }} />
+                )}
                 <span style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 28, borderRadius: 999,
-                  background: isActive ? 'rgba(255,146,0,0.16)' : 'transparent',
-                  fontSize: '1.2rem', lineHeight: 1, transition: 'background 0.15s', color: isActive ? '#FF9200' : '#8f8f8f',
+                  position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 30, borderRadius: 999,
+                  fontSize: '1.2rem', lineHeight: 1, transition: 'color 0.15s',
                 }}>{(() => { const Ic = TAB_ICONS[tab.id] || IconDoc; return <Ic size={20} />; })()}</span>
-                <span style={{ fontSize: '0.62rem', fontWeight: isActive ? 700 : 500, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>{tab.label}</span>
-                {tab.badge && <span style={{ position: 'absolute', top: 4, right: 'calc(50% - 22px)', width: 8, height: 8, borderRadius: '50%', background: '#ef4444', border: '1.5px solid #0c0c0c' }} />}
+                <span style={{ position: 'relative', fontSize: '0.6rem', fontWeight: isActive ? 800 : 500, letterSpacing: '0.02em', whiteSpace: 'nowrap', color: isActive ? '#fff' : '#8f8f8f', textShadow: isActive ? '0 0 10px rgba(255,146,0,0.4)' : 'none' }}>{tab.label}</span>
+                {tab.badge && <span style={{ position: 'absolute', top: 2, right: 'calc(50% - 24px)', width: 8, height: 8, borderRadius: '50%', background: '#ef4444', border: '1.5px solid #141416', boxShadow: '0 0 8px rgba(239,68,68,0.5)' }} />}
               </button>
             );
           })}
-          <button onClick={() => setSidebarOpen(true)} aria-label="Mais seções"
-            style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '7px 2px', border: 'none', background: 'none', cursor: 'pointer', color: '#8f8f8f', WebkitTapHighlightColor: 'transparent' }}>
-            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 28, borderRadius: 999, color: '#8f8f8f' }}><IconMenu size={20} /></span>
-            <span style={{ fontSize: '0.62rem', fontWeight: 500, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>Menu</span>
-            {tabs.filter(t => !primaryTabIds.includes(t.id)).some(t => t.badge) && <span style={{ position: 'absolute', top: 4, right: 'calc(50% - 22px)', width: 8, height: 8, borderRadius: '50%', background: '#ef4444', border: '1.5px solid #0c0c0c' }} />}
+          <button onClick={() => setSidebarOpen(true)} aria-label="Mais seções" className="press"
+            style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '5px 2px', border: 'none', background: 'none', cursor: 'pointer', color: '#8f8f8f', WebkitTapHighlightColor: 'transparent', borderRadius: 18 }}>
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 30, borderRadius: 999, color: '#8f8f8f' }}><IconMenu size={20} /></span>
+            <span style={{ fontSize: '0.6rem', fontWeight: 500, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>Menu</span>
+            {tabs.filter(t => !primaryTabIds.includes(t.id)).some(t => t.badge) && <span style={{ position: 'absolute', top: 2, right: 'calc(50% - 24px)', width: 8, height: 8, borderRadius: '50%', background: '#ef4444', border: '1.5px solid #141416', boxShadow: '0 0 8px rgba(239,68,68,0.5)' }} />}
           </button>
         </div>
       </nav>
