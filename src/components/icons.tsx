@@ -139,3 +139,6 @@ export const IconClock = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
 
 export const IconBerimbau = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
   base(size, style, strokeWidth, <><path d="M14 3 7 20" /><path d="M14 3c2.4.8 4 3 4 5.6 0 4.6-3.6 8.4-8.3 11.4" /><circle cx="6" cy="21" r="1.4" /></>);
+
+export const IconMail = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
+  base(size, style, strokeWidth, <><rect x="3" y="5.5" width="18" height="13" rx="2.5" /><path d="m4 7.5 8 5.6 8-5.6" /></>);

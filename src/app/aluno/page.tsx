@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Carteirinha from '@/components/Carteirinha';
-import DocumentsBar from '@/components/DocumentsBar';
 import PhotoEditor from '@/components/PhotoEditor';
 import { graduacoes as GRADUACOES_ALL, nomenclaturaGraduacao, getCordaColors } from '@/lib/graduacoes';
 import {
@@ -421,7 +420,9 @@ export default function AlunoPage() {
       if (activeTab === 'dashboard' && !muralLoadedRef.current) {
         muralLoadedRef.current = true;
         setMuralLoading(true);
-        fetch('/api/mural', { cache: 'no-store' })
+        // Mural filtrado: avisos gerais (owner/admin geral) + avisos do núcleo do aluno
+        const nucleoParam = student?.nucleo ? `&nucleo=${encodeURIComponent(student.nucleo)}` : '';
+        fetch(`/api/mural?scope=aluno${nucleoParam}`, { cache: 'no-store' })
           .then(r => r.json())
           .then(d => {
             const itens: MuralItem[] = Array.isArray(d.items) ? d.items : [];
@@ -454,7 +455,7 @@ export default function AlunoPage() {
         fetch(`/api/aluno/evolucao?student_id=${session.student_id}`).then(r => r.json()).then(d => { setEvolucaoDates(Array.isArray(d.dates) ? d.dates : []); setEvolucaoEntries(Array.isArray(d.entries) ? d.entries : []); setEvolucaoLoading(false); }).catch(() => setEvolucaoLoading(false));
       }
     }
-  }, [session, activeTab, loadJustificativas, loadHistorico, loadFotos, loadDocs]);
+  }, [session, activeTab, student, loadJustificativas, loadHistorico, loadFotos, loadDocs]);
 
   // ── Login handler ─────────────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
@@ -1369,11 +1370,7 @@ export default function AlunoPage() {
               ))}
             </div>
 
-            {/* Documentos institucionais — bibliografia, estatuto, regimento, informações */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Documentos da Associação</div>
-              <DocumentsBar readOnly studentPhone={student?.telefone} studentName={student?.nome_completo} />
-            </div>
+            {/* Documentos institucionais vivem em painel dedicado (/documentos) — removido da home */}
           </div>
         )}
 

@@ -8,7 +8,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Carteirinha from '@/components/Carteirinha';
-import DocumentsBar from '@/components/DocumentsBar';
 
 type Student = {
   id: string;
@@ -404,7 +403,6 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
               ))}
             </div>
 
-            <DocumentsBar readOnly studentPhone={student.telefone} studentName={student.nome_completo} />
           </div>
         )}
 

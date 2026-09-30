@@ -50,7 +50,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <LanguageProvider>
           <SplashGate />
           {children}
-          <LanguageButton />
+          {/* Seletor de idioma: flutuante apenas na capa (/) e no painel (/admin) */}
+          <LanguageButton scope="home-admin" />
           <SessionCleanup />
         </LanguageProvider>
       </body>

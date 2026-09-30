@@ -2,12 +2,14 @@
 
 /**
  * MuralAdmin — aba do painel para publicar avisos e cartazes no mural do aluno.
- * - Aviso: título + texto.
- * - Cartaz: título + imagem (upload direto para o bucket privado).
- * Qualquer admin publica; owner/admin geral removem qualquer item,
- * admin de núcleo remove apenas o que publicou (reforçado no servidor).
+ * - Aviso: título + texto. Cartaz: título + imagem (upload para o bucket privado).
+ * - Alvo: "Todos os núcleos" (só owner/admin geral) ou um núcleo específico.
+ *   Admin de núcleo publica exclusivamente para os núcleos que gerencia.
+ * - Edições: owner/admin geral gerenciam qualquer item; admin de núcleo só os
+ *   próprios (também reforçado no servidor).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { IconBell, IconImage, IconMapPin, IconPencil, IconTrash, IconRefresh, IconWarn } from '@/components/icons';
 
 type MuralItem = {
   id: string;
@@ -19,9 +21,12 @@ type MuralItem = {
   autor_login: string;
   nucleo?: string;
   created_at: string;
+  updated_at?: string;
 };
 
-export default function MuralAdmin({ nucleos }: { nucleos: { nome: string }[] }) {
+type MeInfo = { username: string; display_name?: string; nome?: string; is_owner: boolean; role?: string };
+
+export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?: string }[] }) {
   const [items, setItems] = useState<MuralItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [tipo, setTipo] = useState<'aviso' | 'cartaz'>('aviso');
@@ -34,18 +39,40 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string }[] })
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [filtro, setFiltro] = useState<'todos' | 'cartaz' | 'aviso'>('todos');
+  const [me, setMe] = useState<MeInfo | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Estado de edição (somente título/texto/etiqueta; a imagem do cartaz não muda)
+  const [editId, setEditId] = useState('');
+  const [editTitulo, setEditTitulo] = useState('');
+  const [editTexto, setEditTexto] = useState('');
+  const [editNucleo, setEditNucleo] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Estado do formulário de confirmação de remoção
+  const [removeId, setRemoveId] = useState('');
+  const [removeItem, setRemoveItem] = useState<MuralItem | null>(null);
+  const [removeConfirm, setRemoveConfirm] = useState('');
+  const [removeSending, setRemoveSending] = useState(false);
+
+  const ehGeral = !!me && (me.is_owner || me.role === 'owner' || me.role === 'admin_geral');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const d = await fetch('/api/mural').then(r => r.json());
+      const d = await fetch('/api/mural', { cache: 'no-store' }).then(r => r.json());
       setItems(Array.isArray(d.items) ? d.items : []);
     } catch { /* mantém lista vazia */ }
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'me' }) })
+      .then(r => r.json())
+      .then(d => { if (d.authenticated) setMe(d); })
+      .catch(() => {});
+  }, [load]);
 
   const onFile = (f: File | null) => {
     setFile(f);
@@ -85,102 +112,167 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string }[] })
     setSaving(false);
   };
 
-  const excluir = async (id: string, tituloItem: string) => {
-    if (!window.confirm(`Remover "${tituloItem}" do mural?`)) return;
-    const res = await fetch(`/api/mural?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) { setErr(json.error || 'Erro ao remover.'); return; }
-    setMsg('Item removido do mural.');
-    await load();
+  const abrirEdicao = (item: MuralItem) => {
+    setEditId(item.id);
+    setEditTitulo(item.titulo);
+    setEditTexto(item.texto || '');
+    setEditNucleo(item.nucleo || '');
+    setMsg(''); setErr('');
   };
+
+  const salvarEdicao = async () => {
+    if (!editId) return;
+    setErr(''); setMsg('');
+    setEditSaving(true);
+    try {
+      const res = await fetch('/api/mural', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editId, titulo: editTitulo.trim(), texto: editTexto.trim(), nucleo: editNucleo.trim() }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Erro ao salvar a edição.');
+      setMsg('Aviso atualizado.');
+      setEditId('');
+      await load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Erro ao salvar a edição.');
+    }
+    setEditSaving(false);
+  };
+
+  const abrirRemocao = (item: MuralItem) => {
+    setRemoveItem(item);
+    setRemoveId(item.id);
+    setRemoveConfirm('');
+    setMsg(''); setErr('');
+  };
+
+  const confirmarRemocao = async () => {
+    if (!removeItem) return;
+    if (removeConfirm.trim() !== removeItem.titulo.trim()) return;
+    setRemoveSending(true);
+    try {
+      const res = await fetch(`/api/mural?id=${encodeURIComponent(removeId)}`, { method: 'DELETE' });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Erro ao remover.');
+      setMsg('Item removido do mural.');
+      setRemoveItem(null);
+      setRemoveId('');
+      await load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Erro ao remover.');
+    }
+    setRemoveSending(false);
+  };
+
+  const podeGerenciar = (item: MuralItem) => ehGeral || item.autor_login === me?.username;
 
   const filtrados = items.filter(i => filtro === 'todos' || i.tipo === filtro);
 
   const inp: React.CSSProperties = {
-    width: '100%', boxSizing: 'border-box', background: '#fff', border: '1px solid #d4d4d8',
-    borderRadius: 8, padding: '9px 12px', fontSize: '0.88rem', color: '#18181b',
+    width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: 10, padding: '10px 12px', fontSize: '0.88rem', color: '#f5f5f4', outline: 'none',
   };
-  const lbl: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 700, color: '#52525b', marginBottom: 4, display: 'block' };
+  const lbl: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 700, color: '#a3a3a3', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Cabeçalho */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>📌 Mural do Aluno</h2>
-          <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#71717a' }}>
-            Avisos em texto e cartazes em imagem aparecem na tela inicial de todos os alunos.
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: 12, background: 'radial-gradient(circle at 32% 26%, rgba(255,146,0,0.28), rgba(255,146,0,0.08))', border: '1px solid rgba(255,146,0,0.3)', color: '#FF9200', boxShadow: '0 0 16px rgba(255,146,0,0.16)' }}>
+            <IconBell size={19} />
+          </span>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f5f5f4' }}>Mural do Aluno</h2>
+            <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#8f8f8f' }}>
+              Avisos e cartazes aparecem na tela inicial do app do aluno.
+            </p>
+          </div>
         </div>
-        <button onClick={load} style={{ border: '1px solid #d4d4d8', background: '#fff', borderRadius: 8, padding: '7px 14px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>↻ Atualizar</button>
+        <button onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.05)', borderRadius: 9, padding: '8px 14px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', color: '#e5e5e5' }}>
+          <IconRefresh size={14} /> Atualizar
+        </button>
       </div>
 
       {(msg || err) && (
         <div style={{
-          background: err ? '#fef2f2' : '#f0fdf4', border: `1px solid ${err ? '#fecaca' : '#bbf7d0'}`,
-          color: err ? '#991b1b' : '#166534', borderRadius: 10, padding: '10px 14px', fontSize: '0.83rem', fontWeight: 600,
+          background: err ? 'rgba(220,38,38,0.1)' : 'rgba(34,197,94,0.1)', border: `1px solid ${err ? 'rgba(220,38,38,0.4)' : 'rgba(34,197,94,0.4)'}`,
+          color: err ? '#fca5a5' : '#86efac', borderRadius: 10, padding: '10px 14px', fontSize: '0.83rem', fontWeight: 600,
         }}>
           {err || msg}
         </div>
       )}
 
       {/* Formulário */}
-      <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 14, padding: 16 }}>
+      <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 16 }}>
         {/* Alternador de tipo */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-          {([['aviso', '📝 Aviso em texto'], ['cartaz', '🖼️ Cartaz (imagem)']] as const).map(([t, label]) => (
-            <button key={t} onClick={() => { setTipo(t); setErr(''); }}
-              style={{
-                flex: 1, padding: '10px 8px', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem',
-                border: tipo === t ? '2px solid #FF9200' : '1px solid #e4e4e7',
-                background: tipo === t ? 'rgba(255,146,0,0.10)' : '#fafafa',
-                color: tipo === t ? '#b45309' : '#71717a',
-              }}>{label}</button>
-          ))}
+          {([['aviso', 'Aviso em texto'], ['cartaz', 'Cartaz (imagem)']] as const).map(([tp, label]) => {
+            const Icon = tp === 'aviso' ? IconBell : IconImage;
+            const ativo = tipo === tp;
+            return (
+              <button key={tp} onClick={() => { setTipo(tp); setErr(''); }}
+                style={{
+                  flex: 1, padding: '10px 8px', borderRadius: 11, cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                  border: ativo ? '1.5px solid rgba(255,146,0,0.65)' : '1px solid rgba(255,255,255,0.1)',
+                  background: ativo ? 'rgba(255,146,0,0.12)' : 'rgba(255,255,255,0.04)',
+                  color: ativo ? '#FF9200' : '#a3a3a3',
+                  boxShadow: ativo ? '0 0 14px rgba(255,146,0,0.12)' : 'none',
+                }}>
+                <Icon size={15} /> {label}
+              </button>
+            );
+          })}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <label style={lbl}>Título *</label>
+            <label style={lbl}>Título</label>
             <input style={inp} value={titulo} onChange={e => setTitulo(e.target.value)}
               placeholder={tipo === 'cartaz' ? 'Ex.: Roda de samba no núcleo central' : 'Ex.: Não haverá treino sábado'} maxLength={120} />
           </div>
 
           {tipo === 'aviso' ? (
             <div>
-              <label style={lbl}>Texto do aviso *</label>
+              <label style={lbl}>Texto do aviso</label>
               <textarea style={{ ...inp, minHeight: 90, resize: 'vertical' }} value={texto} onChange={e => setTexto(e.target.value)}
                 placeholder="Escreva o comunicado que o aluno vai ler no app..." maxLength={1200} />
             </div>
           ) : (
             <div>
-              <label style={lbl}>Imagem do cartaz *</label>
-              <input ref={fileRef} type="file" accept="image/*" style={inp} onChange={e => onFile(e.target.files?.[0] || null)} />
+              <label style={lbl}>Imagem do cartaz</label>
+              <input ref={fileRef} type="file" accept="image/*" style={{ ...inp, padding: '8px 10px' }} onChange={e => onFile(e.target.files?.[0] || null)} />
               {preview && (
-                <div style={{ marginTop: 10, borderRadius: 12, overflow: 'hidden', border: '1px solid #e4e4e7', maxHeight: 240, display: 'flex', justifyContent: 'center', background: '#fafafa' }}>
+                <div style={{ marginTop: 10, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', maxHeight: 240, display: 'flex', justifyContent: 'center', background: 'rgba(255,255,255,0.03)' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={preview} alt="Prévia do cartaz" style={{ maxWidth: '100%', maxHeight: 240, objectFit: 'contain' }} />
                 </div>
               )}
-              <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: '#a1a1aa' }}>PNG ou JPG, até 8 MB. A imagem é publicada exatamente como enviada.</p>
+              <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: '#6b6b6b' }}>PNG ou JPG, até 8 MB. A imagem é publicada exatamente como enviada.</p>
             </div>
           )}
 
-          <div style={{ maxWidth: 320 }}>
-            <label style={lbl}>Etiqueta de núcleo (opcional)</label>
+          <div style={{ maxWidth: 340 }}>
+            <label style={lbl}>Exibir para</label>
             <select style={inp} value={nucleo} onChange={e => setNucleo(e.target.value)}>
-              <option value="">Todos os núcleos</option>
+              <option value="">{ehGeral ? 'Todos os núcleos' : 'Selecione o núcleo...'}</option>
               {nucleos.map(n => <option key={n.nome} value={n.nome}>{n.nome}</option>)}
             </select>
-            <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: '#a1a1aa' }}>
-              O aviso é exibido para todos; a etiqueta indica o núcleo relacionado.
+            <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: '#6b6b6b' }}>
+              {ehGeral
+                ? 'Sem núcleo selecionado, o aviso aparece para todos os alunos do app.'
+                : 'Como admin de núcleo, escolha um dos núcleos que você gerencia — só os alunos dele verão o aviso.'}
             </p>
           </div>
 
           <button onClick={publicar} disabled={saving}
             style={{
-              alignSelf: 'flex-start', background: saving ? '#a1a1aa' : 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff',
-              border: 'none', borderRadius: 10, padding: '11px 22px', fontWeight: 800, fontSize: '0.88rem', cursor: saving ? 'wait' : 'pointer',
+              alignSelf: 'flex-start', background: saving ? 'rgba(255,146,0,0.4)' : 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff',
+              border: 'none', borderRadius: 11, padding: '11px 22px', fontWeight: 800, fontSize: '0.88rem', cursor: saving ? 'wait' : 'pointer',
+              boxShadow: saving ? 'none' : '0 4px 18px rgba(255,146,0,0.25)',
             }}>
             {saving ? 'Publicando...' : 'Publicar no mural'}
           </button>
@@ -192,47 +284,140 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string }[] })
         {([['todos', `Todos (${items.length})`], ['aviso', `Avisos (${items.filter(i => i.tipo === 'aviso').length})`], ['cartaz', `Cartazes (${items.filter(i => i.tipo === 'cartaz').length})`]] as const).map(([f, label]) => (
           <button key={f} onClick={() => setFiltro(f)}
             style={{
-              border: '1px solid ' + (filtro === f ? '#FF9200' : '#e4e4e7'), background: filtro === f ? 'rgba(255,146,0,0.10)' : '#fff',
-              color: filtro === f ? '#b45309' : '#71717a', borderRadius: 999, padding: '5px 14px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer',
+              border: '1px solid ' + (filtro === f ? 'rgba(255,146,0,0.65)' : 'rgba(255,255,255,0.1)'), background: filtro === f ? 'rgba(255,146,0,0.12)' : 'rgba(255,255,255,0.04)',
+              color: filtro === f ? '#FF9200' : '#a3a3a3', borderRadius: 999, padding: '6px 14px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer',
             }}>{label}</button>
         ))}
       </div>
 
       {/* Lista */}
       {loading ? (
-        <div style={{ textAlign: 'center', color: '#71717a', fontSize: '0.85rem', padding: 24 }}>Carregando mural...</div>
+        <div style={{ textAlign: 'center', color: '#8f8f8f', fontSize: '0.85rem', padding: 24 }}>Carregando mural...</div>
       ) : filtrados.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 32, border: '2px dashed #e4e4e7', borderRadius: 14, color: '#71717a', fontSize: '0.85rem' }}>
+        <div style={{ textAlign: 'center', padding: 32, border: '1.5px dashed rgba(255,255,255,0.12)', borderRadius: 16, color: '#8f8f8f', fontSize: '0.85rem' }}>
           Nenhum item no mural ainda. Publique o primeiro aviso acima.
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-          {filtrados.map(item => (
-            <div key={item.id} style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              {item.tipo === 'cartaz' && item.imagem_path && (
-                <MuralImage path={item.imagem_path} />
-              )}
-              <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <span style={{ background: item.tipo === 'cartaz' ? 'rgba(255,146,0,0.12)' : 'rgba(59,130,246,0.10)', color: item.tipo === 'cartaz' ? '#b45309' : '#1d4ed8', borderRadius: 6, padding: '2px 8px', fontSize: '0.64rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    {item.tipo === 'cartaz' ? 'Cartaz' : 'Aviso'}
-                  </span>
-                  {item.nucleo && (
-                    <span style={{ background: '#f4f4f5', color: '#52525b', borderRadius: 6, padding: '2px 8px', fontSize: '0.64rem', fontWeight: 700 }}>🏢 {item.nucleo}</span>
-                  )}
-                </div>
-                <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#18181b', lineHeight: 1.3 }}>{item.titulo}</div>
-                {item.texto && <div style={{ fontSize: '0.8rem', color: '#3f3f46', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{item.texto}</div>}
-                <div style={{ marginTop: 'auto', paddingTop: 8, fontSize: '0.68rem', color: '#a1a1aa', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  <span>{item.autor} · {new Date(item.created_at).toLocaleDateString('pt-BR')}</span>
-                  <button onClick={() => excluir(item.id, item.titulo)}
-                    style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 7, padding: '3px 10px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer' }}>
-                    Remover
-                  </button>
+          {filtrados.map(item => {
+            const gerenciavel = podeGerenciar(item);
+            return (
+              <div key={item.id} style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                {item.tipo === 'cartaz' && item.imagem_path && (
+                  <MuralImage path={item.imagem_path} />
+                )}
+                <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(255,146,0,0.1)', border: '1px solid rgba(255,146,0,0.28)', color: '#fdba74', borderRadius: 7, padding: '2.5px 8px', fontSize: '0.64rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {item.tipo === 'cartaz' ? <IconImage size={10} /> : <IconBell size={10} />}
+                      {item.tipo === 'cartaz' ? 'Cartaz' : 'Aviso'}
+                    </span>
+                    {item.nucleo ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: '#a3a3a3', borderRadius: 7, padding: '2.5px 8px', fontSize: '0.64rem', fontWeight: 700 }}>
+                        <IconMapPin size={10} /> {item.nucleo}
+                      </span>
+                    ) : (
+                      <span style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: '#a3a3a3', borderRadius: 7, padding: '2.5px 8px', fontSize: '0.64rem', fontWeight: 700 }}>Todos os núcleos</span>
+                    )}
+                  </div>
+                  <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#f5f5f4', lineHeight: 1.3 }}>{item.titulo}</div>
+                  {item.texto && <div style={{ fontSize: '0.8rem', color: '#c9c9c9', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{item.texto}</div>}
+                  <div style={{ marginTop: 'auto', paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.68rem', color: '#8f8f8f' }}>
+                      Publicado por <strong style={{ color: '#d4d4d4' }}>{item.autor || item.autor_login}</strong>
+                      {' · '}{new Date(item.created_at).toLocaleDateString('pt-BR')}
+                      {item.updated_at ? ` · editado ${new Date(item.updated_at).toLocaleDateString('pt-BR')}` : ''}
+                    </span>
+                    {gerenciavel && (
+                      <span style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => abrirEdicao(item)} title="Editar aviso"
+                          style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,146,0,0.1)', color: '#FF9200', border: '1px solid rgba(255,146,0,0.3)', borderRadius: 8, padding: '5px 11px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
+                          <IconPencil size={12} /> Editar
+                        </button>
+                        <button onClick={() => abrirRemocao(item)} title="Remover do mural"
+                          style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(220,38,38,0.1)', color: '#f87171', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 8, padding: '5px 11px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
+                          <IconTrash size={12} /> Remover
+                        </button>
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal de edição */}
+      {editId && (
+        <div role="dialog" aria-modal="true" aria-label="Editar aviso" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.66)', backdropFilter: 'blur(4px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={() => setEditId('')}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 440, background: 'linear-gradient(165deg, #1c1c1e, #101012)', border: '1px solid rgba(255,146,0,0.25)', borderRadius: 18, padding: 20, boxShadow: '0 24px 70px rgba(0,0,0,0.6)', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, background: 'rgba(255,146,0,0.12)', border: '1px solid rgba(255,146,0,0.3)', color: '#FF9200' }}>
+                <IconPencil size={16} />
+              </span>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f5f5f4' }}>Editar publicação</h3>
             </div>
-          ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+              <div>
+                <label style={lbl}>Título</label>
+                <input style={inp} value={editTitulo} onChange={e => setEditTitulo(e.target.value)} maxLength={120} />
+              </div>
+              <div>
+                <label style={lbl}>Texto</label>
+                <textarea style={{ ...inp, minHeight: 80, resize: 'vertical' }} value={editTexto} onChange={e => setEditTexto(e.target.value)} maxLength={1200} />
+              </div>
+              <div>
+                <label style={lbl}>Exibir para</label>
+                <select style={inp} value={editNucleo} onChange={e => setEditNucleo(e.target.value)}>
+                  <option value="">{ehGeral ? 'Todos os núcleos' : 'Selecione o núcleo...'}</option>
+                  {nucleos.map(n => <option key={n.nome} value={n.nome}>{n.nome}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                <button onClick={() => setEditId('')} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#e5e5e5', borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+                  Cancelar
+                </button>
+                <button onClick={salvarEdicao} disabled={editSaving || !editTitulo.trim()}
+                  style={{ background: 'linear-gradient(135deg,#FF9200,#d97706)', border: 'none', color: '#fff', borderRadius: 10, padding: '9px 18px', fontWeight: 800, fontSize: '0.82rem', cursor: editSaving ? 'wait' : 'pointer', opacity: editSaving || !editTitulo.trim() ? 0.6 : 1 }}>
+                  {editSaving ? 'Salvando...' : 'Salvar alterações'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de remoção */}
+      {removeItem && (
+        <div role="dialog" aria-modal="true" aria-label="Confirmar remoção" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={() => setRemoveItem(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 420, background: 'linear-gradient(165deg, #201313, #120c0c)', border: '1px solid rgba(220,38,38,0.4)', borderRadius: 18, padding: 20, boxShadow: '0 24px 70px rgba(0,0,0,0.65)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 11, background: 'rgba(220,38,38,0.14)', border: '1px solid rgba(220,38,38,0.4)', color: '#f87171', boxShadow: '0 0 14px rgba(220,38,38,0.2)' }}>
+                <IconWarn size={17} />
+              </span>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#fecaca' }}>Remover do mural</h3>
+            </div>
+            <p style={{ margin: '0 0 6px', fontSize: '0.85rem', color: '#e5e5e5', lineHeight: 1.55 }}>
+              Você está removendo <strong style={{ color: '#fca5a5' }}>"{removeItem.titulo}"</strong> ({removeItem.tipo === 'cartaz' ? 'cartaz' : 'aviso'}
+              {removeItem.nucleo ? ` · ${removeItem.nucleo}` : ' · todos os núcleos'}) publicado por {removeItem.autor || removeItem.autor_login}.
+            </p>
+            <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: '#a3a3a3', lineHeight: 1.5 }}>
+              {removeItem.imagem_path ? 'A imagem do cartaz também será apagada. ' : ''}Os alunos deixam de ver este item imediatamente.
+            </p>
+            <label style={lbl}>Digite o título do aviso para confirmar</label>
+            <input style={{ ...inp, marginBottom: 12 }} value={removeConfirm} onChange={e => setRemoveConfirm(e.target.value)}
+              placeholder={removeItem.titulo} autoFocus onKeyDown={e => { if (e.key === 'Enter') confirmarRemocao(); }} />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setRemoveItem(null)} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#e5e5e5', borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={confirmarRemocao} disabled={removeSending || removeConfirm.trim() !== removeItem.titulo.trim()}
+                style={{ background: removeConfirm.trim() === removeItem.titulo.trim() ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : 'rgba(220,38,38,0.3)', border: 'none', color: '#fff', borderRadius: 10, padding: '9px 18px', fontWeight: 800, fontSize: '0.82rem', cursor: removeSending ? 'wait' : 'pointer', opacity: removeConfirm.trim() === removeItem.titulo.trim() ? 1 : 0.55 }}>
+                {removeSending ? 'Removendo...' : 'Remover definitivamente'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -251,9 +436,9 @@ function MuralImage({ path }: { path: string }) {
     return () => { alive = false; };
   }, [path]);
 
-  if (!url) return <div style={{ height: 140, background: '#f4f4f5' }} />;
+  if (!url) return <div style={{ height: 140, background: 'rgba(255,255,255,0.04)' }} />;
   return (
-    <div style={{ maxHeight: 260, overflow: 'hidden', display: 'flex', justifyContent: 'center', background: '#fafafa', borderBottom: '1px solid #e4e4e7' }}>
+    <div style={{ maxHeight: 260, overflow: 'hidden', display: 'flex', justifyContent: 'center', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={url} alt="" style={{ width: '100%', objectFit: 'cover', maxHeight: 260 }} />
     </div>

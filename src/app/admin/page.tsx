@@ -15,6 +15,9 @@ import MuralAdmin from '@/components/MuralAdmin';
 import { invalidateConfigCache } from '@/hooks/useSystemConfig';
 import EditAccountModal from '@/components/EditAccountModal';
 import MyAccountCard from '@/components/MyAccountCard';
+import { IconHome, IconUser, IconLogout, IconMenu, IconX, IconFolder, IconMapPin, IconWallet, IconChart, IconChevron, IconMedal, IconDoc, IconGear, IconTrash, IconEye, IconLock, IconBell, IconNote, IconMusic, IconBerimbau, IconBag, IconStar, IconWarn, IconMail as IconMailOk, IconRefresh } from '@/components/icons';
+
+
 
 interface PresencaCount {
   student_id: string;
@@ -651,6 +654,18 @@ function DbStatusPanel({ ds, dbCopied, setDbCopied }: { ds: Record<string,unknow
 
 type MuralItem = { id: string; tipo: 'cartaz' | 'aviso'; titulo: string; texto?: string; imagem_path?: string; autor: string; autor_login: string; nucleo?: string; created_at: string };
 
+// Emojis legados do menu → ícones de traço do design system
+type IconComp = (p: { size?: number; style?: React.CSSProperties; strokeWidth?: number }) => React.ReactElement;
+const TAB_ICONS: Record<string, IconComp> = {
+  '📋': IconMapPin, '👥': IconUser, '🏅': IconMedal, '📖': IconDoc, '🔧': IconGear, '🗑️': IconTrash,
+  '🔭': IconEye, '👤': IconUser, '🎓': IconMedal, '🔐': IconLock, '📌': IconBell,
+  '📝': IconNote, '📚': IconDoc, '📣': IconBell, '🎵': IconMusic, '🥋': IconBerimbau,
+  '💰': IconWallet, '📧': IconNote, '🏛️': IconFolder, '📦': IconBag, '💝': IconStar,
+  '🏢': IconFolder, '*': IconGear, '📊': IconChart, '🏆': IconStar, '🔍': IconChart,
+  '⚠️': IconWarn,
+};
+
+
 export default function AdminPage() {
   const { t, lang } = useLanguage();
   const contentAreaRef = useRef<HTMLDivElement>(null);
@@ -912,6 +927,7 @@ export default function AdminPage() {
   const [matriculaEditPass, setMatriculaEditPass] = useState('');
   const [activeTab, setActiveTab] = useState<'alunos' | 'presencas' | 'relatorio' | 'ranking' | 'certificado' | 'financeiro' | 'doacoes' | 'editais' | 'materiais' | 'patrimonio' | 'rascunhos' | 'dados-faltantes' | 'manual' | 'eventos' | 'lixeira' | 'justificativas' | 'contas' | 'auditoria' | 'responsaveis' | 'docs-historicos' | 'bibliografia' | 'estatuto' | 'regimento' | 'informacoes' | 'playlist' | 'minha-conta' | 'email-config' | 'mural' | 'aluno-view' | 'restauracao' | 'organograma' | 'hierarquia' | 'nucleos' | 'system-config'>('alunos');
   const [institucionalExpanded, setInstitucionalExpanded] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   // Área do Aluno — visualização pelo admin
   const [alunoViewStudentId, setAlunoViewStudentId] = useState('');
   const [alunoViewSearch, setAlunoViewSearch] = useState('');
@@ -1867,7 +1883,7 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
-            {loginError && <div style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.4)', borderRadius: 8, padding: '8px 12px', color: '#fca5a5', fontSize: '0.82rem', fontWeight: 600 }}>⚠ {loginError}</div>}
+            {loginError && <div style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.4)', borderRadius: 8, padding: '8px 12px', color: '#fca5a5', fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><IconWarn size={13} /> {loginError}</div>}
             <button type="submit" style={{ background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', marginTop: 4 }}>Entrar</button>
           </form>
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
@@ -1929,7 +1945,8 @@ export default function AdminPage() {
                 </>
               ) : (
                 <div style={{ textAlign: 'center', color: '#86efac', fontSize: '0.85rem', lineHeight: 1.6 }}>
-                  📬 {adminForgotMsg}
+                  <span style={{ display: 'inline-flex', verticalAlign: '-3px', marginRight: 6, color: '#86efac' }}><IconMailOk size={15} /></span>
+                  {adminForgotMsg}
                   <br />
                   <button type="button" onClick={() => { setShowAdminForgot(false); setAdminForgotDone(false); setAdminForgotMsg(''); setAdminForgotCpf(''); }} style={{ marginTop: 10, padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '0.78rem', cursor: 'pointer' }}>Fechar</button>
                 </div>
@@ -2111,85 +2128,65 @@ export default function AdminPage() {
 
   return (
     <div style={{ minHeight: '100vh' }}>
-
+      <div className="adm-glow" aria-hidden="true" />
       <div className="container-wide">
-        <div style={{ padding: '20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link href="/" className="back-link">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Voltar ao formulário
-          </Link>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        {/* Topbar em vidro — marca, contexto e ações */}
+        <div className="adm-topbar">
+          <div className="adm-brand">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-portal-aluno.png" alt="" />
+            <div className="adm-brand-t">
+              <strong>{systemConfig?.system_name || 'Portal Aluno'}</strong>
+              <span>{systemConfig?.organization_name || 'Gestão de Treinos'}</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginLeft: 'auto' }}>
             {/* Botoes de troca de nucleo — visivel quando responsavel gerencia mais de um */}
             {availableNucleos.length > 1 && availableNucleos.map(nk => {
               const isActive = activeNucleo === nk;
               const displayLabel = nk === 'geral' ? (isOwner ? 'Owner' : 'Admin Geral') : (dynamicNucleos.find(n => n.slug === nk)?.nome || nk);
-              const prof = { color: nk === 'geral' ? (isOwner ? '#7c3aed' : '#1d4ed8') : '#0ea5e9' };
               return (
                 <button
                   key={nk}
+                  className={'adm-chip' + (isActive ? ' is-active' : '') + (nk === 'geral' && isOwner ? ' is-owner' : '')}
                   onClick={() => {
                     setActiveNucleo(nk);
                     sessionStorage.setItem('admin_auth', nk);
                     setActiveTab('alunos');
                   }}
-                  style={{
-                    padding: '5px 12px', borderRadius: 20, cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem',
-                    background: isActive ? (isOwner ? '#7c3aed' : prof.color) : `${isOwner ? '#7c3aed' : prof.color}22`,
-                    border: `1px solid ${isOwner ? '#7c3aed' : prof.color}88`,
-                    color: isActive ? '#fff' : (isOwner ? '#7c3aed' : prof.color),
-                    transition: 'all 0.15s',
-                  }}
                 >
-                  {isActive ? '* ' : ''}{displayLabel}
+                  {displayLabel}
                 </button>
               );
             })}
             {/* Current profile badge — so mostra quando tem 1 nucleo */}
             {availableNucleos.length <= 1 && currentProfile && (
-              <div style={{ padding: '4px 10px', borderRadius: 20, background: `${isOwner ? '#FF9200' : currentProfile.color}22`, border: `1px solid ${isOwner ? '#FF9200' : currentProfile.color}55`, color: isOwner ? '#FF9200' : currentProfile.color, fontSize: '0.75rem', fontWeight: 700 }}>
+              <span className={'adm-chip' + (isOwner ? ' is-owner' : '')} style={{ cursor: 'default' }}>
                 {isOwner ? 'Owner' : (loginLabel && !isOwner && activeNucleo !== 'geral' ? `${currentProfile.label} · ${loginLabel}` : currentProfile.label)}
-              </div>
+              </span>
             )}
+            <Link href="/" className="adm-chip">
+              <IconHome size={13} /> Início
+            </Link>
             <button
               onClick={() => { setActiveTab('minha-conta'); }}
-              style={{ background: 'rgba(255,146,0,0.1)', border: '1px solid rgba(255,146,0,0.3)', color: '#FF9200', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}
+              className="adm-chip"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
-              Minha Conta
+              <IconUser size={13} /> Minha Conta
             </button>
             <button
               onClick={() => {
                 fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) }).catch(() => {});
                 sessionStorage.removeItem('admin_auth'); sessionStorage.removeItem('admin_auth_nucleos'); sessionStorage.removeItem('admin_is_owner'); sessionStorage.removeItem('admin_user'); setAuthed(false); setActiveNucleo(null); setAvailableNucleos([]);
               }}
-              style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}
+              className="adm-chip is-danger"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-              Sair
+              <IconLogout size={13} /> Sair
             </button>
-          </div>
-          </div>
-
-        <div className="admin-header">
-          <div>
-            <h1 style={{
-              background: 'linear-gradient(90deg, #dc2626 0%, #2563eb 45%, #16a34a 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              fontSize: '1.9rem',
-              fontWeight: 900,
-              letterSpacing: '0.03em',
-              textShadow: 'none',
-              filter: 'drop-shadow(0 2px 8px rgba(37,99,235,0.25))',
-            }}>
-              {systemConfig?.system_name || 'Portal Aluno — Gestao de Treinos'}
-            </h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: 4 }}>
-              {systemConfig?.organization_name || 'Organizacao Demo'}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Hambúrguer — abre o drawer de navegação (mobile) */}
+            <button className="adm-chip adm-burger" aria-label="Abrir navegação" aria-expanded={navOpen} onClick={() => setNavOpen(true)}>
+              <IconMenu size={16} />
+            </button>
           </div>
         </div>
 
@@ -2285,9 +2282,9 @@ export default function AdminPage() {
           const dadosFaltandoCount = (nucleoFilter ? rascunhos.filter((r: any) => (r.nucleo || '') === nucleoFilter) : rascunhos).filter((r: any) => (r.dados_pendentes || []).length > 0).length;
 
           type ColBtn = { key: string; icon: string; label: string; badge?: number | string; geralOnly?: boolean; ownerOnly?: boolean; href?: string };
-          const columns: { title: string; color: string; bg: string; buttons: ColBtn[] }[] = [
+          const columns: { title: string; Icon: typeof IconFolder; buttons: ColBtn[] }[] = [
             {
-              title: 'Gestão Principal', color: '#16a34a', bg: 'rgba(22,163,74,0.08)',
+              title: 'Gestão Principal', Icon: IconMapPin,
               buttons: [
                 { key: 'registrar-presenca', icon: '📋', label: 'Registrar Presença', href: '/presenca' },
                 { key: 'presencas',   icon: '👥', label: 'Presenças' },
@@ -2298,7 +2295,7 @@ export default function AdminPage() {
               ],
             },
             {
-              title: 'Matrícula e Comunicação', color: '#1d4ed8', bg: 'rgba(29,78,216,0.08)',
+              title: 'Matrícula e Comunicação', Icon: IconUser,
               buttons: [
                 { key: 'aluno-view',    icon: '🔭', label: 'Área do Aluno' },
                 { key: 'contas',        icon: '👤', label: 'Contas Alunos', badge: undefined },
@@ -2311,7 +2308,7 @@ export default function AdminPage() {
               ],
             },
             {
-              title: 'Planejamento e Arquivo', color: '#dc2626', bg: 'rgba(220,38,38,0.08)',
+              title: 'Planejamento e Arquivo', Icon: IconFolder,
               buttons: [
                 { key: 'docs-historicos', icon: '📚', label: 'Documentos Históricos' },
                 { key: 'editais',         icon: '📣', label: 'Editais', geralOnly: true },
@@ -2320,7 +2317,7 @@ export default function AdminPage() {
               ],
             },
             {
-              title: 'Administrativo e Materiais', color: '#6b7280', bg: 'rgba(107,114,128,0.08)',
+              title: 'Administrativo e Materiais', Icon: IconWallet,
               buttons: [
                 { key: 'financeiro',  icon: '💰', label: 'Administrativo', badge: finAlertCount > 0 ? finAlertCount : undefined },
                 { key: 'email-config', icon: '📧', label: 'Config. E-mail', geralOnly: true },
@@ -2332,7 +2329,7 @@ export default function AdminPage() {
               ],
             },
             {
-              title: 'Relatórios e Indicadores', color: '#7c3aed', bg: 'rgba(124,58,237,0.08)',
+              title: 'Relatórios e Indicadores', Icon: IconChart,
               buttons: [
                 { key: 'relatorio',       icon: '📊', label: 'Relatórios' },
                 { key: 'ranking',         icon: '🏆', label: 'Ranking' },
@@ -2352,114 +2349,120 @@ export default function AdminPage() {
             { key: 'organograma',  icon: '🏛️', label: 'Organograma', geralOnly: true },
             { key: 'hierarquia',   icon: '🥋', label: 'Hierarquia',   geralOnly: true },
           ];
-          const institucionalColor = '#ea580c';
           const institucionalIsActive = [...institucionalSubItems, ...institucionalDirectItems].some(b => b.key === activeTab);
+
+          const renderTabBtn = (btn: ColBtn, bi: string | number, small: boolean = false) => {
+            const Icon = TAB_ICONS[btn.icon] || IconFolder;
+            const externo = !!btn.href;
+            const ativo = !externo && activeTab === btn.key;
+            return (
+              <button key={`tab-${btn.key}-${bi}`} onClick={() => externo ? window.open(btn.href!, '_blank') : goTab(btn.key)}
+                className={'adm-tab' + (ativo ? ' is-active' : '')}
+                title={btn.label}
+              >
+                <Icon size={small ? 14 : 15} />
+                <span className="adm-tab-label">{btn.label}</span>
+                {btn.badge !== undefined && <span className="adm-badge">{btn.badge}</span>}
+                {externo && <span className="adm-ext" aria-hidden="true">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </span>}
+              </button>
+            );
+          };
 
           return (
             <div style={{ marginBottom: 0 }}>
-              {/* Grid de colunas */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, padding: '12px 0 0' }}>
+              {/* Grid de colunas em vidro */}
+              <div className="adm-grid">
                 {columns.map(col => (
-                  <div key={col.title} style={{ background: col.bg, border: `1px solid ${col.color}25`, borderRadius: 12, padding: '10px 10px 8px', display: 'flex', flexDirection: 'column', gap: 0 }}>
-                    <div style={{ fontSize: '0.6rem', fontWeight: 800, color: col.color, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 7, textAlign: 'center' }}>{col.title}</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {col.buttons.filter(b => (!b.geralOnly || activeNucleo === 'geral') && (!b.ownerOnly || isOwner)).map((btn, bi) => (
-                        <button key={`${btn.key}-${bi}`} onClick={() => btn.href ? window.open(btn.href, '_blank') : goTab(btn.key)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 7,
-                            padding: '7px 10px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                            background: !btn.href && activeTab === btn.key ? col.color : btn.href ? 'rgba(22,163,74,0.18)' : 'rgba(255,255,255,0.06)',
-                            color: !btn.href && activeTab === btn.key ? '#fff' : btn.href ? '#16a34a' : 'var(--text-primary)',
-                            fontWeight: (!btn.href && activeTab === btn.key) || btn.href ? 700 : 500,
-                            fontSize: '0.78rem', textAlign: 'left', transition: 'all 0.15s',
-                            boxShadow: !btn.href && activeTab === btn.key ? `0 2px 8px ${col.color}50` : 'none',
-                            position: 'relative',
-                          }}
-                        >
-                          <span style={{ fontSize: '0.9rem', lineHeight: 1, flexShrink: 0 }}>{btn.icon}</span>
-                          <span style={{ flex: 1, lineHeight: 1.3 }}>{btn.label}</span>
-                          {btn.badge !== undefined && (
-                            <span style={{ background: '#ef4444', color: '#fff', borderRadius: 99, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 800, flexShrink: 0 }}>
-                              {btn.badge}
-                            </span>
-                          )}
-                        </button>
-                      ))}
+                  <div key={col.title} className="adm-col">
+                    <div className="adm-col-title"><col.Icon size={13} /> {col.title}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      {col.buttons.filter(b => (!b.geralOnly || activeNucleo === 'geral') && (!b.ownerOnly || isOwner)).map((btn, bi) => renderTabBtn(btn, bi))}
                     </div>
                   </div>
                 ))}
 
                 {/* Institucional — card com submenu expansível */}
-                <div style={{ background: `rgba(234,88,12,0.08)`, border: `1px solid ${institucionalColor}25`, borderRadius: 12, padding: '10px 10px 8px', display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  <div style={{ fontSize: '0.6rem', fontWeight: 800, color: institucionalColor, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 7, textAlign: 'center' }}>Institucional</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className="adm-col">
+                  <div className="adm-col-title"><IconFolder size={13} /> Institucional</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
                     {/* Botões diretos: Organograma e Hierarquia (geral only) */}
                     {activeNucleo === 'geral' && (
                       <>
-                        {institucionalDirectItems.map((btn, bi) => (
-                          <button key={`inst-direct-${bi}`}
-                            onClick={() => goTab(btn.key)}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 7,
-                              padding: '7px 10px', borderRadius: 8, border: `1px solid ${institucionalColor}35`, cursor: 'pointer',
-                              background: activeTab === btn.key ? institucionalColor : `${institucionalColor}15`,
-                              color: activeTab === btn.key ? '#fff' : institucionalColor,
-                              fontWeight: 700,
-                              fontSize: '0.78rem', textAlign: 'left', transition: 'all 0.15s',
-                              boxShadow: activeTab === btn.key ? `0 2px 8px ${institucionalColor}50` : 'none',
-                            }}
-                          >
-                            <span style={{ fontSize: '0.9rem', lineHeight: 1, flexShrink: 0 }}>{btn.icon}</span>
-                            <span style={{ flex: 1, lineHeight: 1.3 }}>{btn.label}</span>
-                            <span style={{ fontSize: '0.6rem', opacity: 0.7 }}>✏️</span>
-                          </button>
-                        ))}
-                        <div style={{ height: 1, background: `${institucionalColor}25`, margin: '2px 0' }} />
+                        {institucionalDirectItems.map((btn, bi) => renderTabBtn(btn, `d-${bi}`))}
+                        <div style={{ height: 1, background: 'rgba(255,146,0,0.14)', margin: '3px 0' }} />
                       </>
                     )}
 
                     {/* Botão principal Institucional (outros docs) */}
                     <button
                       onClick={() => setInstitucionalExpanded(v => !v)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 7,
-                        padding: '7px 10px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                        background: institucionalSubItems.some(b => b.key === activeTab) || institucionalExpanded ? institucionalColor : 'rgba(255,255,255,0.06)',
-                        color: institucionalSubItems.some(b => b.key === activeTab) || institucionalExpanded ? '#fff' : 'var(--text-primary)',
-                        fontWeight: institucionalSubItems.some(b => b.key === activeTab) || institucionalExpanded ? 700 : 500,
-                        fontSize: '0.78rem', textAlign: 'left', transition: 'all 0.15s',
-                        boxShadow: institucionalSubItems.some(b => b.key === activeTab) || institucionalExpanded ? `0 2px 8px ${institucionalColor}50` : 'none',
-                      }}
+                      className={'adm-tab' + ((institucionalSubItems.some(b => b.key === activeTab) || institucionalExpanded) ? ' is-active' : '')}
                     >
-                      <span style={{ fontSize: '0.9rem', lineHeight: 1, flexShrink: 0 }}>📂</span>
-                      <span style={{ flex: 1, lineHeight: 1.3 }}>Documentos</span>
-                      <span style={{ fontSize: '0.75rem', transition: 'transform 0.2s', display: 'inline-block', transform: institucionalExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+                      <IconFolder size={15} />
+                      <span className="adm-tab-label">Documentos</span>
+                      <span style={{ transition: 'transform 0.2s', display: 'inline-flex', transform: institucionalExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                        <IconChevron size={13} />
+                      </span>
                     </button>
                     {/* Submenus expandíveis */}
                     {institucionalExpanded && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, paddingLeft: 8, borderLeft: `2px solid ${institucionalColor}40`, marginLeft: 8 }}>
-                        {institucionalSubItems.map((btn, bi) => (
-                          <button key={`inst-sub-${bi}`}
-                            onClick={() => { goTab(btn.key); }}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 6,
-                              padding: '6px 8px', borderRadius: 7, border: 'none', cursor: 'pointer',
-                              background: activeTab === btn.key ? `${institucionalColor}22` : 'transparent',
-                              color: activeTab === btn.key ? institucionalColor : 'var(--text-primary)',
-                              fontWeight: activeTab === btn.key ? 700 : 500,
-                              fontSize: '0.75rem', textAlign: 'left', transition: 'all 0.15s',
-                            }}
-                          >
-                            <span style={{ fontSize: '0.85rem', lineHeight: 1, flexShrink: 0 }}>{btn.icon}</span>
-                            <span style={{ lineHeight: 1.3 }}>{btn.label}</span>
-                          </button>
-                        ))}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 10, borderLeft: '2px solid rgba(255,146,0,0.22)', marginLeft: 8 }}>
+                        {institucionalSubItems.map((btn, bi) => renderTabBtn(btn, `s-${bi}`, true))}
                       </div>
                     )}
                   </div>
                 </div>
               </div>
+
+              {/* Drawer de navegação (mobile) */}
+              {navOpen && (
+                <>
+                  <div className="adm-drawer-backdrop" onClick={() => setNavOpen(false)} />
+                  <aside className="adm-drawer" role="dialog" aria-modal="true" aria-label="Navegação do painel">
+                    <div className="adm-drawer-head">
+                      <span className="adm-drawer-title">Navegação</span>
+                      <button className="adm-drawer-close" onClick={() => setNavOpen(false)} aria-label="Fechar navegação">
+                        <IconX size={16} />
+                      </button>
+                    </div>
+                    {columns.map(col => (
+                      <div key={col.title} style={{ marginBottom: 12 }}>
+                        <div className="adm-col-title"><col.Icon size={12} /> {col.title}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {col.buttons.filter(b => (!b.geralOnly || activeNucleo === 'geral') && (!b.ownerOnly || isOwner)).map((btn, bi) => {
+                            const Icon = TAB_ICONS[btn.icon] || IconFolder;
+                            const externo = !!btn.href;
+                            return (
+                              <button key={`nav-${btn.key}-${bi}`}
+                                className={'adm-tab' + (!externo && activeTab === btn.key ? ' is-active' : '')}
+                                onClick={() => { setNavOpen(false); externo ? window.open(btn.href!, '_blank') : goTab(btn.key); }}
+                              >
+                                <Icon size={15} />
+                                <span className="adm-tab-label">{btn.label}</span>
+                                {btn.badge !== undefined && <span className="adm-badge">{btn.badge}</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{ marginTop: 6, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                      <button className="adm-tab" onClick={() => { setNavOpen(false); setActiveTab('minha-conta'); }}>
+                        <IconUser size={15} /> <span className="adm-tab-label">Minha Conta</span>
+                      </button>
+                      <button className="adm-tab" onClick={() => {
+                        fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) }).catch(() => {});
+                        sessionStorage.removeItem('admin_auth'); sessionStorage.removeItem('admin_auth_nucleos'); sessionStorage.removeItem('admin_is_owner'); sessionStorage.removeItem('admin_user'); setAuthed(false); setActiveNucleo(null); setAvailableNucleos([]);
+                      }}>
+                        <IconLogout size={15} /> <span className="adm-tab-label">Sair</span>
+                      </button>
+                    </div>
+                  </aside>
+                </>
+              )}
 
               {/* Filtros e Buscas — só visíveis na aba Alunos */}
               {activeTab === 'alunos' && (
@@ -9728,7 +9731,9 @@ _Portal Aluno_`
       {activeTab === 'informacoes' && activeNucleo === 'geral' && (() => {
         return (
           <div style={{ marginTop: 24, background: 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 14, padding: '20px 22px' }}>
-            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#34d399', marginBottom: 4 }}>🗄️ Configuração do Banco de Dados (Multi-tenant)</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, fontSize: '0.95rem', color: '#34d399', marginBottom: 4 }}>
+              <IconFolder size={16} /> Configuração do Banco de Dados (Multi-tenant)
+            </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
               Diagnóstico e setup da coluna <code style={{ background: 'rgba(255,255,255,0.08)', padding: '1px 6px', borderRadius: 4 }}>tenant_id</code> para todos os alunos.
             </div>
@@ -9750,8 +9755,8 @@ _Portal Aluno_`
                 <>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
                     <button onClick={runDiag} disabled={dbLoading}
-                      style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', color: '#34d399', borderRadius: 8, padding: '8px 16px', cursor: dbLoading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>
-                      {dbLoading ? '⏳ Verificando...' : '🔍 Verificar e Configurar Banco'}
+                      style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', color: '#34d399', borderRadius: 8, padding: '8px 16px', cursor: dbLoading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <IconRefresh size={14} /> {dbLoading ? 'Verificando...' : 'Verificar e Configurar Banco'}
                     </button>
                   </div>
 

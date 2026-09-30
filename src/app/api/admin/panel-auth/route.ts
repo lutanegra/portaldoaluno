@@ -164,6 +164,7 @@ export async function POST(req: NextRequest) {
       role: roleOf(sess.u, acc),
       label: acc.label,
       nome: acc.nome || '',
+      display_name: acc.nome || sess.u,
       email: acc.email || '',
       cpf: maskCpf(normalizeCpfDigits(acc.cpf || '')),
       is_owner: sess.u === OWNER_KEY,
