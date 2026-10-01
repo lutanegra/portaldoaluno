@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { readPanelSession } from '@/lib/panelSession';
+import { alunoEmConformidade, resumoPendencias, isValidCPF, isValidRG, cpfDigits } from '@/lib/studentCompliance';
 
 export const dynamic = 'force-dynamic';
 
@@ -132,7 +134,7 @@ export async function PATCH(req: NextRequest) {
     // Verify student exists
     const { data: existing, error: fetchError } = await supabaseAdmin
       .from('students')
-      .select('id')
+      .select('id, cpf, identidade, data_nascimento, menor_de_idade, assinatura_responsavel, nome_responsavel, cpf_responsavel')
       .eq('id', student_id)
       .maybeSingle();
 
@@ -224,6 +226,50 @@ export async function PATCH(req: NextRequest) {
       const m = today.getMonth() - dob.getMonth();
       if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
       payload.menor_de_idade = age < 18;
+    }
+
+    // ── Regras de obrigatoriedade (RG/CPF e termo de menor) ─────────────────
+    // O aluno sempre pode COMPLETAR o cadastro; porém não pode deixá-lo
+    // irregular: campos obrigatórios não podem ser enviados vazios, valores
+    // preenchidos precisam ser válidos e um aluno conforme não perde dados.
+    const ehAdmin = !!readPanelSession(req);
+
+    const vazio = (v: unknown) => v === null || v === undefined || (typeof v === 'string' && !v.trim());
+    const novosDocs: Record<string, unknown> = { ...existing, ...(Object.fromEntries(Object.entries(payload).filter(([, v]) => !vazio(v)))) };
+    const conflitos: string[] = [];
+
+    // Formato dos documentos quando preenchidos
+    if (!vazio(payload.cpf)) {
+      const d = cpfDigits(String(payload.cpf));
+      if (d.length !== 11 || !isValidCPF(d)) conflitos.push('CPF inválido — verifique os dígitos.');
+    }
+    if (!vazio(payload.identidade) && !isValidRG(String(payload.identidade))) {
+      conflitos.push('RG inválido — verifique o número.');
+    }
+
+    // Obrigatoriedade no estado final
+    if (vazio(novosDocs.cpf) || vazio(novosDocs.identidade)) {
+      conflitos.push('CPF e RG são obrigatórios e não podem ficar em branco.');
+    }
+    const menorFinal = typeof novosDocs.menor_de_idade === 'boolean' ? novosDocs.menor_de_idade : undefined;
+    const camposMenor = ['assinatura_responsavel', 'nome_responsavel', 'cpf_responsavel'];
+    const mexeuEmMenor = camposMenor.some(k => k in payload);
+    if (mexeuEmMenor && !ehAdmin) {
+      const simulado = {
+        cpf: novosDocs.cpf as string | null,
+        identidade: novosDocs.identidade as string | null,
+        data_nascimento: (novosDocs.data_nascimento as string | null) ?? null,
+        menor_de_idade: menorFinal,
+        assinatura_responsavel: (novosDocs.assinatura_responsavel as boolean | null) ?? null,
+        nome_responsavel: (novosDocs.nome_responsavel as string | null) ?? null,
+        cpf_responsavel: (novosDocs.cpf_responsavel as string | null) ?? null,
+      };
+      if (!alunoEmConformidade(simulado, menorFinal)) {
+        conflitos.push(`O cadastro ficaria irregular (${resumoPendencias(simulado, menorFinal)}). Termo, nome e CPF do responsável não podem ser removidos.`);
+      }
+    }
+    if (conflitos.length > 0) {
+      return NextResponse.json({ error: conflitos.join(' ') }, { status: 422 });
     }
 
     // Vincula ao núcleo pelo nome — tenants é a fonte da verdade e o nome vem do

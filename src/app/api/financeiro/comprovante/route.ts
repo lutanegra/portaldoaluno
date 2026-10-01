@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { exigirConformidadeAluno } from '@/lib/alunoGate';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +30,10 @@ export async function POST(req: NextRequest) {
   if (!student_id || !filename) {
     return NextResponse.json({ error: 'student_id and filename required' }, { status: 400 });
   }
+
+  // Conformidade cadastral: sem CPF/RG (e termo, se menor) o aluno não envia comprovante
+  const gate = await exigirConformidadeAluno(req, String(student_id));
+  if (!gate.ok) return gate.response;
 
   const ext = (filename as string).split('.').pop()?.toLowerCase() || 'jpg';
   const ts = Date.now();

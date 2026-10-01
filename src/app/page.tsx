@@ -1,6 +1,7 @@
 'use client';
 
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import AppFooter from '@/components/AppFooter';
 
 export default function Home() {
   const { t } = useLanguage();
@@ -51,6 +52,7 @@ export default function Home() {
           </a>
         </div>
 
+        <AppFooter variante="capa" />
       </div>
 
       {/* Botão fixo — Painel Administrativo (redireciona para o login único em /admin) */}
@@ -71,3 +73,4 @@ export default function Home() {
     </div>
   );
 }
+

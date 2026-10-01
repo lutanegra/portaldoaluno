@@ -18,6 +18,8 @@ import EditAccountModal from '@/components/EditAccountModal';
 import MyAccountCard from '@/components/MyAccountCard';
 import BackupPanel from '@/components/BackupPanel';
 import BackupSistemaPanel from '@/components/BackupSistemaPanel';
+import VersionsCard from '@/components/VersionsCard';
+import AppFooter from '@/components/AppFooter';
 import { IconHome, IconUser, IconLogout, IconMenu, IconX, IconFolder, IconMapPin, IconWallet, IconChart, IconChevron, IconMedal, IconDoc, IconGear, IconTrash, IconEye, IconLock, IconBell, IconNote, IconMusic, IconBerimbau, IconBag, IconStar, IconWarn, IconMail as IconMailOk, IconRefresh } from '@/components/icons';
 
 
@@ -665,7 +667,7 @@ const TAB_ICONS: Record<string, IconComp> = {
   '📝': IconNote, '📚': IconDoc, '📣': IconBell, '🎵': IconMusic, '🥋': IconBerimbau,
   '💰': IconWallet, '📧': IconNote, '🏛️': IconFolder, '📦': IconBag, '💝': IconStar,
   '🛡️': IconLock, '🏢': IconFolder, '*': IconGear, '📊': IconChart, '🏆': IconStar, '🔍': IconChart,
-  '⚠️': IconWarn,
+  '⚠️': IconWarn, '✦': IconStar,
 };
 
 
@@ -932,7 +934,7 @@ export default function AdminPage() {
   const [deleteAdminPass, setDeleteAdminPass] = useState('');
   const [matriculaEditNum, setMatriculaEditNum] = useState('');
   const [matriculaEditPass, setMatriculaEditPass] = useState('');
-  const [activeTab, setActiveTab] = useState<'alunos' | 'presencas' | 'relatorio' | 'ranking' | 'certificado' | 'financeiro' | 'doacoes' | 'editais' | 'materiais' | 'patrimonio' | 'rascunhos' | 'dados-faltantes' | 'manual' | 'eventos' | 'lixeira' | 'justificativas' | 'contas' | 'auditoria' | 'responsaveis' | 'docs-historicos' | 'bibliografia' | 'estatuto' | 'regimento' | 'informacoes' | 'playlist' | 'minha-conta' | 'email-config' | 'backup' | 'mural' | 'aluno-view' | 'restauracao' | 'organograma' | 'hierarquia' | 'nucleos' | 'system-config'>('alunos');
+  const [activeTab, setActiveTab] = useState<'alunos' | 'presencas' | 'relatorio' | 'ranking' | 'certificado' | 'financeiro' | 'doacoes' | 'editais' | 'materiais' | 'patrimonio' | 'rascunhos' | 'dados-faltantes' | 'manual' | 'eventos' | 'lixeira' | 'justificativas' | 'contas' | 'auditoria' | 'responsaveis' | 'docs-historicos' | 'bibliografia' | 'estatuto' | 'regimento' | 'informacoes' | 'playlist' | 'minha-conta' | 'email-config' | 'backup' | 'mural' | 'aluno-view' | 'restauracao' | 'organograma' | 'hierarquia' | 'nucleos' | 'system-config' | 'versoes'>('alunos');
   const [institucionalExpanded, setInstitucionalExpanded] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   // Área do Aluno — visualização pelo admin
@@ -2069,6 +2071,7 @@ export default function AdminPage() {
               )}
             </div>
           )}
+          <AppFooter />
           </div>
         </div>
       </div>
@@ -2451,6 +2454,7 @@ export default function AdminPage() {
                 { key: 'ranking',         icon: '🏆', label: 'Ranking' },
                 { key: 'auditoria',       icon: '🔍', label: 'Auditoria', geralOnly: true },
                 { key: 'dados-faltantes', icon: '⚠️', label: 'Dados Faltantes', badge: dadosFaltandoCount > 0 ? dadosFaltandoCount : undefined },
+                { key: 'versoes',         icon: '✦',  label: 'Versões do Sistema' },
               ],
             },
           ];
@@ -12908,13 +12912,26 @@ Suporte Ginga Gestão.`
         </div>
       )}
 
+      {/* ===== ABA VERSÕES DO SISTEMA (qualquer admin — informativo) ===== */}
+      {activeTab === 'versoes' && (
+        <div style={{ paddingTop: 24, maxWidth: 760, margin: '0 auto' }}>
+          <div style={{ marginBottom: 20 }}>
+            <h2 style={{ margin: '0 0 4px', fontSize: '1.15rem', color: 'var(--text-primary)' }}>✦ Versões do Sistema</h2>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              A versão oficial e o changelog completo de cada atualização do Ginga Gestão.
+            </p>
+          </div>
+          <VersionsCard />
+        </div>
+      )}
+
       {/* ===== ABA MINHA CONTA (qualquer admin) ===== */}
       {activeTab === 'minha-conta' && (
         <div style={{ paddingTop: 24, maxWidth: 760, margin: '0 auto' }}>
           <div style={{ marginBottom: 20 }}>
             <h2 style={{ margin: '0 0 4px', fontSize: '1.15rem', color: 'var(--text-primary)' }}>👤 Minha Conta</h2>
             <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              Gerencie seu próprio acesso: nome, e-mail de recuperação, CPF (login alternativo) e senha.
+              Gerencie seu próprio acesso: nome, e-mail de recuperação, CPF (login alternativo) e senha. Acompanhe abaixo a versão do sistema e o histórico de atualizações.
             </p>
           </div>
           <MyAccountCard
@@ -12938,6 +12955,17 @@ Suporte Ginga Gestão.`
               }).catch(() => {});
             }}
           />
+
+          {/* Versões e atualizações do sistema (informativo, todos os admins) */}
+          <div style={{ marginTop: 26 }}>
+            <div style={{ marginBottom: 14 }}>
+              <h2 style={{ margin: '0 0 4px', fontSize: '1.15rem', color: 'var(--text-primary)' }}>Versões e Atualizações</h2>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                Versão oficial do sistema e o histórico completo de novidades de cada versão.
+              </p>
+            </div>
+            <VersionsCard />
+          </div>
         </div>
       )}
 

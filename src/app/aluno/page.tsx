@@ -11,6 +11,8 @@ import {
   IconFlame, IconStar, IconWarn, IconClock, IconBerimbau,
   IconCheck, IconInfo, IconLock, IconTrash, IconBag, IconLink, IconRefresh, IconPrinter,
 } from '@/components/icons';
+import { pendenciasAluno, resumoPendencias, isValidCPF, isValidRG, cpfDigits, type StudentDocsLike } from '@/lib/studentCompliance';
+import AppFooter from '@/components/AppFooter';
 import FrequenciaCard from './FrequenciaCard';
 
 /** Título de seção com ícone SVG à esquerda (substitui os h2 com emoji). */
@@ -283,6 +285,9 @@ export default function AlunoPage() {
 
   // ── Admin preview mode flag ────────────────────────────────────────────────
   const [isAdminPreview, setIsAdminPreview] = useState(false);
+
+  // ── Conformidade cadastral (aviso ao tentar ação bloqueada) ────────────────
+  const [conformidadeAviso, setConformidadeAviso] = useState('');
 
   // ── Load nucleos dinamicos ──────────────────────────────────────────────────
   useEffect(() => {
@@ -586,6 +591,7 @@ export default function AlunoPage() {
   };
 
   const handlePresenca = async () => {
+    if (!exigirConformidade(pendencias.some(p => p.campo === 'termo') ? 'termo' : 'dados')) return;
     if (!navigator.geolocation) { setPresencaMsg('Geolocalização não disponível neste dispositivo.'); setPresencaStatus('error'); return; }
     if (!student?.nucleo) {
       setPresencaMsg('Você precisa estar vinculado a um núcleo para registrar presença. Escolha seu núcleo na aba Meus Dados.');
@@ -623,6 +629,7 @@ export default function AlunoPage() {
 
   const handleSubmitJustificativa = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!exigirConformidade(pendencias.some(p => p.campo === 'termo') ? 'termo' : 'dados')) return;
     setJustLoading(true); setJustMsg('');
     try {
       const res = await fetch('/api/aluno/justificativas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'submit', student_id: session!.student_id, ...justForm }) });
@@ -646,6 +653,28 @@ export default function AlunoPage() {
       if (student.assinatura_responsavel) setTermoSaved(true);
     }
   }, [student]);
+
+  // ── Conformidade cadastral (documentos + termo de menor) ───────────────────
+  const docsAluno: StudentDocsLike | null = student ? {
+    cpf: (student.cpf as string) || null,
+    identidade: (student.identidade as string) || null,
+    data_nascimento: (student.data_nascimento as string) || null,
+    menor_de_idade: typeof student.menor_de_idade === 'boolean' ? student.menor_de_idade : null,
+    assinatura_responsavel: (student.assinatura_responsavel as boolean) || false,
+    nome_responsavel: (student.nome_responsavel as string) || null,
+    cpf_responsavel: (student.cpf_responsavel as string) || null,
+  } : null;
+  const pendencias = docsAluno ? pendenciasAluno(docsAluno) : [];
+  const emConformidade = isAdminPreview || pendencias.length === 0;
+  const pendenciasResumo = docsAluno ? resumoPendencias(docsAluno) : '';
+
+  /** Bloqueia a ação do aluno irregular e aponta para a aba que resolve. */
+  const exigirConformidade = (destino: Tab = 'dados'): boolean => {
+    if (!docsAluno || pendencias.length === 0) return true;
+    setConformidadeAviso(`Cadastro incompleto — pendência(s): ${pendenciasResumo}. Complete para usar esta função.`);
+    setActiveTab(destino);
+    return false;
+  };
 
   // Populate dados form when student data is loaded or tab activated
   useEffect(() => {
@@ -762,6 +791,8 @@ export default function AlunoPage() {
             <div className="pa-divider" />
             <a href="/" className="pa-btn-ghost" style={{ display: 'block', textAlign: 'center', fontSize: '0.8rem' }}>← Voltar à página inicial</a>
           </div>
+
+          <AppFooter variante="capa" />
         </div>
       </div>
     );
@@ -1065,8 +1096,8 @@ export default function AlunoPage() {
   // ── TABS NAVIGATION ───────────────────────────────────────────────────────
   const tabs: { id: Tab; icon: string; label: string; badge?: boolean }[] = [
     { id: 'dashboard',      icon: '', label: 'Início' },
-    { id: 'dados',          icon: '', label: 'Meus Dados', badge: !!(student && (!student.nucleo || !student.graduacao || !student.email)) },
-    { id: 'termo',          icon: '', label: 'Termo', badge: !!(student && student.menor_de_idade && !student.assinatura_responsavel) },
+    { id: 'dados',          icon: '', label: 'Meus Dados', badge: !!(student && (!student.nucleo || !student.graduacao || !student.email || (docsAluno && pendencias.some(p => p.campo !== 'termo')))) },
+    { id: 'termo',          icon: '', label: 'Termo', badge: !!(student && docsAluno && pendencias.some(p => ['termo', 'nome_responsavel', 'cpf_responsavel'].includes(p.campo))) },
     { id: 'evolucao',       icon: '', label: 'Evolução' },
     { id: 'carteirinha',    icon: '', label: 'Carteirinha' },
     { id: 'presenca',       icon: '', label: 'Presença' },
@@ -1152,6 +1183,32 @@ export default function AlunoPage() {
         {/* ── DASHBOARD ── */}
         {activeTab === 'dashboard' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {!emConformidade && (
+              <div style={{ background: 'linear-gradient(160deg, rgba(255,146,0,0.14) 0%, rgba(255,146,0,0.05) 100%)', border: '1px solid rgba(255,146,0,0.4)', borderRadius: 16, padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 12, backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', boxShadow: '0 0 24px rgba(255,146,0,0.08)' }}>
+                <span style={{ display: 'flex', color: '#FF9200', flexShrink: 0, marginTop: 2 }}><IconWarn size={22} /></span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fdba74', marginBottom: 3 }}>Cadastro incompleto</div>
+                  <div style={{ fontSize: '0.8rem', color: 'rgba(253,186,116,0.85)', lineHeight: 1.5, marginBottom: 10 }}>
+                    Pendência(s): <strong>{pendenciasResumo}</strong>. Sem esses dados, presença, justificativas e solicitações financeiras ficam bloqueadas.
+                  </div>
+                  <button onClick={() => setActiveTab(pendencias.some(p => p.campo === 'termo') ? 'termo' : 'dados')} className="press"
+                    style={{ background: 'linear-gradient(135deg, #ffb84d 0%, #FF9200 55%, #f07f00 100%)', color: '#141414', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(255,146,0,0.35)' }}>
+                    Completar cadastro
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {conformidadeAviso && (
+              <div style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ display: 'flex', color: '#fca5a5', flexShrink: 0 }}><IconLock size={18} /></span>
+                <div style={{ flex: 1, fontSize: '0.8rem', color: '#fca5a5', lineHeight: 1.5 }}>{conformidadeAviso}</div>
+                <button onClick={() => setConformidadeAviso('')} aria-label="Dispensar aviso" style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', flexShrink: 0, padding: 4 }}>
+                  <IconX size={16} />
+                </button>
+              </div>
+            )}
 
             {student && (student.menor_de_idade as boolean) && !student.assinatura_responsavel && (
               <div style={{ background: 'linear-gradient(160deg, rgba(239,68,68,0.13) 0%, rgba(239,68,68,0.05) 100%)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 16, padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 12, backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}>
@@ -1531,6 +1588,7 @@ export default function AlunoPage() {
                         {solBatizadoMsg && <div style={{ fontSize: '0.78rem', color: solBatizadoMsg.startsWith('✅') ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{solBatizadoMsg}</div>}
                         <button disabled={solBatizadoSaving} onClick={async () => {
                           if (!session) return;
+                          if (!exigirConformidade(pendencias.some(p => p.campo === 'termo') ? 'termo' : 'dados')) return;
                           setSolBatizadoSaving(true); setSolBatizadoMsg('');
                           try {
                             const getRes = await fetch(`/api/financeiro?student_id=${session.student_id}`);
@@ -1593,6 +1651,7 @@ export default function AlunoPage() {
                       {solUnifMsg && <div style={{ fontSize: '0.78rem', color: solUnifMsg.startsWith('✅') ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{solUnifMsg}</div>}
                       <button disabled={solUnifSaving || !solUnifItem.trim()} onClick={async () => {
                         if (!session || !solUnifItem.trim()) return;
+                        if (!exigirConformidade(pendencias.some(p => p.campo === 'termo') ? 'termo' : 'dados')) return;
                         setSolUnifSaving(true); setSolUnifMsg('');
                         try {
                           const getRes = await fetch(`/api/financeiro?student_id=${session.student_id}`);
@@ -2600,6 +2659,20 @@ export default function AlunoPage() {
           const handleSaveDados = async () => {
             setDadosLoading(true); setDadosMsg('');
             try {
+              // Validação local dos documentos obrigatórios (o servidor valida de novo)
+              const cpfLimpo = cpfDigits(dadosForm.cpf || '');
+              if (cpfLimpo && !isValidCPF(cpfLimpo)) {
+                setDadosMsg('CPF inválido — confira os 11 dígitos antes de salvar.'); setDadosMsgType('error'); setDadosLoading(false); return;
+              }
+              if (dadosForm.identidade && dadosForm.identidade.trim() && !isValidRG(dadosForm.identidade)) {
+                setDadosMsg('RG inválido — confira o número.'); setDadosMsgType('error'); setDadosLoading(false); return;
+              }
+              if (!cpfLimpo) {
+                setDadosMsg('CPF é obrigatório.'); setDadosMsgType('error'); setDadosLoading(false); return;
+              }
+              if (!dadosForm.identidade || !dadosForm.identidade.trim()) {
+                setDadosMsg('RG é obrigatório.'); setDadosMsgType('error'); setDadosLoading(false); return;
+              }
               const payload = {
                 ...dadosForm,
                 tipo_graduacao: dadosForm.tipo_graduacao || autoTipo || dadosForm.tipo_graduacao,
@@ -3053,6 +3126,9 @@ export default function AlunoPage() {
           };
           const handleSaveTermo = async () => {
             if (!termoForm.nome_responsavel.trim()) { setTermoMsg('Preencha o nome do responsável antes de confirmar.'); return; }
+            const cpfRespDigits = cpfDigits(termoForm.cpf_responsavel || '');
+            if (!cpfRespDigits) { setTermoMsg('O CPF do responsável é obrigatório.'); return; }
+            if (!isValidCPF(cpfRespDigits)) { setTermoMsg('CPF do responsável inválido — confira os 11 dígitos.'); return; }
             setTermoSaving(true); setTermoMsg('');
             try {
               const res = await fetch('/api/aluno/dados', {
@@ -3108,7 +3184,7 @@ export default function AlunoPage() {
                 <div style={{ fontWeight: 700, fontSize: '1rem', color: '#86efac', marginBottom: 6 }}>Não aplicável</div>
                 <div style={{ fontSize: '0.82rem', color: '#4ade80', lineHeight: 1.5 }}>
                   Este aluno é maior de idade e não necessita de Termo de Responsabilidade.<br />
-                  O termo é obrigatório apenas para alunos menores de 18 anos.
+                  O termo é obrigatório para alunos menores de 18 anos — incluindo nome completo e CPF do responsável.
                 </div>
               </div>
             </div>
@@ -3194,8 +3270,8 @@ export default function AlunoPage() {
               </div>
 
               {!termoSaved ? (
-                <button onClick={handleSaveTermo} disabled={termoSaving || !termoForm.nome_responsavel.trim()}
-                  style={{ background: termoForm.nome_responsavel.trim() ? `linear-gradient(135deg, #dc2626, #b91c1c)` : '#2e2e2e', color: termoForm.nome_responsavel.trim() ? '#fff' : '#9ca3af', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: termoForm.nome_responsavel.trim() ? 'pointer' : 'not-allowed', boxShadow: termoForm.nome_responsavel.trim() ? '0 4px 14px rgba(220,38,38,0.35)' : 'none' }}>
+                <button onClick={handleSaveTermo} disabled={termoSaving || !termoForm.nome_responsavel.trim() || !cpfDigits(termoForm.cpf_responsavel || '')}
+                  style={{ background: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') ? `linear-gradient(135deg, #dc2626, #b91c1c)` : '#2e2e2e', color: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') ? '#fff' : '#9ca3af', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') ? 'pointer' : 'not-allowed', boxShadow: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') ? '0 4px 14px rgba(220,38,38,0.35)' : 'none' }}>
                   {termoSaving ? '⏳ Salvando...' : 'Confirmar e Assinar Termo'}
                 </button>
               ) : (

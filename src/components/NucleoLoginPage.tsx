@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import AppFooter from '@/components/AppFooter';
 
 export interface NucleoConfig {
   key: string;
@@ -638,12 +639,8 @@ export default function NucleoLoginPage({ nucleoKey }: Props) {
         )}
       </div>
 
-      {/* Rodapé */}
-      <div style={{ marginTop: 24, textAlign: 'center' }}>
-        <a href="/" style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.72rem', textDecoration: 'none' }}>
-          ← Voltar para o site
-        </a>
-      </div>
+      {/* Rodapé oficial (versão + novidades + © automático) */}
+      <AppFooter variante="capa" />
     </div>
   );
 }

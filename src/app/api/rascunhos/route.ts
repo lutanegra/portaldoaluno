@@ -54,6 +54,8 @@ export interface RascunhoData {
 // Required fields and their friendly labels
 const REQUIRED_FIELDS: Record<string, string> = {
   nome_completo: 'Nome Completo',
+  cpf: 'CPF',
+  identidade: 'RG',
   data_nascimento: 'Data de Nascimento',
   telefone: 'Telefone',
   cep: 'CEP',

@@ -148,3 +148,9 @@ export const IconSearch = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
 
 export const IconDownload = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
   base(size, style, strokeWidth, <><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></>);
+
+export const IconShieldCheck = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
+  base(size, style, strokeWidth, <><path d="M12 21.5c4.5-1.8 7.5-5.6 7.5-10V5.6L12 2.9 4.5 5.6v5.9c0 4.4 3 8.2 7.5 10Z" /><path d="m8.8 11.8 2.3 2.3 4.2-4.4" /></>);
+
+export const IconId = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
+  base(size, style, strokeWidth, <><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><circle cx="8.2" cy="11" r="2.2" /><path d="M5 16.2c.6-1.7 1.8-2.5 3.2-2.5s2.6.8 3.2 2.5" /><path d="M14.5 9.5h4.5" /><path d="M14.5 13h4.5" /></>);

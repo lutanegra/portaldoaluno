@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getTenantId } from '@/lib/tenants';
 import { autoBackupAfterChange } from '@/lib/backupAlunos';
+import { isValidCPF, isValidRG, cpfDigits, idadeEm } from '@/lib/studentCompliance';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,6 +80,25 @@ export async function POST(req: NextRequest) {
 
     if (!payload) {
       return NextResponse.json({ error: 'Payload ausente' }, { status: 400 });
+    }
+
+    // ── Documentos obrigatórios: sem CPF e RG válidos o cadastro não é salvo ──
+    const cpfInsc = String(payload.cpf || '').replace(/\D/g, '');
+    const rgInsc = String(payload.identidade || '').trim();
+    const faltando: string[] = [];
+    if (!cpfInsc || !isValidCPF(cpfInsc)) faltando.push('CPF válido');
+    if (!rgInsc || !isValidRG(rgInsc)) faltando.push('RG');
+    const menorInsc = payload.menor_de_idade === true ||
+      (payload.data_nascimento ? (idadeEm(String(payload.data_nascimento)) >= 0 && idadeEm(String(payload.data_nascimento)) < 18) : false);
+    if (menorInsc) {
+      if (!String(payload.nome_responsavel || '').trim()) faltando.push('Nome do responsável');
+      if (!cpfDigits(String(payload.cpf_responsavel || ''))) faltando.push('CPF do responsável');
+    }
+    if (faltando.length > 0) {
+      return NextResponse.json(
+        { error: `Cadastro não salvo — obrigatório preencher: ${faltando.join(', ')}.`, pendencias: faltando },
+        { status: 422 },
+      );
     }
 
     // Normaliza nome: remove acentos, lowercase, colapsa espaços extras

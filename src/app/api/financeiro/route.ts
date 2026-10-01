@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { exigirConformidadeAluno } from '@/lib/alunoGate';
 
 // Service role for both read and write — bucket 'photos' is private, anon key cannot read it
 const supabaseRead = createClient(
@@ -118,6 +119,13 @@ export async function POST(req: NextRequest) {
   delete (body as any)._admin_save;
 
   if (!body.student_id) return NextResponse.json({ error: 'student_id required' }, { status: 400 });
+
+  // Conformidade cadastral: aluno sem CPF/RG (ou menor sem termo) não altera sua ficha.
+  // Salvamentos do painel administrativo passam sem gate.
+  if (!isAdminSave) {
+    const gate = await exigirConformidadeAluno(req, String(body.student_id));
+    if (!gate.ok) return gate.response;
+  }
 
   const now = new Date().toISOString();
   body.updated_at = now;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { readPanelSession } from '@/lib/panelSession';
 import { loadCreds, accIsGeral, accNucleos } from '@/lib/panelCredentials';
+import { exigirConformidadeAluno } from '@/lib/alunoGate';
 
 export const dynamic = 'force-dynamic';
 
@@ -94,6 +95,10 @@ export async function POST(req: NextRequest) {
     if (!student_id || !data_falta || !motivo) {
       return NextResponse.json({ error: 'Dados incompletos.' }, { status: 400 });
     }
+
+    // Conformidade cadastral: sem CPF/RG (e termo, se menor) o aluno não envia justificativa
+    const gate = await exigirConformidadeAluno(req, String(student_id));
+    if (!gate.ok) return gate.response;
 
     // Validate date — must be within last 30 days
     const faltaDate = new Date(data_falta + 'T12:00:00');

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { appendAudit } from '@/lib/audit';
 import { readPanelSession } from '@/lib/panelSession';
 import { loadCreds, accIsGeral, accNucleos, accHasNucleo, type PanelAccount } from '@/lib/panelCredentials';
+import { exigirConformidadeAluno } from '@/lib/alunoGate';
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
@@ -202,6 +203,10 @@ function extrairJanela(
 // e o admin de núcleo só pode marcar presença de alunos do próprio núcleo.
 export async function POST(req: Request) {
   const { student } = await req.json();
+
+  // ── CONFORMIDADE CADASTRAL (aluno sem CPF/RG/termo não registra presença) ──
+  const gate = await exigirConformidadeAluno(req, String(student?.id || ''));
+  if (!gate.ok) return gate.response;
 
   // ── SESSÃO DE ADMIN (bypass das travas, com filtro de núcleo) ──
   let adminNucleo: string | null = null; // null = sem admin; 'geral' = admin geral/owner
