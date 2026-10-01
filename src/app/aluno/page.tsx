@@ -438,6 +438,21 @@ export default function AlunoPage() {
               .catch(() => {});
           }
         }
+      } else if (res.status === 401 || res.status === 403) {
+        // O perfil aberto ("Quem está usando?") pode não pertencer mais a esta
+        // conta (ex.: perfil ativo deixado pela conta anterior no dispositivo).
+        // Cai para a PRÓPRIA conta autenticada — a tela nunca fica no vazio.
+        try {
+          const chk = await fetch('/api/aluno/auth', { cache: 'no-store' });
+          const d = await chk.json();
+          if (d.authenticated && d.session?.student_id) {
+            if (d.student) setStudent(d.student);
+            await loadStudentData(d.session.student_id, false);
+          } else {
+            setSession(null);
+            setStudent(null);
+          }
+        } catch { setSession(null); setStudent(null); }
       }
     } catch {}
     if (showGlobalLoader) setLoading(false);
@@ -576,7 +591,9 @@ export default function AlunoPage() {
       if (data.student) setStudent(data.student);
       setSession(sess);
       setActiveTab('dashboard');
-      // Then load full merged data (includes apelido/nome_social from Storage extras)
+      // Recarga completa sempre — dados enxutos do login não bastam para o
+      // formulário de dados (data de nascimento → termo) nem para o ID.
+      setDadosInitialized(false);
       loadStudentData(data.student_id);
     } catch { setLoginError('Erro de conexão. Tente novamente.'); }
     finally { setLoginLoading(false); }
@@ -648,7 +665,11 @@ export default function AlunoPage() {
         setShowRegister(false);
         setRegisterTipo(null); setRespTambemAluno(null);
         setRespForm({ nome_completo: '', cpf: '', data_nascimento: '', email: '', phone: '', password: '', confirmPassword: '' });
-        if (data.student_id) loadStudentData(data.student_id, true);
+        if (data.student_id) {
+          // Recarga completa — perfil de responsável também precisa da linha inteira
+          setDadosInitialized(false);
+          loadStudentData(data.student_id, true);
+        }
       }, 900);
     } catch { setRespError('Erro de conexão. Tente novamente.'); }
     finally { setRespLoading(false); }
@@ -693,6 +714,9 @@ export default function AlunoPage() {
               if (data.student) setStudent(data.student);
               setShowRegister(false);
               setRegisterTipo(null);
+              // Recarga completa SEMPRE — a resposta de cadastro vem enxuta e o
+              // formulário/dados (termo, ID) precisam da linha inteira do banco.
+              setDadosInitialized(false);
               loadStudentData(data.student_id, true);
             }, 900);
           } else {
@@ -732,6 +756,8 @@ export default function AlunoPage() {
         if (data2.student) setStudent(data2.student);
         setShowRegister(false);
         setRegisterTipo(null);
+        // Recarga completa SEMPRE — termo e ID dependem da linha inteira.
+        setDadosInitialized(false);
         loadStudentData(data2.student_id, true);
       }, 900);
     } catch { setRegisterError('Erro de conexão. Tente novamente.'); }
@@ -1653,7 +1679,7 @@ export default function AlunoPage() {
                 </div>
                 <div style={{ background: 'rgba(255,146,0,0.07)', border: '1px solid rgba(255,146,0,0.25)', borderRadius: 12, padding: '9px 12px' }}>
                   <div style={{ fontSize: '0.6rem', color: 'rgba(255,146,0,0.8)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Meu ID</div>
-                  <div style={{ fontSize: '0.86rem', fontWeight: 800, letterSpacing: '0.1em', color: '#ffb84d', textShadow: '0 0 12px rgba(255,146,0,0.35)' }}>{alunoInscricaoNum != null ? `CCLN-${String(alunoInscricaoNum).padStart(3, '0')}` : '—'}</div>
+                  <div style={{ fontSize: '0.86rem', fontWeight: 800, letterSpacing: '0.1em', color: '#ffb84d', textShadow: '0 0 12px rgba(255,146,0,0.35)' }}>{alunoInscricaoNum != null ? `CCLN-${String(alunoInscricaoNum).padStart(3, '0')}` : (student ? 'Gerando…' : '—')}</div>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '9px 12px' }}>
                   <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Graduação</div>

@@ -10,6 +10,7 @@ import {
 } from '@/lib/alunoSession';
 import { createClient } from '@supabase/supabase-js';
 import { readPanelSession } from '@/lib/panelSession';
+import { PROFILE_COOKIE, profileCookieOptions } from '@/lib/ator';
 import { appendAudit } from '@/lib/audit';
 import { idadeEm, faixaCadastro, mensagemFaixa } from '@/lib/idade';
 
@@ -145,6 +146,22 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const action = String(body.action || '');
+
+    /* ── LOGOUT — limpa TODOS os cookies no servidor (sessão + perfil ativo) ── */
+    if (action === 'logout') {
+      const store = await cookies();
+      store.set(SESSION_COOKIE, '', { ...sessionCookieOptions(), maxAge: 0 });
+      // O contexto "Quem está usando?" NUNCA sobrevive à saída — sem isso, o
+      // próximo login desta conta abriria o perfil aberto pela conta anterior.
+      store.set(PROFILE_COOKIE, '', { ...profileCookieOptions(), maxAge: 0 });
+      try {
+        const sessSaindo = readAlunoSessionFromReq(req);
+        if (sessSaindo) {
+          await appendAudit({ actor: sessSaindo.un || sessSaindo.sid, actor_type: 'student', action: 'aluno_logout', target_id: sessSaindo.sid });
+        }
+      } catch {}
+      return NextResponse.json({ success: true });
+    }
 
     /* ── Recuperação de senha por e-mail (sem sessão) ─────────────────────── */
 

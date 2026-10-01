@@ -76,6 +76,19 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.4.2',
+    data: '2026-10-01',
+    titulo: 'Cadastro completo logo após criar a conta',
+    descricao:
+      'Depois de criar a conta, a tela "Meus Dados" abre já preenchida com o que foi informado no cadastro — data de nascimento, telefone e e-mail —, o ID (CCLN-000) aparece sozinho e o aviso de Termo surge imediatamente para menores de 18.',
+    itens: [
+      { categoria: 'correcoes', texto: 'Ao terminar o cadastro (ou entrar na conta), os dados já preenchidos aparecem na tela "Meus Dados" sem precisar recarregar a página.' },
+      { categoria: 'correcoes', texto: 'O ID do aluno (CCLN-000) passa a aparecer na hora — inclusive no primeiro acesso, antes de qualquer salvamento.' },
+      { categoria: 'correcoes', texto: 'O aviso de "Menor de idade — Termo obrigatório" surge imediatamente quando a data de nascimento informa menoridade.' },
+      { categoria: 'seguranca', texto: 'Sair da conta agora limpa também o perfil aberto no dispositivo: o próximo login desta tela não herda o acesso de quem saiu antes.' },
+    ],
+  },
+  {
     versao: '1.4.1',
     data: '2026-10-01',
     titulo: 'Correções no cadastro e salvamento de dados',
