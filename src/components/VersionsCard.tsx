@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { APP_VERSION, APP_RELEASE_DATE } from '@/lib/version';
-import { CHANGELOG, CATEGORIA_META } from '@/components/changelog';
+import { CHANGELOG, CATEGORIA_META, type ChangelogEntry } from '@/components/changelog';
 import { IconShieldCheck } from '@/components/icons';
 
 /**
@@ -36,7 +36,7 @@ export default function VersionsCard() {
 
       {/* Explicação do versionamento */}
       <div style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '13px 16px', fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-        O versionamento segue o padrão <strong style={{ color: 'var(--text-primary)' }}>MAJOR.MINOR.PATCH</strong>: correções sobem o último número, recursos novos sobem o do meio e reformulações grandes sobem o primeiro. Cada implementação relevante do sistema gera uma nova versão registrada no histórico abaixo — não é preciso cadastrar nada aqui.
+        O versionamento segue o padrão <strong style={{ color: 'var(--text-primary)' }}>MAJOR.MINOR.PATCH</strong>: correções sobem o último número, recursos novos sobem o do meio e reformulações grandes sobem o primeiro. Cada implementação relevante do sistema gera uma nova versão registrada no histórico abaixo — não é preciso cadastrar nada aqui. Itens marcados com <strong style={{ color: '#fbbf24' }}>cadeado</strong> (e versões com etiqueta <strong style={{ color: '#fbbf24' }}>Interna</strong>) tratam de infraestrutura ou recursos do painel e não aparecem no ✦ Novidades do aluno.
       </div>
 
       {/* Histórico */}
@@ -48,6 +48,7 @@ export default function VersionsCard() {
           const grupos = ['novo', 'melhorias', 'interface', 'correcoes', 'seguranca', 'desempenho']
             .map(cat => ({ cat, itens: entry.itens.filter(i => i.categoria === cat) }))
             .filter(g => g.itens.length > 0);
+          const temRestrito = entry.publico === 'admin' || entry.itens.some(i => i.publico === 'admin');
           return (
             <div key={entry.versao} style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '14px 16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -55,6 +56,9 @@ export default function VersionsCard() {
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{entry.data.split('-').reverse().join('/')}</span>
                 {ei === 0 && (
                   <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#4ade80', background: 'rgba(74,222,128,0.10)', border: '1px solid rgba(74,222,128,0.35)', borderRadius: 999, padding: '2px 8px' }}>Atual</span>
+                )}
+                {temRestrito && (
+                  <span title="Não aparece no ✦ Novidades do aluno" style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#fbbf24', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.35)', borderRadius: 999, padding: '2px 8px' }}>Interna</span>
                 )}
               </div>
               <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f5f5f4', margin: '5px 0 3px' }}>{entry.titulo}</div>
@@ -68,7 +72,13 @@ export default function VersionsCard() {
                       <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 3 }}>
                         {itens.map((item, ii) => (
                           <li key={ii} style={{ display: 'flex', gap: 7, fontSize: '0.76rem', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
-                            <span aria-hidden="true" style={{ color: meta.cor, flexShrink: 0 }}>•</span>
+                            {item.publico === 'admin' ? (
+                              <span aria-label="Visível apenas para administradores" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', color: '#fbbf24' }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+                              </span>
+                            ) : (
+                              <span aria-hidden="true" style={{ color: meta.cor, flexShrink: 0 }}>•</span>
+                            )}
                             <span>{item.texto}</span>
                           </li>
                         ))}

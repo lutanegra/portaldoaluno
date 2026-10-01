@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { APP_VERSION } from '@/lib/version';
-import { CHANGELOG, CATEGORIA_META, type ChangelogCategoria } from './changelog';
+import { CHANGELOG, changelogParaAluno, versaoReferenciaAluno, CATEGORIA_META, type ChangelogCategoria, type ChangelogEntry } from './changelog';
 
 /**
  * Rodapé oficial do sistema: © com ano automático + versão.
@@ -16,7 +16,11 @@ function lerVisto(): string {
   try { return localStorage.getItem(SEEN_KEY) || ''; } catch { return ''; }
 }
 
-/** Hook do indicador: verdadeiro quando a versão atual ainda não foi vista. */
+/**
+ * Hook do indicador: verdadeiro quando há novidade (na visão do ALUNO) ainda não vista.
+ * Compara com a versão de referência do aluno, não com a versão bruta do sistema —
+ * lançamentos internos (só painel/infra) não devem acender o ponto para quem treina.
+ */
 export function useNovidades() {
   const [visto, setVisto] = useState<string | null>(null);
 
@@ -32,12 +36,13 @@ export function useNovidades() {
   }, []);
 
   const marcarVista = useCallback(() => {
-    try { localStorage.setItem(SEEN_KEY, APP_VERSION); } catch {}
-    setVisto(APP_VERSION);
+    const referencia = versaoReferenciaAluno();
+    try { localStorage.setItem(SEEN_KEY, referencia); } catch {}
+    setVisto(referencia);
     try { window.dispatchEvent(new Event('pa-changelog-visto')); } catch {}
   }, []);
 
-  return { temNovidade: visto !== null && visto !== APP_VERSION, marcarVista };
+  return { temNovidade: visto !== null && visto !== versaoReferenciaAluno(), marcarVista };
 }
 
 const ORDEM_CATEGORIAS: ChangelogCategoria[] = ['novo', 'melhorias', 'interface', 'correcoes', 'seguranca', 'desempenho'];
@@ -47,7 +52,7 @@ function dataBR(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
-/** Modal do histórico de versões (mais recente primeiro). */
+/** Modal do histórico de versões (mais recente primeiro). Visão do ALUNO: sem itens do painel/infra. */
 export function ChangelogModal({ open, onClose, aoAbrir }: { open: boolean; onClose: () => void; aoAbrir?: () => void }) {
   useEffect(() => {
     if (!open) return;
@@ -62,6 +67,8 @@ export function ChangelogModal({ open, onClose, aoAbrir }: { open: boolean; onCl
   }, [open, onClose, aoAbrir]);
 
   if (!open) return null;
+
+  const visivel: ChangelogEntry[] = changelogParaAluno();
 
   return (
     <div
@@ -85,7 +92,7 @@ export function ChangelogModal({ open, onClose, aoAbrir }: { open: boolean; onCl
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.02rem', fontWeight: 800, color: '#f5f5f4' }}>
               <span style={{ color: '#FF9200' }}>✦</span> Novidades
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#FF9200', background: 'rgba(255,146,0,0.12)', border: '1px solid rgba(255,146,0,0.35)', borderRadius: 999, padding: '2px 9px' }}>v{APP_VERSION}</span>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#FF9200', background: 'rgba(255,146,0,0.12)', border: '1px solid rgba(255,146,0,0.35)', borderRadius: 999, padding: '2px 9px' }}>v{versaoReferenciaAluno()}</span>
             </div>
             <div style={{ fontSize: '0.74rem', color: '#8f8f8f', marginTop: 2 }}>Histórico de atualizações do sistema</div>
           </div>
@@ -99,9 +106,9 @@ export function ChangelogModal({ open, onClose, aoAbrir }: { open: boolean; onCl
           </button>
         </div>
 
-        {/* Entradas */}
+        {/* Entradas (somente o que interessa ao aluno) */}
         <div style={{ padding: '16px 18px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {CHANGELOG.map((entry, ei) => {
+          {visivel.map((entry, ei) => {
             const grupos = ORDEM_CATEGORIAS
               .map(cat => ({ cat, itens: entry.itens.filter(i => i.categoria === cat) }))
               .filter(g => g.itens.length > 0);
