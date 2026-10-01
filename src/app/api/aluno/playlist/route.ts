@@ -50,16 +50,23 @@ function detectPlatform(url: string): string {
 // GET /api/aluno/playlist?student_id=...
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const student_id = searchParams.get('student_id');
-  if (!student_id) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
+  const { resolverAtor } = await import('@/lib/ator');
+  const ator = await resolverAtor(req, searchParams.get('student_id'));
+  if (!ator || !ator.studentId) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  const student_id = ator.studentId;
   const items = await loadPlaylist(student_id);
   return NextResponse.json(items);
 }
 
 // POST /api/aluno/playlist — add item
 export async function POST(req: NextRequest) {
-  const { student_id, title, url } = await req.json();
-  if (!student_id || !url) return NextResponse.json({ error: 'student_id e url são obrigatórios.' }, { status: 400 });
+  const bodyIn = await req.json();
+  const { title, url } = bodyIn;
+  const { resolverAtor } = await import('@/lib/ator');
+  const ator = await resolverAtor(req, bodyIn.student_id);
+  if (!ator || !ator.studentId) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  const student_id = ator.studentId;
+  if (!url) return NextResponse.json({ error: 'student_id e url são obrigatórios.' }, { status: 400 });
 
   // Basic URL validation
   try { new URL(url); } catch { return NextResponse.json({ error: 'URL inválida.' }, { status: 400 }); }
@@ -81,8 +88,13 @@ export async function POST(req: NextRequest) {
 
 // PUT /api/aluno/playlist — edit item
 export async function PUT(req: NextRequest) {
-  const { student_id, id, title, url } = await req.json();
-  if (!student_id || !id) return NextResponse.json({ error: 'student_id e id são obrigatórios.' }, { status: 400 });
+  const bodyIn = await req.json();
+  const { id, title, url } = bodyIn;
+  const { resolverAtor } = await import('@/lib/ator');
+  const ator = await resolverAtor(req, bodyIn.student_id);
+  if (!ator || !ator.studentId) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  const student_id = ator.studentId;
+  if (!id) return NextResponse.json({ error: 'student_id e id são obrigatórios.' }, { status: 400 });
 
   const items = await loadPlaylist(student_id);
   const idx = items.findIndex(i => i.id === id);
@@ -103,8 +115,13 @@ export async function PUT(req: NextRequest) {
 
 // DELETE /api/aluno/playlist
 export async function DELETE(req: NextRequest) {
-  const { student_id, id } = await req.json();
-  if (!student_id || !id) return NextResponse.json({ error: 'student_id e id são obrigatórios.' }, { status: 400 });
+  const bodyIn = await req.json();
+  const { id } = bodyIn;
+  const { resolverAtor } = await import('@/lib/ator');
+  const ator = await resolverAtor(req, bodyIn.student_id);
+  if (!ator || !ator.studentId) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  const student_id = ator.studentId;
+  if (!id) return NextResponse.json({ error: 'student_id e id são obrigatórios.' }, { status: 400 });
 
   const items = await loadPlaylist(student_id);
   const filtered = items.filter(i => i.id !== id);

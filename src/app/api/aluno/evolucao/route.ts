@@ -20,8 +20,10 @@ export interface EvolucaoEntry {
 // GET /api/aluno/evolucao?student_id=...&days=365
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const student_id = searchParams.get('student_id');
-  if (!student_id) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
+  const { resolverAtor } = await import('@/lib/ator');
+  const ator = await resolverAtor(req, searchParams.get('student_id'));
+  if (!ator || !ator.studentId) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  const student_id = ator.studentId;
 
   const days = parseInt(searchParams.get('days') || '365', 10);
 

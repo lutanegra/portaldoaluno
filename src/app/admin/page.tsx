@@ -11,6 +11,7 @@ import AlunoViewer from '@/components/AlunoViewer';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { getTenantIdByKey } from '@/lib/tenants';
 import WhatsappFilaPanel from '@/components/WhatsappFilaPanel';
+import ResponsaveisPanel from '@/components/ResponsaveisPanel';
 import MuralAdmin from '@/components/MuralAdmin';
 import { invalidateConfigCache } from '@/hooks/useSystemConfig';
 import EditAccountModal from '@/components/EditAccountModal';
@@ -901,7 +902,7 @@ export default function AdminPage() {
 
 
   const currentProfile: { label: string; color: string } | undefined = activeNucleo === 'geral'
-    ? (isOwner ? { label: 'Owner', color: '#7c3aed' } : { label: 'Admin Geral', color: '#1d4ed8' })
+    ? (isOwner ? { label: 'Owner', color: '#7c3aed' } : { label: 'Admin Geral', color: '#93c5fd' })
     : dynamicNucleos.find(n => n.slug === activeNucleo)
       ? { label: dynamicNucleos.find(n => n.slug === activeNucleo)!.nome, color: '#0ea5e9' }
       : undefined;
@@ -2586,11 +2587,11 @@ export default function AdminPage() {
               {/* Filtros e Buscas — só visíveis na aba Alunos */}
               {activeTab === 'alunos' && (
                 <div style={{ marginTop: 10, background: 'rgba(29,78,216,0.05)', border: '1px solid rgba(29,78,216,0.15)', borderRadius: 12, padding: '12px 14px' }}>
-                  <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>🔍 Filtros e Buscas</div>
+                  <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>🔍 Filtros e Buscas</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8 }}>
                     <input
                       className="search-input"
-                      placeholder="🔍 Buscar por nome ou CPF..."
+                      placeholder="Buscar por nome ou CPF..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       style={{ fontSize: '0.82rem' }}
@@ -2634,8 +2635,8 @@ export default function AdminPage() {
                       <option value="nome-desc">↓ Nome Z → A</option>
                       <option value="grad-asc">🎖 Graduação ↑</option>
                       <option value="grad-desc">🎖 Graduação ↓</option>
-                      <option value="data-asc">📅 Mais antigo</option>
-                      <option value="data-desc">📅 Mais recente</option>
+                      <option value="data-asc">Mais antigo</option>
+                      <option value="data-desc">Mais recente</option>
                     </select>
                     <select
                       className="search-input"
@@ -2726,7 +2727,7 @@ export default function AdminPage() {
 
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 900, fontSize: '1rem', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ color: '#dc2626', animation: 'sirenFlash 0.8s ease-in-out infinite' }}>🚨</span>
+                  <span style={{ color: '#f87171', animation: 'sirenFlash 0.8s ease-in-out infinite' }}>🚨</span>
                   <span style={{ background: 'linear-gradient(90deg,#dc2626,#1d4ed8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
                     {aniversariantes.length === 1 ? 'ANIVERSARIANTE' : 'ANIVERSARIANTES'} DE HOJE!
                   </span>
@@ -2761,7 +2762,7 @@ export default function AdminPage() {
                   })}
                 </div>
               </div>
-              <button onClick={() => setShowBirthdayAlert(false)} style={{ background: 'rgba(0,0,0,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: '4px 8px', borderRadius: 6, flexShrink: 0, fontWeight: 700 }}>×</button>
+              <button onClick={() => setShowBirthdayAlert(false)} style={{ background: 'rgba(0,0,0,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#f87171', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: '4px 8px', borderRadius: 6, flexShrink: 0, fontWeight: 700 }}>×</button>
             </div>
           );
         })()}
@@ -2787,7 +2788,7 @@ export default function AdminPage() {
               const ncLabel = nucleoFilter || activeNucleo;
               return (
                 <div className="stat-card" style={{ borderTop: `3px solid ${ncColor}` }}>
-                  <div className="stat-value" style={{ color: ncColor }}>📍</div>
+                  <div className="stat-value" style={{ color: ncColor }}><IconMapPin size={26} /></div>
                   <div className="stat-label" style={{ fontWeight: 700 }}>{ncLabel}</div>
                 </div>
               );
@@ -2841,7 +2842,7 @@ export default function AdminPage() {
               body: JSON.stringify({ admin_auth: 'geral' }),
             });
             const d = await res.json();
-            if (d.success) alert(`✅ tenant_id atualizado!\n\n• Atualizados agora: ${d.updated}\n• Já tinham tenant_id: ${d.already_had_tenant_id}\n• Com erro: ${d.skipped}\n• Total: ${d.total}`);
+            if (d.success) alert(`tenant_id atualizado!\n\n• Atualizados agora: ${d.updated}\n• Já tinham tenant_id: ${d.already_had_tenant_id}\n• Com erro: ${d.skipped}\n• Total: ${d.total}`);
             else alert('Erro: ' + (d.error || JSON.stringify(d)));
           }} style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.35)', color: '#34d399', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
             Preencher tenant_id (Multi-tenant)
@@ -2882,7 +2883,7 @@ export default function AdminPage() {
                     const res = await fetch('/api/admin/import-alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }) });
                     const d = await res.json();
                     if (d.success) {
-                      alert(`✅ Importação concluída!\n\n• Atualizados: ${d.updated}\n• Não encontrados: ${d.notFound}\n• Com erro: ${d.skipped}\n• Total no CSV: ${d.total}${d.errors?.length ? '\n\nErros:\n' + d.errors.join('\n') : ''}`);
+                      alert(`Importação concluída!\n\n• Atualizados: ${d.updated}\n• Não encontrados: ${d.notFound}\n• Com erro: ${d.skipped}\n• Total no CSV: ${d.total}${d.errors?.length ? '\n\nErros:\n' + d.errors.join('\n') : ''}`);
                       fetchStudents(activeNucleo);
                     } else { alert('Erro: ' + (d.error || JSON.stringify(d))); }
                   } catch (err) { alert('Erro na importação: ' + err); }
@@ -2949,23 +2950,23 @@ export default function AdminPage() {
                               return <span style={{ fontSize: '0.65rem', background: 'rgba(234,179,8,0.12)', color: '#b45309', border: '1px solid rgba(234,179,8,0.4)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>Infantil</span>;
                             }
                             if (isMestre) {
-                              return <span style={{ fontSize: '0.65rem', background: 'rgba(220,38,38,0.12)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>{nivel}</span>;
+                              return <span style={{ fontSize: '0.65rem', background: 'rgba(220,38,38,0.12)', color: '#f87171', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>{nivel}</span>;
                             }
                             if (isMestrando || isProf) {
                               return <span style={{ fontSize: '0.65rem', background: 'rgba(139,92,246,0.12)', color: '#7c3aed', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>{nivel}</span>;
                             }
                             if (isInstrutor) {
-                              return <span style={{ fontSize: '0.65rem', background: 'rgba(8,145,178,0.12)', color: '#0369a1', border: '1px solid rgba(8,145,178,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>{nivel}</span>;
+                              return <span style={{ fontSize: '0.65rem', background: 'rgba(8,145,178,0.12)', color: '#93c5fd', border: '1px solid rgba(8,145,178,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>{nivel}</span>;
                             }
                             if (isMonitor) {
                               return <span style={{ fontSize: '0.65rem', background: 'rgba(22,163,74,0.12)', color: '#15803d', border: '1px solid rgba(22,163,74,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>Monitor</span>;
                             }
                             if (isGraduado) {
-                              return <span style={{ fontSize: '0.65rem', background: 'rgba(29,78,216,0.12)', color: '#1d4ed8', border: '1px solid rgba(29,78,216,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>{nivel}</span>;
+                              return <span style={{ fontSize: '0.65rem', background: 'rgba(29,78,216,0.12)', color: '#93c5fd', border: '1px solid rgba(29,78,216,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>{nivel}</span>;
                             }
                             // Aluno comum — usa sexo para Aluno/Aluna
-                            if (sexo === 'M') return <span style={{ fontSize: '0.65rem', background: 'rgba(29,78,216,0.12)', color: '#1d4ed8', border: '1px solid rgba(29,78,216,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>Aluno</span>;
-                            if (sexo === 'F') return <span style={{ fontSize: '0.65rem', background: 'rgba(220,38,38,0.12)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>Aluna</span>;
+                            if (sexo === 'M') return <span style={{ fontSize: '0.65rem', background: 'rgba(29,78,216,0.12)', color: '#93c5fd', border: '1px solid rgba(29,78,216,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>Aluno</span>;
+                            if (sexo === 'F') return <span style={{ fontSize: '0.65rem', background: 'rgba(220,38,38,0.12)', color: '#f87171', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>Aluna</span>;
                             return null;
                           })()}
                           {(() => {
@@ -3049,9 +3050,9 @@ export default function AdminPage() {
                           </button>
                           <button
                             onClick={() => { setChartStudent(student); fetchHistorico(); }}
-                            style={{ background: 'rgba(22,163,74,0.12)', border: '1px solid rgba(22,163,74,0.3)', color: '#4ade80', padding: '5px 10px', borderRadius: 7, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}
+                            style={{ background: 'rgba(255,146,0,0.10)', border: '1px solid rgba(255,146,0,0.3)', color: '#FF9200', padding: '5px 10px', borderRadius: 7, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}
                           >
-                            📊
+                            Gráfico
                           </button>
                           {student.menor_de_idade && !student.assinatura_responsavel && (
                             <button
@@ -3079,7 +3080,7 @@ _Portal Aluno_`
                               title="Enviar termo pelo WhatsApp"
                               style={{ background: 'rgba(37,211,102,0.12)', border: '1px solid rgba(37,211,102,0.35)', color: '#25d366', padding: '5px 10px', borderRadius: 7, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}
                             >
-                              📋
+                              Termo
                             </button>
                           )}
                           <button
@@ -3130,7 +3131,7 @@ _Portal Aluno_`
                 <div className="stat-label">{t('admin_total_students')}</div>
               </div>
               <div className="stat-card">
-                <div className="stat-value" style={{ color: '#dc2626' }}>
+                <div className="stat-value" style={{ color: '#f87171' }}>
                   {students.filter(s => !filterPresencaNucleo || s.nucleo === filterPresencaNucleo).length -
                     checkins.filter(c => !filterPresencaNucleo || c.nucleo === filterPresencaNucleo).length}
                 </div>
@@ -3279,7 +3280,7 @@ _Portal Aluno_`
                             </a>
                           ) : (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                              📍 GPS não disponível
+                              GPS não disponível
                             </span>
                           )}
                         </div>
@@ -3451,7 +3452,7 @@ _Portal Aluno_`
                   </div>
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#dc2626', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f87171', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                     ⚠ Mais Faltas — {relDias} dias
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 500 }}>({rankStudents.length} alunos)</span>
                   </h3>
@@ -3595,7 +3596,7 @@ _Portal Aluno_`
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Modelo carregado — será usado como fundo do certificado</div>
                         </div>
                         <button onClick={() => { setCertTemplateUrl(null); setCertTemplateName(null); if (certTemplateInputRef.current) certTemplateInputRef.current.value = ''; }}
-                          style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626', padding: '5px 10px', borderRadius: 7, cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}>
+                          style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#f87171', padding: '5px 10px', borderRadius: 7, cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}>
                           Remover
                         </button>
                       </div>
@@ -3750,22 +3751,22 @@ _Portal Aluno_`
                   <div style={{ textAlign: 'center' }}>
                     {/* Logo + org name */}
                     <img src={systemConfig?.logo_url || '/logo-portal-aluno.png'} alt={systemConfig?.organization_short || 'CCLN'} style={{ width: 52, height: 52, objectFit: 'contain', marginBottom: 4 }} />
-                    <div style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#92400e' }}>
+                    <div style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#facc15' }}>
                       {systemConfig?.organization_name || 'Portal Aluno'}
                     </div>
                     <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,#b45309,transparent)', margin: '10px 0' }} />
-                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#78350f', letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1.2 }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fde68a', letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1.2 }}>
                       Certificado
                     </div>
-                    <div style={{ fontSize: '0.65rem', color: '#92400e', letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: 2 }}>
+                    <div style={{ fontSize: '0.65rem', color: '#facc15', letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: 2 }}>
                       {certEvento || 'Batizado e Troca de Cordas'}
                     </div>
                     <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,#b45309,transparent)', margin: '10px 0' }} />
-                    <div style={{ fontSize: '0.62rem', color: '#78350f', marginBottom: 6 }}>Certificamos que</div>
+                    <div style={{ fontSize: '0.62rem', color: '#fde68a', marginBottom: 6 }}>Certificamos que</div>
                     <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#1a1a1a', fontFamily: 'Georgia, serif', marginBottom: 6, minHeight: 28 }}>
                       {certStudent ? certStudent.nome_completo : <span style={{ color: '#d4b896', fontStyle: 'italic' }}>Nome do Aluno</span>}
                     </div>
-                    <div style={{ fontSize: '0.6rem', color: '#78350f', marginBottom: 4 }}>
+                    <div style={{ fontSize: '0.6rem', color: '#fde68a', marginBottom: 4 }}>
                       concluiu com êxito a graduação em Capoeira, recebendo a
                     </div>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(180,83,9,0.08)', border: '1px solid rgba(180,83,9,0.3)', borderRadius: 6, padding: '5px 14px', marginBottom: 6 }}>
@@ -3777,14 +3778,14 @@ _Portal Aluno_`
                           </div>
                         );
                       })()}
-                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#78350f' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#fde68a' }}>
                         {certGraduacao || <span style={{ color: '#d4b896', fontStyle: 'italic' }}>graduação</span>}
                       </span>
                       {certGraduacao && nomenclaturaGraduacao[certGraduacao] && (
-                        <span style={{ fontSize: '0.62rem', color: '#92400e' }}>— {nomenclaturaGraduacao[certGraduacao]}</span>
+                        <span style={{ fontSize: '0.62rem', color: '#facc15' }}>— {nomenclaturaGraduacao[certGraduacao]}</span>
                       )}
                     </div>
-                    <div style={{ fontSize: '0.58rem', color: '#92400e', marginBottom: 10 }}>
+                    <div style={{ fontSize: '0.58rem', color: '#facc15', marginBottom: 10 }}>
                       {certLocal || <span style={{ color: '#d4b896', fontStyle: 'italic' }}>Local do evento</span>}
                       {certData && <span> · {new Date(certData + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</span>}
                     </div>
@@ -4081,7 +4082,7 @@ _Portal Aluno_`
                           <div key={ym} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', borderTop: `3px solid ${cor}` }}>
                             <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: 4 }}>{monthLabel(ym)}</div>
                             <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 700 }}>✓ {presentStudents} alunos presentes</div>
-                            <div style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 700 }}>✗ {total - presentStudents} ausentes</div>
+                            <div style={{ fontSize: '0.75rem', color: '#f87171', fontWeight: 700 }}>✗ {total - presentStudents} ausentes</div>
                             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 4 }}>{totalCheckins} check-ins · {trainDays} treino{trainDays !== 1 ? 's' : ''}</div>
                             <div style={{ marginTop: 6, height: 5, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
                               <div style={{ height: '100%', width: `${presencePct}%`, background: cor, borderRadius: 3, transition: 'width 0.4s' }} />
@@ -4108,7 +4109,7 @@ _Portal Aluno_`
                   <div className="stat-label">Com Presença</div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-value" style={{ color: '#dc2626' }}>
+                  <div className="stat-value" style={{ color: '#f87171' }}>
                     {students.filter(s => (relatorioHistorico[s.id] || []).length === 0).length}
                   </div>
                   <div className="stat-label">Sem Presença</div>
@@ -4169,7 +4170,7 @@ _Portal Aluno_`
                             </td>
                             <td style={{ fontSize: '0.85rem' }}>{student.graduacao}</td>
                             <td style={{ textAlign: 'center', fontWeight: 700, color: '#16a34a' }}>{presencas}</td>
-                            <td style={{ textAlign: 'center', fontWeight: 700, color: '#dc2626' }}>{relDias - presencas}</td>
+                            <td style={{ textAlign: 'center', fontWeight: 700, color: '#f87171' }}>{relDias - presencas}</td>
                             <td>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <div style={{ flex: 1, background: 'var(--bg-input)', borderRadius: 6, height: 8, overflow: 'hidden', border: '1px solid var(--border)', minWidth: 60 }}>
@@ -4242,7 +4243,7 @@ _Portal Aluno_`
 
               if (relContas.length === 0) return (
                 <div style={{ textAlign: 'center', background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 12, padding: '32px 20px' }}>
-                  <div style={{ fontSize: 36, marginBottom: 8 }}>👤</div>
+                  <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center', color: '#FF9200' }}><IconUser size={38} /></div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                     {nucleoFilter ? `${t('admin_no_accounts_for')} ${nucleoFilter}.` : t('admin_no_accounts')}
                   </div>
@@ -4282,7 +4283,7 @@ _Portal Aluno_`
                                 ) : <span style={{ color: '#d97706', fontSize: '0.74rem' }}>não cadastrado</span>}
                               </td>
                               <td style={{ padding: '10px 14px' }}>
-                                <span style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6, padding: '3px 9px', fontFamily: 'monospace', fontWeight: 800, color: '#1d4ed8', fontSize: '0.8rem' }}>{acc.username}</span>
+                                <span style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '3px 9px', fontFamily: 'monospace', fontWeight: 800, color: '#FF9200', fontSize: '0.8rem' }}>{acc.username}</span>
                               </td>
                               <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>{st?.nucleo || '—'}</td>
                               <td style={{ padding: '10px 14px' }}>
@@ -4298,7 +4299,7 @@ _Portal Aluno_`
                   </div>
                   <div style={{ marginTop: 10, fontSize: '0.76rem', color: 'var(--text-secondary)', display: 'flex', gap: 16 }}>
                     <span>Total: <strong>{relContas.length}</strong> conta{relContas.length !== 1 ? 's' : ''}</span>
-                    <span>✅ Ativas: <strong>{relContas.filter(a => a.active).length}</strong></span>
+                    <span>Ativas: <strong>{relContas.filter(a => a.active).length}</strong></span>
                     <span>⏳ Pendentes: <strong>{relContas.filter(a => !a.active).length}</strong></span>
                   </div>
                 </div>
@@ -4316,9 +4317,9 @@ _Portal Aluno_`
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
             {([
               { key: 'visao', label: 'Visão Geral' },
-              { key: 'batizado', label: '🥋 Batizado' },
+              { key: 'batizado', label: 'Batizado' },
               { key: 'uniformes', label: '👕 Uniformes' },
-              { key: 'mensalidades', label: '📅 Mensalidades' },
+              { key: 'mensalidades', label: 'Mensalidades' },
               { key: 'contribuicao', label: '🤝 Contribuição' },
             ] as const).map(st => (
               <button key={st.key} onClick={() => setFinSubTab(st.key)}
@@ -6814,7 +6815,7 @@ _Portal Aluno_`
       {activeTab === 'playlist' && activeNucleo === 'geral' && (() => {
         // ── helpers (inline, avoid top-level scope pollution) ──
         const PLATFORMS: { value: string; label: string; icon: string; color: string; placeholder: string }[] = [
-          { value: 'youtube', label: 'YouTube',  icon: '▶️', color: '#dc2626', placeholder: 'https://youtube.com/watch?v=...' },
+          { value: 'youtube', label: 'YouTube',  icon: '▶️', color: '#f87171', placeholder: 'https://youtube.com/watch?v=...' },
           { value: 'spotify', label: 'Spotify',  icon: '🎧', color: '#16a34a', placeholder: 'https://open.spotify.com/track/...' },
           { value: 'deezer',  label: 'Deezer',   icon: '🎵', color: '#7c3aed', placeholder: 'https://www.deezer.com/track/...' },
           { value: 'tiktok',  label: 'TikTok',   icon: '🎶', color: '#0891b2', placeholder: 'https://www.tiktok.com/@.../video/...' },
@@ -8320,7 +8321,7 @@ _Portal Aluno_`
                           </div>
                           <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
                             <button onClick={() => { setHistGradEditing(r); setHistGradForm({ data_graduacao: r.data_graduacao, graduacao_recebida: r.graduacao_recebida, evento: r.evento, professor_responsavel: r.professor_responsavel, observacoes: r.observacoes || '' }); setHistGradMsg(''); }}
-                              style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: '#a78bfa', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap' }}>✏️ Editar</button>
+                              style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: '#a78bfa', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap' }}>Editar</button>
                             <button onClick={() => deleteHistGrad(selected.id, r.id)}
                               style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', color: '#f87171', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap' }}>🗑 Excluir</button>
                           </div>
@@ -8786,10 +8787,10 @@ _Portal Aluno_`
                 if (!acc) return null;
                 return (
                   <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.35)', borderRadius: 10, padding: '12px 14px' }}>
-                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#92400e', marginBottom: 6 }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#facc15', marginBottom: 6 }}>
                       🔄 Resetar validação de telefone
                     </div>
-                    <div style={{ fontSize: '0.73rem', color: '#78350f', marginBottom: 10, lineHeight: 1.5 }}>
+                    <div style={{ fontSize: '0.73rem', color: '#fde68a', marginBottom: 10, lineHeight: 1.5 }}>
                       Use quando o telefone foi corrigido e o aluno está travado sem conseguir validar a conta.
                       Isso vai {acc.active ? 'desativar a conta e ' : ''}enviar um novo código para o número atual cadastrado no sistema.
                     </div>
@@ -8841,7 +8842,7 @@ _Portal Aluno_`
       {showDeleteContaModal && (
         <div className="modal-overlay" onClick={() => { setShowDeleteContaModal(false); setDeleteContaForm({ student_id: '', confirm_text: '' }); setContasMsg(''); }}>
           <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, textAlign: 'center' }}>
-            <h2 style={{ margin: '0 0 14px', color: '#dc2626' }}>
+            <h2 style={{ margin: '0 0 14px', color: '#f87171' }}>
               🗑️ Excluir Conta de Acesso
               <button className="modal-close" onClick={() => { setShowDeleteContaModal(false); setDeleteContaForm({ student_id: '', confirm_text: '' }); setContasMsg(''); }}>&times;</button>
             </h2>
@@ -8850,22 +8851,22 @@ _Portal Aluno_`
               const st = students.find(s => s.id === deleteContaForm.student_id);
               return (
                 <>
-                  <div style={{ padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, marginBottom: 16, textAlign: 'left' }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#dc2626' }}>{st?.nome_completo || '—'}</div>
+                  <div style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, marginBottom: 16, textAlign: 'left' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f87171' }}>{st?.nome_completo || '—'}</div>
                     <div style={{ fontSize: '0.76rem', color: '#991b1b', marginTop: 2 }}>Login: <strong>{acc?.username}</strong></div>
                   </div>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.5 }}>
                     A conta de acesso será <strong>excluída permanentemente</strong>. O cadastro do aluno é preservado.
                   </p>
                   <div style={{ textAlign: 'left', marginBottom: 16 }}>
-                    <label style={{ fontSize: '0.78rem', color: '#dc2626', display: 'block', marginBottom: 6, fontWeight: 700 }}>Digite <strong>EXCLUIR</strong> para confirmar:</label>
+                    <label style={{ fontSize: '0.78rem', color: '#f87171', display: 'block', marginBottom: 6, fontWeight: 700 }}>Digite <strong>EXCLUIR</strong> para confirmar:</label>
                     <input
                       type="text"
                       value={deleteContaForm.confirm_text}
                       onChange={e => setDeleteContaForm(f => ({ ...f, confirm_text: e.target.value }))}
                       placeholder="EXCLUIR"
                       autoFocus
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '2px solid #fca5a5', fontSize: '0.9rem', background: '#fff5f5', color: '#dc2626', boxSizing: 'border-box', fontWeight: 700, letterSpacing: 2, textAlign: 'center' }}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '2px solid rgba(239,68,68,0.45)', fontSize: '0.9rem', background: '#fff5f5', color: '#f87171', boxSizing: 'border-box', fontWeight: 700, letterSpacing: 2, textAlign: 'center' }}
                     />
                   </div>
                   {contasMsg && showDeleteContaModal && (
@@ -9105,7 +9106,7 @@ _Portal Aluno_`
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
                     {[
                       { label: 'Presenças', value: presentes, color: cor },
-                      { label: 'Faltas', value: 30 - presentes, color: '#dc2626' },
+                      { label: 'Faltas', value: 30 - presentes, color: '#f87171' },
                       { label: 'Frequência', value: `${Math.round((presentes / 30) * 100)}%`, color: cor },
                     ].map(s => (
                       <div key={s.label} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px', textAlign: 'center' }}>
@@ -9274,7 +9275,7 @@ _Portal Aluno_`
                     const res = await fetch('/api/admin/import-alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }) });
                     const d = await res.json();
                     if (d.success) {
-                      alert(`✅ Importação concluída!\n\n• Atualizados: ${d.updated}\n• Não encontrados: ${d.notFound}\n• Com erro: ${d.skipped}\n• Total no CSV: ${d.total}${d.errors?.length ? '\n\nErros:\n' + d.errors.join('\n') : ''}`);
+                      alert(`Importação concluída!\n\n• Atualizados: ${d.updated}\n• Não encontrados: ${d.notFound}\n• Com erro: ${d.skipped}\n• Total no CSV: ${d.total}${d.errors?.length ? '\n\nErros:\n' + d.errors.join('\n') : ''}`);
                       fetchStudents(activeNucleo);
                     } else { alert('Erro: ' + (d.error || JSON.stringify(d))); }
                   } catch (err) { alert('Erro na importação: ' + err); }
@@ -9672,7 +9673,7 @@ _Portal Aluno_`
                             <div style={{ padding: '8px 14px', background: 'rgba(124,58,237,0.04)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
                               <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.7rem', color: '#a78bfa' }}>Abrir em nova aba ↗</a>
                             </div>
-                            <iframe src={m.url} style={{ width: '100%', height: 600, border: 'none', display: 'block', background: '#f1f5f9' }} title={m.name} />
+                            <iframe src={m.url} style={{ width: '100%', height: 600, border: 'none', display: 'block', background: 'rgba(255,255,255,0.04)' }} title={m.name} />
                           </div>
                         )}
 
@@ -9908,8 +9909,8 @@ _Portal Aluno_`
       {/* ===== ABAS ESTATUTO / REGIMENTO / BIBLIOGRAFIA — uploader direto via /api/docs ===== */}
       {(activeTab === 'estatuto' || activeTab === 'regimento' || activeTab === 'bibliografia') && (() => {
         const docConfigs: Record<string, Array<{ key: string; label: string; color: string; icon: string }>> = {
-          estatuto:    [{ key: 'pa_estatuto',    label: 'Estatuto Social',          color: '#dc2626', icon: '📄' }],
-          regimento:   [{ key: 'pa_regimento',   label: 'Regimento Interno',        color: '#1d4ed8', icon: '📝' }],
+          estatuto:    [{ key: 'pa_estatuto',    label: 'Estatuto Social',          color: '#f87171', icon: '📄' }],
+          regimento:   [{ key: 'pa_regimento',   label: 'Regimento Interno',        color: '#93c5fd', icon: '📝' }],
           bibliografia: bibliografiaMestres.length > 0
             ? bibliografiaMestres.map((m, i) => ({
                 key: `pa_bio_mestre_${m.id}`,
@@ -11168,7 +11169,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                 const url = nucleoFilter ? `/api/aluno/justificativas?admin=true&nucleo=${encodeURIComponent(nucleoFilter)}` : '/api/aluno/justificativas?admin=true';
                 fetch(url).then(r => r.json()).then(d => { setJustificativas(Array.isArray(d) ? d : []); setLoadingJustificativas(false); }).catch(() => setLoadingJustificativas(false));
               }}
-              style={{ padding: '8px 16px', borderRadius: 8, background: '#f59e0b', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+              style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg, #ffb84d 0%, #FF9200 55%, #f07f00 100%)', color: '#141414', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
             >
               🔄 Atualizar
             </button>
@@ -11257,7 +11258,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
           <div style={{ paddingTop: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
               <h2 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-primary)' }}>🔭 Área do Aluno — Visualização</h2>
-              <span style={{ fontSize: '0.75rem', color: '#6b7280', background: '#f3f4f6', borderRadius: 20, padding: '3px 10px' }}>
+              <span style={{ fontSize: '0.75rem', color: '#a3a3a3', background: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: '3px 10px' }}>
                 {activeNucleo === 'geral' ? 'Todos os núcleos' : nucleoFilter || 'Todos'}
               </span>
             </div>
@@ -11292,7 +11293,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                         {s.foto_url ? (
                           <img src={s.foto_url} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                         ) : (
-                          <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>👤</div>
+                          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,146,0,0.12)', color: '#FF9200', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>👤</div>
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: '0.82rem', fontWeight: isActive ? 700 : 500, color: isActive ? '#1d4ed8' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.nome_completo}</div>
@@ -11301,7 +11302,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                             {!hasAccount && <span style={{ color: '#f59e0b' }}>sem conta</span>}
                           </div>
                         </div>
-                        {isActive && <span style={{ color: '#1d4ed8', fontSize: '0.8rem' }}>▶</span>}
+                        {isActive && <span style={{ color: '#93c5fd', fontSize: '0.8rem' }}>▶</span>}
                       </button>
                     );
                   })}
@@ -11350,17 +11351,17 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                 fetch('/api/aluno/gerar-id').then(r => r.json()).then(d2 => { if (d2 && typeof d2 === 'object') setStudentDisplayIds(d2 as Record<string, string>); }).catch(() => {});
                 fetch('/api/aluno/contas').then(r => r.json()).then(d2 => setAlunoContas(Array.isArray(d2) ? d2 : [])).catch(() => {});
               }}
-              style={{ padding: '8px 16px', borderRadius: 8, background: '#7c3aed', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}
+              style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg, #ffb84d 0%, #FF9200 55%, #f07f00 100%)', color: '#141414', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.82rem' }}
             >
               Gerar IDs p/ Alunos Existentes
             </button>
           </div>
 
-          {contasMsg && <div style={{ padding: '12px 16px', borderRadius: 8, marginBottom: 16, background: contasMsg.includes('✅') ? '#f0fdf4' : '#fef2f2', color: contasMsg.includes('✅') ? '#166534' : '#991b1b', border: `1px solid ${contasMsg.includes('✅') ? '#bbf7d0' : '#fecaca'}`, fontSize: '0.85rem' }}>{contasMsg}</div>}
+          {contasMsg && <div style={{ padding: '12px 16px', borderRadius: 8, marginBottom: 16, background: contasMsg.includes('✅') ? 'rgba(34,197,94,0.09)' : 'rgba(239,68,68,0.09)', color: contasMsg.includes('✅') ? '#86efac' : '#fca5a5', border: `1px solid ${contasMsg.includes('✅') ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, fontSize: '0.85rem' }}>{contasMsg.replace('✅ ', '')}</div>}
 
           {/* Create account */}
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
-            <h3 style={{ margin: '0 0 4px', fontSize: '0.95rem', color: 'var(--text-primary)' }}>➕ Criar conta para aluno</h3>
+            <h3 style={{ margin: '0 0 4px', fontSize: '0.95rem', color: 'var(--text-primary)' }}>Criar conta para aluno</h3>
             <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Login gerado automaticamente: nome + ID sequencial CCLN. Senha informada aqui é a senha inicial do aluno.</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12, marginBottom: 14 }}>
               <div style={{ gridColumn: '1 / -1' }}>
@@ -11417,10 +11418,10 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                   value={novaContaForm.confirm_password}
                   onChange={e => setNovaContaForm(prev => ({ ...prev, confirm_password: e.target.value }))}
                   placeholder="Repita a senha"
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: '0.82rem', background: 'var(--input-bg)', color: 'var(--text-primary)', boxSizing: 'border-box', borderColor: novaContaForm.confirm_password && novaContaForm.confirm_password !== novaContaForm.password ? '#dc2626' : '' }}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: '0.82rem', background: 'var(--input-bg)', color: 'var(--text-primary)', boxSizing: 'border-box', borderColor: novaContaForm.confirm_password && novaContaForm.confirm_password !== novaContaForm.password ? '#f87171' : '' }}
                 />
                 {novaContaForm.confirm_password && novaContaForm.confirm_password !== novaContaForm.password && (
-                  <div style={{ fontSize: '0.72rem', color: '#dc2626', marginTop: 2 }}>As senhas não coincidem</div>
+                  <div style={{ fontSize: '0.72rem', color: '#f87171', marginTop: 2 }}>As senhas não coincidem</div>
                 )}
               </div>
             </div>
@@ -11439,9 +11440,9 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                 setNovaContaForm({ student_id: '', password: '', confirm_password: '', email: '' });
                 fetch('/api/aluno/contas').then(r => r.json()).then(d2 => setAlunoContas(Array.isArray(d2) ? d2 : [])).catch(() => {});
               }}
-              style={{ padding: '9px 24px', borderRadius: 8, background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}
+              style={{ padding: '9px 24px', borderRadius: 8, background: 'linear-gradient(135deg, #ffb84d 0%, #FF9200 55%, #f07f00 100%)', color: '#141414', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem' }}
             >
-              ➕ Criar Conta de Acesso
+              Criar Conta de Acesso
             </button>
           </div>
 
@@ -11449,7 +11450,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
             <h3 style={{ margin: '0 0 4px', fontSize: '0.95rem', color: 'var(--text-primary)' }}>��� Solicitar E-mail do Aluno via WhatsApp</h3>
             <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Use este modelo para pedir o e-mail ao aluno e criar a conta de acesso.</p>
-            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '14px 16px', fontSize: '0.82rem', color: '#14532d', lineHeight: 1.7, fontFamily: 'monospace', whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '14px 16px', fontSize: '0.82rem', color: '#d4d4d4', lineHeight: 1.7, fontFamily: 'monospace', whiteSpace: 'pre-wrap', userSelect: 'text' }}>
 {`Olá! Tudo bem? 👋🏽
 
 Somos da Portal Aluno.
@@ -11477,7 +11478,7 @@ Assim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍�
 
           {/* Reset password */}
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '0.95rem', color: 'var(--text-primary)' }}>🔑 Resetar / Alterar senha de aluno</h3>
+            <h3 style={{ margin: '0 0 6px', fontSize: '0.95rem', color: 'var(--text-primary)' }}>Resetar / Alterar senha de aluno</h3>
             <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Use para redefinir a senha de acesso de um aluno já cadastrado.</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12, marginBottom: 12 }}>
               <div style={{ gridColumn: '1 / -1' }}>
@@ -11532,13 +11533,13 @@ Assim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍�
                 setContasMsg(`✅ Senha redefinida com sucesso!${emailStatus}`);
                 setResetPassForm({ student_id: '', new_password: '', confirm_new_password: '' });
               }}
-              style={{ padding: '9px 24px', borderRadius: 8, background: '#dc2626', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}
-            >🔑 Redefinir Senha</button>
+              style={{ padding: '9px 24px', borderRadius: 8, background: 'rgba(239,68,68,0.14)', color: '#f87171', border: '1px solid rgba(239,68,68,0.4)', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem' }}
+            >Redefinir Senha</button>
           </div>
 
           {/* Edit account */}
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '0.95rem', color: 'var(--text-primary)' }}>✏️ Editar dados da conta</h3>
+            <h3 style={{ margin: '0 0 6px', fontSize: '0.95rem', color: 'var(--text-primary)' }}>Editar dados da conta</h3>
             <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Corrija o nome de usuário, e-mail ou WhatsApp vinculado à conta de um aluno.</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12, marginBottom: 12 }}>
               <div style={{ gridColumn: '1 / -1' }}>
@@ -11596,13 +11597,13 @@ Assim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍�
                 setEditContaForm({ student_id: '', new_username: '', new_email: '', new_phone: '' });
                 fetch('/api/aluno/contas').then(r => r.json()).then(d2 => setAlunoContas(Array.isArray(d2) ? d2 : [])).catch(() => {});
               }}
-              style={{ padding: '9px 24px', borderRadius: 8, background: editContaLoading || !editContaForm.student_id ? '#9ca3af' : '#0891b2', color: '#fff', border: 'none', cursor: editContaLoading || !editContaForm.student_id ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.85rem' }}
+              style={{ padding: '9px 24px', borderRadius: 8, background: editContaLoading || !editContaForm.student_id ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #ffb84d 0%, #FF9200 55%, #f07f00 100%)', color: editContaLoading || !editContaForm.student_id ? '#8f8f8f' : '#141414', border: 'none', cursor: editContaLoading || !editContaForm.student_id ? 'not-allowed' : 'pointer', fontWeight: 800, fontSize: '0.85rem' }}
             >{editContaLoading ? t('admin_saving') : '✏️ ' + t('admin_save')}</button>
           </div>
 
           {/* Delete account */}
-          <div style={{ background: 'var(--card-bg)', border: '2px solid #fecaca', borderRadius: 12, padding: 20, marginBottom: 20 }}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '0.95rem', color: '#dc2626' }}>🗑️ Excluir conta de acesso</h3>
+          <div style={{ background: 'var(--card-bg)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+            <h3 style={{ margin: '0 0 6px', fontSize: '0.95rem', color: '#f87171' }}>Excluir conta de acesso</h3>
             <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Remove a conta de login do aluno. Os dados cadastrais do aluno são preservados. Esta ação <strong>não pode ser desfeita</strong>.</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12, marginBottom: 12 }}>
               <div style={{ gridColumn: '1 / -1' }}>
@@ -11631,13 +11632,13 @@ Assim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍�
               </div>
               {deleteContaForm.student_id && (
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ fontSize: '0.78rem', color: '#dc2626', display: 'block', marginBottom: 4 }}>Digite <strong>EXCLUIR</strong> para confirmar *</label>
+                  <label style={{ fontSize: '0.78rem', color: '#f87171', display: 'block', marginBottom: 4 }}>Digite <strong>EXCLUIR</strong> para confirmar *</label>
                   <input
                     type="text"
                     value={deleteContaForm.confirm_text}
                     onChange={e => setDeleteContaForm(f => ({ ...f, confirm_text: e.target.value }))}
                     placeholder="EXCLUIR"
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #fca5a5', fontSize: '0.82rem', background: '#fff5f5', color: '#dc2626', boxSizing: 'border-box', fontWeight: 700, letterSpacing: 1 }}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid rgba(239,68,68,0.35)', fontSize: '0.82rem', background: '#fff5f5', color: '#f87171', boxSizing: 'border-box', fontWeight: 700, letterSpacing: 1 }}
                   />
                 </div>
               )}
@@ -11659,7 +11660,7 @@ Assim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍�
                 fetch('/api/aluno/contas').then(r => r.json()).then(d2 => setAlunoContas(Array.isArray(d2) ? d2 : [])).catch(() => {});
               }}
               style={{ padding: '9px 24px', borderRadius: 8, background: deleteContaLoading || !deleteContaForm.student_id || deleteContaForm.confirm_text !== 'EXCLUIR' ? '#9ca3af' : '#dc2626', color: '#fff', border: 'none', cursor: deleteContaLoading || !deleteContaForm.student_id || deleteContaForm.confirm_text !== 'EXCLUIR' ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.85rem' }}
-            >{deleteContaLoading ? 'Excluindo...' : '🗑️ Excluir Conta Definitivamente'}</button>
+            >{deleteContaLoading ? 'Excluindo...' : 'Excluir Conta Definitivamente'}</button>
           </div>
 
           {/* Accounts report — filtered by nucleo for responsáveis */}
@@ -11667,7 +11668,7 @@ Assim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍�
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
               <div>
                 <h3 style={{ margin: '0 0 2px', fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                  📋 Contas cadastradas
+                  Contas cadastradas
                   {nucleoFilter && <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500, marginLeft: 8 }}>— {nucleoFilter}</span>}
                 </h3>
                 <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
@@ -11684,7 +11685,7 @@ Assim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍�
                   if (idMap && typeof idMap === 'object') setStudentDisplayIds(idMap as Record<string, string>);
                   setLoadingContas(false);
                 }).catch(() => setLoadingContas(false));
-              }} style={{ padding: '6px 14px', borderRadius: 6, background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}>🔄 Atualizar</button>
+              }} style={{ padding: '6px 14px', borderRadius: 6, background: 'linear-gradient(135deg, #ffb84d 0%, #FF9200 55%, #f07f00 100%)', color: '#141414', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 800 }}>Atualizar</button>
             </div>
 
             {loadingContas ? <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Carregando...</div>
@@ -11705,10 +11706,10 @@ Assim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍�
                 return (
                   <>
                     {withoutAccount.length > 0 && (
-                      <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
+                      <div style={{ background: 'rgba(234,179,8,0.07)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
-                          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#92400e' }}>
-                            ⚠ {withoutAccount.length} aluno{withoutAccount.length !== 1 ? 's' : ''} sem conta de acesso
+                          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#facc15' }}>
+                            {withoutAccount.length} aluno{withoutAccount.length !== 1 ? 's' : ''} sem conta de acesso
                           </div>
                           {/* Bulk dispatch button */}
                           {withoutAccount.filter(s => (s.telefone || '').replace(/\D/g, '').length >= 10).length > 0 && (
@@ -11751,7 +11752,7 @@ Portal Aluno 🥋`
                               }}
                               style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'linear-gradient(135deg,#25d366,#128c7e)', color: '#fff', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
                             >
-                              📲 Disparar WhatsApp para todos ({withoutAccount.filter(s => (s.telefone || '').replace(/\D/g, '').length >= 10).length})
+                              Disparar WhatsApp para todos ({withoutAccount.filter(s => (s.telefone || '').replace(/\D/g, '').length >= 10).length})
                             </button>
                           )}
                         </div>
@@ -11779,8 +11780,8 @@ Atenciosamente,
 Portal Aluno 🥋`
                             );
                             return (
-                              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '3px 6px 3px 10px' }}>
-                                <span style={{ fontSize: '0.76rem', color: '#78350f', fontWeight: 600 }}>
+                              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(234,179,8,0.07)', border: '1px solid rgba(234,179,8,0.25)', borderRadius: 8, padding: '3px 6px 3px 10px' }}>
+                                <span style={{ fontSize: '0.76rem', color: '#fde68a', fontWeight: 600 }}>
                                   {(s.nome_completo || '').split(' ')[0]} {(s.nome_completo || '').split(' ').slice(-1)[0]}{displayId ? ` (${displayId})` : ''}
                                 </span>
                                 {tel.length >= 10 ? (
@@ -11791,15 +11792,14 @@ Portal Aluno 🥋`
                                     title="Enviar convite pelo WhatsApp"
                                     style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'linear-gradient(135deg,#25d366,#128c7e)', color: '#fff', borderRadius: 6, padding: '2px 8px', textDecoration: 'none', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}
                                   >
-                                    📱 WhatsApp
-                                  </a>
+                                    WhatsApp</a>
                                 ) : (
-                                  <span title="Sem telefone cadastrado" style={{ fontSize: '0.68rem', color: '#dc2626', opacity: 0.7 }}>📵</span>
+                                  <span title="Sem telefone cadastrado" style={{ fontSize: '0.68rem', color: '#f87171', opacity: 0.7 }}><IconX size={13} style={{ display: 'inline' }} /></span>
                                 )}
                               </div>
                             );
                           })}
-                          {withoutAccount.length > 10 && <span style={{ fontSize: '0.76rem', color: '#92400e', alignSelf: 'center' }}>+{withoutAccount.length - 10} mais...</span>}
+                          {withoutAccount.length > 10 && <span style={{ fontSize: '0.76rem', color: '#facc15', alignSelf: 'center' }}>+{withoutAccount.length - 10} mais...</span>}
                         </div>
                       </div>
                     )}
@@ -11824,16 +11824,16 @@ Portal Aluno 🥋`
                               const displayId = acc.display_id || studentDisplayIds[acc.student_id] || '—';
                               return (
                                 <tr key={acc.student_id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                  <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontWeight: 800, color: '#6366f1', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>{displayId}</td>
+                                  <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontWeight: 800, color: '#FF9200', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>{displayId}</td>
                                   <td style={{ padding: '8px 10px', color: 'var(--text-primary)', fontWeight: 600, minWidth: 160 }}>{st?.nome_completo || '—'}</td>
                                   <td style={{ padding: '8px 10px' }}>
-                                    <span style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6, padding: '2px 8px', fontFamily: 'monospace', fontWeight: 700, color: '#1d4ed8', fontSize: '0.82rem' }}>{acc.username}</span>
+                                    <span style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '2px 8px', fontFamily: 'monospace', fontWeight: 700, color: '#FF9200', fontSize: '0.82rem' }}>{acc.username}</span>
                                   </td>
                                   <td style={{ padding: '8px 10px', color: 'var(--text-secondary)', fontSize: '0.78rem' }}>{acc.email || '—'}</td>
                                   <td style={{ padding: '8px 10px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{acc.phone || '—'}</td>
                                   <td style={{ padding: '8px 10px', color: 'var(--text-secondary)', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{st?.nucleo || '—'}</td>
                                   <td style={{ padding: '8px 10px' }}>
-                                    <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: '0.72rem', fontWeight: 700, background: acc.active ? '#dcfce7' : '#fef9c3', color: acc.active ? '#166534' : '#854d0e' }}>
+                                    <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: '0.72rem', fontWeight: 700, background: acc.active ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)', color: acc.active ? '#4ade80' : '#facc15' }}>
                                       {acc.active ? t('admin_account_active') : t('admin_account_pending')}
                                     </span>
                                   </td>
@@ -11846,16 +11846,16 @@ Portal Aluno 🥋`
                                         setEditContaForm({ student_id: acc.student_id, new_username: acc.username, new_email: acc.email || '', new_phone: acc.phone || '' });
                                         setShowEditContaModal(true);
                                       }}
-                                      style={{ padding: '3px 10px', borderRadius: 6, background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, marginRight: 6 }}
-                                    >✏️ Editar</button>
+                                      style={{ padding: '3px 10px', borderRadius: 6, background: 'rgba(255,146,0,0.10)', color: '#FF9200', border: '1px solid rgba(255,146,0,0.3)', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, marginRight: 6 }}
+                                    >Editar</button>
                                     <button
                                       title="Excluir conta"
                                       onClick={() => {
                                         setDeleteContaForm({ student_id: acc.student_id, confirm_text: '' });
                                         setShowDeleteContaModal(true);
                                       }}
-                                      style={{ padding: '3px 10px', borderRadius: 6, background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}
-                                    >🗑️ Excluir</button>
+                                      style={{ padding: '3px 10px', borderRadius: 6, background: 'rgba(239,68,68,0.10)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}
+                                    >Excluir</button>
                                   </td>
                                 </tr>
                               );
@@ -11873,6 +11873,9 @@ Portal Aluno 🥋`
               })()
             }
           </div>
+
+          {/* ── RESPONSÁVEIS & AUTORIZAÇÕES ── */}
+          <ResponsaveisPanel />
 
           {/* ── FILA WHATSAPP ── */}
           <WhatsappFilaPanel
@@ -11917,20 +11920,20 @@ Portal Aluno 🥋`
                     }}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 8, background: '#4f46e5', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}
                   >
-                    🔄 Atualizar
+                    Atualizar
                   </button>
                 </div>
 
                 {loadingContas ? (
                   <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20, fontSize: '0.85rem' }}>Carregando...</div>
                 ) : semConta.length === 0 ? (
-                  <div style={{ background: 'rgba(22,163,74,0.07)', border: '1px solid rgba(22,163,74,0.25)', borderRadius: 10, padding: '12px 16px', fontSize: '0.85rem', color: '#166534', fontWeight: 600 }}>
-                    ✅ Todos os alunos possuem conta de acesso.
+                  <div style={{ background: 'rgba(22,163,74,0.07)', border: '1px solid rgba(22,163,74,0.25)', borderRadius: 10, padding: '12px 16px', fontSize: '0.85rem', color: '#4ade80', fontWeight: 600 }}>
+                    Todos os alunos possuem conta de acesso.
                   </div>
                 ) : (
                   <div style={{ background: 'rgba(234,179,8,0.07)', border: '1.5px solid rgba(234,179,8,0.35)', borderRadius: 12, padding: '14px 16px' }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#92400e', marginBottom: 12 }}>
-                      ⚠️ {semConta.length} aluno{semConta.length !== 1 ? 's' : ''} sem conta de acesso
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#facc15', marginBottom: 12 }}>
+                      {semConta.length} aluno{semConta.length !== 1 ? 's' : ''} sem conta de acesso
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {shown.map((s: any) => {
@@ -11952,8 +11955,8 @@ Atenciosamente,
 Suporte Ginga Gestão.`
                         );
                         return (
-                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(254,243,199,0.9)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: 20, padding: '4px 6px 4px 14px' }}>
-                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#78350f' }}>
+                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 20, padding: '4px 6px 4px 14px' }}>
+                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#fde68a' }}>
                               {s.nome_completo}{displayId ? ` (${displayId})` : ''}
                             </span>
                             {tel.length >= 10 ? (
@@ -11964,10 +11967,9 @@ Suporte Ginga Gestão.`
                                 title="Enviar convite pelo WhatsApp"
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'linear-gradient(135deg,#25d366,#128c7e)', color: '#fff', borderRadius: 12, padding: '3px 10px', textDecoration: 'none', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}
                               >
-                                📱 WhatsApp
-                              </a>
+                                WhatsApp</a>
                             ) : (
-                              <span title="Sem telefone cadastrado" style={{ fontSize: '0.75rem', opacity: 0.5 }}>📵</span>
+                              <span title="Sem telefone cadastrado" style={{ fontSize: '0.75rem', opacity: 0.5 }}><IconX size={13} style={{ display: 'inline' }} /></span>
                             )}
                           </div>
                         );
@@ -12036,8 +12038,8 @@ Suporte Ginga Gestão.`
                   {[
                     { label: 'Ativos hoje', value: ativos24h, sub: `${ativosPorc}% do total`, color: '#16a34a', bg: 'rgba(22,163,74,0.07)', icon: '✅' },
                     { label: 'Nunca acessaram', value: nuncaAcessou, sub: `${total > 0 ? Math.round(nuncaAcessou/total*100) : 0}% sem acesso`, color: '#d97706', bg: 'rgba(217,119,6,0.07)', icon: '⚠️' },
-                    { label: 'Sem e-mail', value: semEmail, sub: 'Busca ativa WhatsApp', color: '#dc2626', bg: 'rgba(220,38,38,0.07)', icon: '📧' },
-                    { label: 'Total alunos', value: total, sub: 'Matrículas ativas', color: '#1d4ed8', bg: 'rgba(29,78,216,0.07)', icon: '👥' },
+                    { label: 'Sem e-mail', value: semEmail, sub: 'Busca ativa WhatsApp', color: '#f87171', bg: 'rgba(220,38,38,0.07)', icon: '📧' },
+                    { label: 'Total alunos', value: total, sub: 'Matrículas ativas', color: '#93c5fd', bg: 'rgba(29,78,216,0.07)', icon: '👥' },
                   ].map(m => (
                     <div key={m.label} style={{ background: m.bg, border: `1px solid ${m.color}30`, borderRadius: 12, padding: '12px 14px' }}>
                       <div style={{ fontSize: '1.2rem', marginBottom: 4 }}>{m.icon}</div>
@@ -12090,7 +12092,7 @@ Suporte Ginga Gestão.`
                               <span style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{ns.nc}</span>
                               <span style={{ fontWeight: 700, color: ns.color, flexShrink: 0 }}>{ns.ativos}/{ns.total} ({pct}%)</span>
                             </div>
-                            <div style={{ height: 8, background: '#e5e7eb', borderRadius: 4, overflow: 'hidden' }}>
+                            <div style={{ height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
                               <div style={{ height: '100%', width: `${pct}%`, background: ns.color, borderRadius: 4, transition: 'width 0.5s ease' }} />
                             </div>
                           </div>
@@ -12105,10 +12107,10 @@ Suporte Ginga Gestão.`
                   <div style={{ fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Filtro Rápido de Alunos</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     {[
-                      { key: 'todos', label: '👥 Todos os alunos', count: total, color: '#1d4ed8' },
+                      { key: 'todos', label: '👥 Todos os alunos', count: total, color: '#93c5fd' },
                       { key: 'ativos', label: '✅ Ativos nas últimas 24h', count: ativos24h, color: '#16a34a' },
                       { key: 'nunca', label: '⚠️ Nunca acessaram', count: nuncaAcessou, color: '#d97706' },
-                      { key: 'sem-email', label: '📧 Sem e-mail cadastrado', count: semEmail, color: '#dc2626' },
+                      { key: 'sem-email', label: '📧 Sem e-mail cadastrado', count: semEmail, color: '#f87171' },
                     ].map(f => (
                       <button key={f.key} onClick={() => setEngagementFilter(f.key as typeof engagementFilter)}
                         style={{ padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${f.color}40`, background: engagementFilter === f.key ? f.color : 'transparent', color: engagementFilter === f.key ? '#fff' : f.color, fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', transition: 'all 0.15s' }}>
@@ -12228,14 +12230,14 @@ Suporte Ginga Gestão.`
             );
 
             const actionColors: Record<string, { bg: string; color: string }> = {
-              login:          { bg: '#dcfce7', color: '#166534' },
+              login:          { bg: '#dcfce7', color: '#4ade80' },
               login_cpf:      { bg: '#dbeafe', color: '#1e40af' },
-              logout:         { bg: '#fef3c7', color: '#92400e' },
+              logout:         { bg: '#fef3c7', color: '#facc15' },
               delete:         { bg: '#fee2e2', color: '#991b1b' },
               edit:           { bg: '#ede9fe', color: '#5b21b6' },
               create:         { bg: '#d1fae5', color: '#065f46' },
-              export:         { bg: '#e0f2fe', color: '#0369a1' },
-              background:     { bg: '#f0fdf4', color: '#166534' },
+              export:         { bg: '#e0f2fe', color: '#93c5fd' },
+              background:     { bg: '#f0fdf4', color: '#4ade80' },
               'bulk-action':  { bg: '#fef9c3', color: '#854d0e' },
             };
             const getActionStyle = (action: string) => {

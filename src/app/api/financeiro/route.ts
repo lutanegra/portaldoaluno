@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { exigirConformidadeAluno } from '@/lib/alunoGate';
+import { resolverAtor } from '@/lib/ator';
 
 // Service role for both read and write — bucket 'photos' is private, anon key cannot read it
 const supabaseRead = createClient(
@@ -81,8 +82,11 @@ export interface FichaFinanceira {
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const studentId = req.nextUrl.searchParams.get('student_id');
-  if (!studentId) return NextResponse.json({ error: 'student_id required' }, { status: 400 });
+  const ator = await resolverAtor(req, req.nextUrl.searchParams.get('student_id'));
+  if (!ator || !ator.studentId) {
+    return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  }
+  const studentId = ator.studentId;
 
   // Fetch directly via HTTP to bypass all Next.js / SDK caches
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
@@ -118,12 +122,17 @@ export async function POST(req: NextRequest) {
   const body: FichaFinanceira = rawBody;
   delete (body as any)._admin_save;
 
-  if (!body.student_id) return NextResponse.json({ error: 'student_id required' }, { status: 400 });
+  // QUEM salva: painel, o próprio aluno ou responsável com vínculo ativo.
+  const ator = await resolverAtor(req, body.student_id);
+  if (!ator || !ator.studentId) {
+    return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  }
+  body.student_id = ator.studentId;
 
   // Conformidade cadastral: aluno sem CPF/RG (ou menor sem termo) não altera sua ficha.
-  // Salvamentos do painel administrativo passam sem gate.
-  if (!isAdminSave) {
-    const gate = await exigirConformidadeAluno(req, String(body.student_id));
+  // Salvamentos do painel e do responsável (em nome do tutelado) passam sem gate.
+  if (!isAdminSave && ator.emNomeDe !== 'responsavel') {
+    const gate = await exigirConformidadeAluno(req, ator.studentId);
     if (!gate.ok) return gate.response;
   }
 

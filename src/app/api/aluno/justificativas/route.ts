@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { readPanelSession } from '@/lib/panelSession';
 import { loadCreds, accIsGeral, accNucleos } from '@/lib/panelCredentials';
 import { exigirConformidadeAluno } from '@/lib/alunoGate';
+import { resolverAtor } from '@/lib/ator';
+import { readAlunoSessionFromReq } from '@/lib/alunoSession';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +25,8 @@ export type Justificativa = {
   motivo: string;
   status: 'pendente' | 'aprovado' | 'recusado';
   resposta_mestre?: string;
+  enviado_por?: 'proprio_aluno' | 'responsavel' | 'painel';
+  conta_enviada_por?: string | null; // student_id da conta que autenticou o envio
   created_at: string;
   updated_at: string;
 };
@@ -42,7 +46,7 @@ async function saveJustificativas(list: Justificativa[]): Promise<void> {
   await supabaseAdmin.storage.from(BUCKET).upload(KEY, blob, { upsert: true });
 }
 
-// GET: student gets only THEIR justificativas; admin gets all or filtered by nucleo
+// GET: student gets only THEIR justificativas (or a tutelado's); admin gets all or filtered by nucleo
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const student_id = searchParams.get('student_id');
@@ -75,12 +79,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(filtered);
   }
 
-  if (!student_id) {
-    return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
+  // Aluno/responsável: somente justificativas do próprio perfil ou de tutelado
+  const ator = await resolverAtor(req, student_id);
+  if (!ator) {
+    return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
   }
-
-  // Student can ONLY see their own justificativas
-  return NextResponse.json(all.filter(j => j.student_id === student_id));
+  return NextResponse.json(all.filter(j => j.student_id === ator.studentId));
 }
 
 // POST: student submits a justificativa; admin approves/rejects
@@ -91,14 +95,30 @@ export async function POST(req: NextRequest) {
   const all = await loadJustificativas();
 
   if (action === 'submit') {
-    const { student_id, data_falta, motivo } = body;
-    if (!student_id || !data_falta || !motivo) {
+    const { data_falta, motivo } = body;
+    if (!data_falta || !motivo) {
       return NextResponse.json({ error: 'Dados incompletos.' }, { status: 400 });
     }
 
-    // Conformidade cadastral: sem CPF/RG (e termo, se menor) o aluno não envia justificativa
-    const gate = await exigirConformidadeAluno(req, String(student_id));
-    if (!gate.ok) return gate.response;
+    // QUEM envia: só o próprio aluno, um responsável com vínculo ativo, ou o
+    // painel. O backend registra a conta real — a troca de perfil no frontend
+    // nunca falsifica o remetente.
+    const ator = await resolverAtor(req, body.student_id);
+    if (!ator || !ator.studentId) {
+      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    }
+    const student_id = ator.studentId;
+
+    // Conformidade cadastral: sem CPF/RG (e termo, se menor) não há justificativa
+    const gate = await exigirConformidadeAluno(req, student_id);
+    if (!gate.ok && ator.emNomeDe !== 'responsavel') return gate.response;
+
+    const { data: student } = await supabaseAdmin
+      .from('students')
+      .select('nome_completo, nucleo')
+      .eq('id', student_id)
+      .maybeSingle();
+    if (!student) return NextResponse.json({ error: 'Aluno não encontrado.' }, { status: 404 });
 
     // Validate date — must be within last 30 days
     const faltaDate = new Date(data_falta + 'T12:00:00');
@@ -108,14 +128,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'A data deve estar nos últimos 30 dias.' }, { status: 400 });
     }
 
-    // Get student info
-    const { data: student } = await supabaseAdmin
-      .from('students')
-      .select('nome_completo, nucleo')
-      .eq('id', student_id)
-      .maybeSingle();
-    if (!student) return NextResponse.json({ error: 'Aluno não encontrado.' }, { status: 404 });
-
     // Check for duplicate (same student, same date)
     const existing = all.find(j => j.student_id === student_id && j.data_falta === data_falta);
     if (existing) {
@@ -123,6 +135,8 @@ export async function POST(req: NextRequest) {
     }
 
     const now2 = new Date().toISOString();
+    // Autoria real: a conta autenticada (nunca o frontend) determina quem enviou
+    const sessaoAluno = readAlunoSessionFromReq(req);
     const justificativa: Justificativa = {
       id: `just_${Date.now()}_${Math.random().toString(36).slice(2)}`,
       student_id,
@@ -131,6 +145,8 @@ export async function POST(req: NextRequest) {
       data_falta,
       motivo,
       status: 'pendente',
+      enviado_por: ator.emNomeDe === 'responsavel' ? 'responsavel' : ator.viaPainel ? 'painel' : 'proprio_aluno',
+      conta_enviada_por: sessaoAluno?.sid || null,
       created_at: now2,
       updated_at: now2,
     };

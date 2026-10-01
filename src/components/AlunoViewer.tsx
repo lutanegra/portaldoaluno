@@ -437,7 +437,7 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Registrar Presença</h2>
             <div style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '20px', border: '1px solid var(--border)', textAlign: 'center' }}>
-              <div style={{ fontSize: 48, marginBottom: 10 }}>📍</div>
+              <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center', color: '#FF9200' }}><IconMapPin size={44} /></div>
               <h3 style={{ margin: '0 0 6px', fontSize: '0.95rem', fontWeight: 700 }}>Presença de hoje</h3>
               <p style={{ margin: '0 0 16px', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                 O registro será feito com a localização GPS do dispositivo.<br />
@@ -469,7 +469,7 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
                       const data = await res.json();
                       if (!res.ok) { setPresencaMsg(data.error || 'Erro ao registrar.'); setPresencaStatus('error'); }
                       else if (data.alreadyRegistered) { setPresencaMsg('Presença já registrada hoje!'); setPresencaStatus('success'); }
-                      else { setPresencaMsg('✅ Presença registrada com sucesso!'); setPresencaStatus('success'); }
+                      else { setPresencaMsg('Presença registrada com sucesso!'); setPresencaStatus('success'); }
                     } catch { setPresencaMsg('Erro de conexão.'); setPresencaStatus('error'); }
                     setPresencaLoading(false);
                   }, () => { setPresencaMsg('Permissão de localização negada.'); setPresencaStatus('error'); setPresencaLoading(false); });
@@ -552,7 +552,7 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
         {/* ── JUSTIFICATIVAS ── */}
         {activeTab === 'justificativas' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>📝 Justificativas de Falta</h2>
+            <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Justificativas de Falta</h2>
             <div style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '16px', border: '1px solid var(--border)' }}>
               <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 12 }}>Enviar justificativa</div>
               {justMsg && <div style={{ background: justMsgType === 'success' ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${justMsgType === 'success' ? 'rgba(34,197,94,0.35)' : 'rgba(220,38,38,0.35)'}`, color: justMsgType === 'success' ? '#86efac' : '#fca5a5', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: '0.8rem' }}>{justMsg}</div>}
@@ -584,10 +584,10 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
                   <div>
                     <div style={{ fontSize: '0.8rem', fontWeight: 700 }}>{new Date(j.data_falta + 'T12:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>{j.motivo}</div>
-                    {j.resposta_mestre && <div style={{ marginTop: 4, fontSize: '0.72rem', color: '#FF9200' }}>💬 {j.resposta_mestre}</div>}
+                    {j.resposta_mestre && <div style={{ marginTop: 4, fontSize: '0.72rem', color: '#FF9200' }}>Resposta: {j.resposta_mestre}</div>}
                   </div>
                   <span style={{ flexShrink: 0, padding: '2px 8px', borderRadius: 20, fontSize: '0.68rem', fontWeight: 700, background: j.status === 'aprovado' ? 'rgba(34,197,94,0.12)' : j.status === 'recusado' ? 'rgba(220,38,38,0.12)' : 'rgba(245,158,11,0.12)', color: j.status === 'aprovado' ? '#4ade80' : j.status === 'recusado' ? '#f87171' : '#fbbf24' }}>
-                    {j.status === 'aprovado' ? '✅ Aprovada' : j.status === 'recusado' ? '❌ Recusada' : '⏳ Pendente'}
+                    {j.status === 'aprovado' ? 'Aprovada' : j.status === 'recusado' ? 'Recusada' : 'Pendente'}
                   </span>
                 </div>
               ))}
@@ -599,9 +599,9 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
         {activeTab === 'fotos' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>📸 Fotos e Vídeos</h2>
+              <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Fotos e Vídeos</h2>
               <button onClick={() => fotosFileRef.current?.click()} disabled={fotosUploading}
-                style={{ background: '#86198f', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', opacity: fotosUploading ? 0.7 : 1 }}>
+                style={{ background: 'linear-gradient(135deg, #ffb84d 0%, #FF9200 55%, #f07f00 100%)', color: '#141414', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem', opacity: fotosUploading ? 0.7 : 1 }}>
                 {fotosUploading ? '⏳ Enviando...' : '⬆ Enviar'}
               </button>
               <input ref={fotosFileRef} type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={async e => {
@@ -618,7 +618,7 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
             {fotosLoading ? (
               <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Carregando...</div>
             ) : fotosMedia.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 16px', background: '#fdf2f8', borderRadius: 14, border: '2px dashed #f0abfc' }}>
+              <div style={{ textAlign: 'center', padding: '40px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 14, border: '2px dashed rgba(255,146,0,0.35)' }}>
                 <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>📷</div>
                 <div style={{ fontWeight: 700, color: '#86198f', fontSize: '0.88rem' }}>Nenhum arquivo ainda</div>
               </div>
@@ -629,7 +629,7 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
                     {m.type === 'foto' ? (
                       <a href={m.url} target="_blank" rel="noreferrer"><img src={m.url} alt={m.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} /></a>
                     ) : (
-                      <a href={m.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', aspectRatio: '1', background: '#1f2937', textDecoration: 'none' }}>
+                      <a href={m.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', aspectRatio: '1', background: 'rgba(255,255,255,0.05)', textDecoration: 'none' }}>
                         <span style={{ fontSize: '2rem' }}>🎬</span>
                       </a>
                     )}
@@ -660,9 +660,9 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
           };
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>🎵 Playlist do Aluno</h2>
+              <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Playlist do Aluno</h2>
               <div style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '14px', border: '1px solid var(--border)' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 10 }}>➕ Adicionar link</div>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 10 }}>Adicionar link</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <input type="url" value={playlistAddUrl} onChange={e => setPlaylistAddUrl(e.target.value)} placeholder="Cole o link (Spotify, YouTube, TikTok...)"
                     style={{ border: '1.5px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '9px 12px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', width: '100%' }} />
@@ -674,20 +674,20 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
                     setPlaylistAdding(true); setPlaylistMsg('');
                     const res = await fetch('/api/aluno/playlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: studentId, url: playlistAddUrl.trim(), title: playlistAddTitle.trim() || undefined }) });
                     const data = await res.json();
-                    if (res.ok) { setPlaylistItems(prev => [data.item, ...prev]); setPlaylistAddUrl(''); setPlaylistAddTitle(''); setPlaylistMsg('✅ Adicionado!'); setPlaylistMsgType('success'); }
+                    if (res.ok) { setPlaylistItems(prev => [data.item, ...prev]); setPlaylistAddUrl(''); setPlaylistAddTitle(''); setPlaylistMsg('Adicionado!'); setPlaylistMsgType('success'); }
                     else { setPlaylistMsg(data.error || 'Erro.'); setPlaylistMsgType('error'); }
                     setPlaylistAdding(false);
                   }} disabled={playlistAdding || !playlistAddUrl.trim()}
                     style={{ background: playlistAdding || !playlistAddUrl.trim() ? 'rgba(255,146,0,0.35)' : 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 8, padding: '10px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
-                    {playlistAdding ? '⏳ Adicionando...' : '➕ Adicionar'}
+                    {playlistAdding ? 'Adicionando...' : 'Adicionar'}
                   </button>
                 </div>
               </div>
               {playlistLoading ? (
                 <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '28px', fontSize: '0.85rem' }}>Carregando...</div>
               ) : playlistItems.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', background: '#f5f3ff', borderRadius: 14, border: '2px dashed #a78bfa' }}>
-                  <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>🎵</div>
+                <div style={{ textAlign: 'center', padding: '40px', background: 'rgba(255,255,255,0.03)', borderRadius: 14, border: '2px dashed rgba(255,146,0,0.35)' }}>
+                  <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center', color: '#FF9200' }}><IconMusic size={44} /></div>
                   <div style={{ fontWeight: 700, color: '#c4b5fd', fontSize: '0.88rem' }}>Playlist vazia</div>
                 </div>
               ) : (
@@ -719,7 +719,7 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
                             </div>
                             <div style={{ display: 'flex', gap: 4 }}>
                               <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ padding: '4px 8px', borderRadius: 6, background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none' }}>↗</a>
-                              <button onClick={() => { setPlaylistEditId(item.id); setPlaylistEditTitle(item.title); setPlaylistEditUrl(item.url); }} style={{ padding: '4px 7px', borderRadius: 6, background: 'rgba(255,146,0,0.08)', border: 'none', color: '#FF9200', fontSize: '0.65rem', cursor: 'pointer' }}>✏️</button>
+                              <button onClick={() => { setPlaylistEditId(item.id); setPlaylistEditTitle(item.title); setPlaylistEditUrl(item.url); }} style={{ padding: '4px 7px', borderRadius: 6, background: 'rgba(255,146,0,0.08)', border: 'none', color: '#FF9200', fontSize: '0.65rem', cursor: 'pointer' }}>Editar</button>
                               <button onClick={async () => { if (!confirm('Remover?')) return; const res = await fetch('/api/aluno/playlist', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: studentId, id: item.id }) }); if (res.ok) setPlaylistItems(prev => prev.filter(i => i.id !== item.id)); }} style={{ padding: '4px 7px', borderRadius: 6, background: 'rgba(220,38,38,0.1)', border: 'none', color: '#f87171', fontSize: '0.65rem', cursor: 'pointer' }}>🗑</button>
                             </div>
                           </div>
@@ -764,7 +764,7 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
 
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>📊 Dashboard de Evolução</h2>
+              <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Dashboard de Evolução</h2>
               {evolucaoLoading ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Carregando...</div>
               ) : (
@@ -772,9 +772,9 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                     {[
                       { label: 'Total treinos', value: totalDays, icon: '', color: nucleoColor, bg: `${nucleoColor}15`, border: `${nucleoColor}30` },
-                      { label: 'Este mês', value: thisMonthCount, icon: '📅', color: '#c4b5fd', bg: '#f5f3ff', border: '#e9d5ff' },
+                      { label: 'Este mês', value: thisMonthCount, icon: '□', color: '#fdba74', bg: 'rgba(255,146,0,0.07)', border: 'rgba(255,146,0,0.25)' },
                       { label: 'Mês passado', value: lastMonthCount, icon: '📆', color: '#0891b2', bg: '#f0f9ff', border: '#bae6fd' },
-                      { label: 'Sequência', value: `${streak}d`, icon: '🔥', color: '#f87171', bg: '#fef2f2', border: '#fecaca' },
+                      { label: 'Sequência', value: `${streak}d`, icon: '□', color: '#fdba74', bg: 'rgba(255,146,0,0.07)', border: 'rgba(255,146,0,0.25)' },
                     ].map(s => (
                       <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ fontSize: '1.4rem' }}>{s.icon}</div>
@@ -833,7 +833,7 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
                                   {new Date(entry.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
                                 </div>
                                 {localLabel && <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: 1 }}>Núcleo: <strong style={{ color: 'var(--text-secondary)' }}>{localLabel}</strong></div>}
-                                {entry.hora && <div style={{ fontSize: '0.67rem', color: 'var(--text-tertiary)', marginTop: 1 }}>🕐 {entry.hora}</div>}
+                                {entry.hora && <div style={{ fontSize: '0.67rem', color: 'var(--text-tertiary)', marginTop: 1 }}>{entry.hora}</div>}
                               </div>
                             </div>
                           );
@@ -845,7 +845,7 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
 
                   {evolucaoDates.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '32px', background: 'var(--bg-input)', borderRadius: 14, border: '2px dashed #e5e7eb' }}>
-                      <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>🥋</div>
+                      <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center', color: '#FF9200' }}><IconChart size={44} /></div>
                       <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-secondary)' }}>Nenhuma presença registrada</div>
                     </div>
                   )}

@@ -26,14 +26,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Envie os dados como JSON com { student_id, tipo, ref, filename, filetype }.' }, { status: 400 });
   }
 
-  const { student_id, tipo, ref, filename, filetype } = body;
-  if (!student_id || !filename) {
+  const { tipo, ref, filename, filetype } = body;
+  // Identidade resolvida no servidor: próprio aluno, tutelado com vínculo ativo ou painel
+  const { resolverAtor } = await import('@/lib/ator');
+  const ator = await resolverAtor(req, body.student_id);
+  if (!ator || !ator.studentId) {
+    return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  }
+  const student_id = ator.studentId;
+  if (!filename) {
     return NextResponse.json({ error: 'student_id and filename required' }, { status: 400 });
   }
 
   // Conformidade cadastral: sem CPF/RG (e termo, se menor) o aluno não envia comprovante
-  const gate = await exigirConformidadeAluno(req, String(student_id));
-  if (!gate.ok) return gate.response;
+  const gate = await exigirConformidadeAluno(req, student_id);
+  if (!gate.ok && ator.emNomeDe !== 'responsavel') return gate.response;
 
   const ext = (filename as string).split('.').pop()?.toLowerCase() || 'jpg';
   const ts = Date.now();

@@ -1017,7 +1017,16 @@ html, body {
   }
   .table-responsive {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
+  /* Adm-grid empilha no celular */
+  .adm-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .adm-col { min-width: 0; }
+  /* Cartões e modais respiram melhor em telas pequenas */
+  .adm-modal-card, [class*="modal-card"] { max-width: 100vw; }
+  .student-table { min-width: 640px; }
   .pa-card { padding: 24px 20px; }
   .pa-splash-ring { width: 112px; height: 112px; }
   .pa-splash-ring img { width: 76px; height: 76px; }
@@ -1273,8 +1282,12 @@ html, body {
 .adm-ext { color: #22c55e; }
 
 @media (max-width: 640px) {
-  .adm-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 9px; }
+  .adm-grid { grid-template-columns: 1fr; gap: 9px; }
   .adm-tab { font-size: 0.74rem; padding: 7px 8px; }
+  .adm-col { padding: 10px 9px 8px; min-width: 0; }
+  /* Tabelas amplas ganham rolagem horizontal com toque */
+  .table-responsive { -webkit-overflow-scrolling: touch; }
+  table { min-width: 0; }
 }
 
 /* Hambúrguer do painel admin — só aparece no mobile */

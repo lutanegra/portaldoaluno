@@ -25,8 +25,10 @@ function fileType(name: string): 'foto' | 'video' {
 
 /** GET /api/aluno/media?student_id=xxx — list student's uploaded media */
 export async function GET(req: NextRequest) {
-  const student_id = new URL(req.url).searchParams.get('student_id');
-  if (!student_id) return NextResponse.json({ error: 'student_id required' }, { status: 400 });
+  const { resolverAtor } = await import('@/lib/ator');
+  const ator = await resolverAtor(req, new URL(req.url).searchParams.get('student_id'));
+  if (!ator || !ator.studentId) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  const student_id = ator.studentId;
 
   const folder = mediaFolder(student_id);
   const { data: files, error } = await supabase.storage
@@ -60,8 +62,12 @@ export async function POST(req: NextRequest) {
   const fd = await req.formData();
   const file = fd.get('file') as File | null;
   const student_id = fd.get('student_id') as string | null;
+  const { resolverAtor } = await import('@/lib/ator');
+  const ator = await resolverAtor(req, student_id);
+  if (!ator || !ator.studentId) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  const sid = ator.studentId;
 
-  if (!file || !student_id) return NextResponse.json({ error: 'file and student_id required' }, { status: 400 });
+  if (!file) return NextResponse.json({ error: 'file and student_id required' }, { status: 400 });
   if (file.size > MAX_SIZE) return NextResponse.json({ error: 'Arquivo muito grande. Máximo 50 MB.' }, { status: 400 });
 
   const ext = file.name.split('.').pop()?.toLowerCase() || 'bin';
@@ -71,7 +77,7 @@ export async function POST(req: NextRequest) {
   const ts = Date.now();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\s+/g, '_');
   const storageName = `${ts}_${safeName}`;
-  const path = `${mediaFolder(student_id)}/${storageName}`;
+  const path = `${mediaFolder(sid)}/${storageName}`;
 
   const buf = Buffer.from(await file.arrayBuffer());
   const { error } = await supabase.storage
@@ -86,9 +92,12 @@ export async function POST(req: NextRequest) {
 /** DELETE /api/aluno/media — remove a file */
 export async function DELETE(req: NextRequest) {
   const { student_id, name } = await req.json();
-  if (!student_id || !name) return NextResponse.json({ error: 'student_id and name required' }, { status: 400 });
+  const { resolverAtor } = await import('@/lib/ator');
+  const ator = await resolverAtor(req, student_id);
+  if (!ator || !ator.studentId) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  if (!name) return NextResponse.json({ error: 'student_id and name required' }, { status: 400 });
 
-  const path = `${mediaFolder(student_id)}/${name}`;
+  const path = `${mediaFolder(ator.studentId)}/${name}`;
   const { error } = await supabase.storage.from(BUCKET).remove([path]);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

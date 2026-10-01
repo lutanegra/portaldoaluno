@@ -76,3 +76,9 @@ export function sessionCookieOptions() {
     maxAge: SESSION_TTL_DAYS * 24 * 60 * 60,
   };
 }
+
+/** Lê a sessão do aluno a partir de um Request (route handlers). */
+export function readAlunoSessionFromReq(req: Request): AlunoSession | null {
+  const token = req.headers.get('cookie')?.match(new RegExp(`${SESSION_COOKIE}=([^;]+)`))?.[1];
+  return verifyAlunoSession(token);
+}

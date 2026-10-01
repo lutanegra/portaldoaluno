@@ -13,6 +13,7 @@ import {
 } from '@/components/icons';
 import { pendenciasAluno, resumoPendencias, isValidCPF, isValidRG, cpfDigits, type StudentDocsLike } from '@/lib/studentCompliance';
 import AppFooter from '@/components/AppFooter';
+import PerfilGuardiaoCard from '@/components/PerfilGuardiaoCard';
 import FrequenciaCard from './FrequenciaCard';
 
 /** Título de seção com ícone SVG à esquerda (substitui os h2 com emoji). */
@@ -133,6 +134,12 @@ function getGradColor(grad: string) {
 
 export default function AlunoPage() {
   const [session, setSession] = useState<{ student_id: string; username: string } | null>(null);
+  // Contexto de perfil: o próprio ou um tutelado (troca não muda a identidade logada)
+  const [perfis, setPerfis] = useState<{ student_id: string; nome_completo: string; foto_url: string | null; tipo: 'proprio' | 'tutelado' }[]>([]);
+  const [perfilAtivo, setPerfilAtivo] = useState<string>('');
+  const [perfilLoading, setPerfilLoading] = useState(false);
+  const perfilAtivoInfo = perfis.find(p => p.student_id === perfilAtivo) || null;
+  const acessandoComoTutelado = !!perfilAtivoInfo && perfilAtivoInfo.tipo === 'tutelado';
   const [student, setStudent] = useState<Student | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [loading, setLoading] = useState(true);
@@ -158,7 +165,7 @@ export default function AlunoPage() {
 
   // ── Register ──────────────────────────────────────────────────────────────
   const [showRegister, setShowRegister] = useState(false);
-  const [registerForm, setRegisterForm] = useState({ cpf_or_doc: '', username: '', email: '', password: '', confirmPassword: '', phone: '' });
+  const [registerForm, setRegisterForm] = useState({ cpf_or_doc: '', username: '', email: '', password: '', confirmPassword: '', phone: '', data_nascimento: '' });
   const [registerError, setRegisterError] = useState('');
   const [registerSuccess, setRegisterSuccess] = useState('');
   const [registerLoading, setRegisterLoading] = useState(false);
@@ -331,8 +338,49 @@ export default function AlunoPage() {
           }
         })
         .catch(() => setLoading(false));
+
     } catch { setLoading(false); }
   }, []);
+
+  // Perfis acessíveis (o próprio + tutelados) e contexto ativo — "Quem está usando?"
+  const carregarPerfis = useCallback(async () => {
+    try {
+      const res = await fetch('/api/aluno/contas?sessao=1', { cache: 'no-store' });
+      if (!res.ok) return;
+      const d = await res.json();
+      if (d.authenticated) {
+        setPerfis(d.perfis || []);
+        setPerfilAtivo(d.perfil_ativo || d.conta?.student_id || '');
+      }
+    } catch {}
+  }, []);
+
+  const trocarPerfil = useCallback(async (studentId: string) => {
+    setPerfilLoading(true);
+    try {
+      const res = await fetch('/api/aluno/contas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'switch-profile', student_id: studentId }),
+      });
+      if (res.ok) {
+        setPerfilAtivo(studentId);
+        // Recarrega os dados do perfil aberto (sessionEffect já carregou o próprio)
+        const r2 = await fetch(`/api/aluno/dados?student_id=${studentId}`);
+        if (r2.ok) {
+          const d2 = await r2.json();
+          if (d2.student) setStudent(d2.student);
+        }
+      }
+    } finally {
+      setPerfilLoading(false);
+    }
+  }, []);
+
+  // Carrega perfis acessíveis quando a sessão existe
+  useEffect(() => {
+    if (session && !isAdminPreview) carregarPerfis();
+  }, [session, isAdminPreview, carregarPerfis]);
 
   const loadStudentData = useCallback(async (student_id: string, showGlobalLoader = false) => {
     if (showGlobalLoader) setLoading(true);
@@ -520,6 +568,7 @@ export default function AlunoPage() {
     if (!emailRegex.test(registerForm.email.trim())) { setRegisterError('Informe um e-mail válido.'); return; }
     if (registerForm.password.length < 6) { setRegisterError('Senha deve ter pelo menos 6 caracteres.'); return; }
     if (registerForm.password !== registerForm.confirmPassword) { setRegisterError('As senhas não coincidem.'); return; }
+    if (!registerForm.data_nascimento.trim()) { setRegisterError('Informe sua data de nascimento.'); return; }
 
     setRegisterLoading(true);
     try {
@@ -535,6 +584,7 @@ export default function AlunoPage() {
             password: registerForm.password,
             phone: registerForm.phone.trim(),
             nome_completo: registerForm.username.trim(),
+            data_nascimento: registerForm.data_nascimento.trim(),
           }),
         });
         const data = await res.json();
@@ -569,6 +619,7 @@ export default function AlunoPage() {
           nome_completo: registerForm.username.trim(),
           email: registerForm.email.trim().toLowerCase(),
           password: registerForm.password,
+          data_nascimento: registerForm.data_nascimento.trim(),
         }),
       });
       const data2 = await res2.json();
@@ -853,6 +904,20 @@ export default function AlunoPage() {
                   onChange={e => setRegisterForm(p => ({ ...p, cpf_or_doc: e.target.value }))}
                   placeholder="000.000.000-00"
                 />
+              </div>
+
+              {/* Data de nascimento — define as regras de idade da conta */}
+              <div className="pa-field">
+                <label htmlFor="reg-dob">Data de nascimento *</label>
+                <input
+                  id="reg-dob"
+                  type="date"
+                  value={registerForm.data_nascimento}
+                  onChange={e => setRegisterForm(p => ({ ...p, data_nascimento: e.target.value }))}
+                  max={new Date().toISOString().slice(0, 10)}
+                  required
+                />
+                <p className="pa-hint">Menores de 15 anos devem ser cadastrados pelo responsável. De 15 a 17, a conta precisa da autorização do responsável.</p>
               </div>
 
               {/* Telefone (opcional) */}
@@ -1197,6 +1262,18 @@ export default function AlunoPage() {
                     Completar cadastro
                   </button>
                 </div>
+              </div>
+            )}
+
+            {acessandoComoTutelado && perfilAtivoInfo && (
+              <div style={{ background: 'rgba(96,165,250,0.10)', border: '1px solid rgba(96,165,250,0.35)', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ display: 'flex', color: '#93c5fd', flexShrink: 0 }}><IconUser size={18} /></span>
+                <div style={{ flex: 1, fontSize: '0.8rem', color: '#93c5fd', lineHeight: 1.5 }}>
+                  Você está acessando como <strong>{perfilAtivoInfo.nome_completo}</strong> (perfil de dependente). Ações em nome dele ficam registradas na sua conta.
+                </div>
+                <button onClick={() => trocarPerfil(session!.student_id)} className="press" style={{ background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.35)', color: '#93c5fd', borderRadius: 9, padding: '6px 12px', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                  Voltar ao meu perfil
+                </button>
               </div>
             )}
 
@@ -2158,6 +2235,12 @@ export default function AlunoPage() {
                 <div>
                   <SectionTitle icon={<IconGear size={17} />}>Minha Conta</SectionTitle>
                   <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#a3a3a3' }}>Gerencie suas credenciais de acesso</p>
+                </div>
+
+                {/* Responsáveis, tutelados e autorização de adolescente */}
+                <div>
+                  <SectionTitle icon={<IconUser size={17} />}>Responsáveis & Perfis</SectionTitle>
+                  <PerfilGuardiaoCard />
                 </div>
 
                 {/* Current account info */}
@@ -3532,6 +3615,32 @@ export default function AlunoPage() {
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, background: 'rgba(255,146,0,0.08)', border: '1px solid rgba(255,146,0,0.28)', borderRadius: 9, padding: '4px 10px' }}>
                   <span style={{ fontSize: '0.6rem', color: 'rgba(255,146,0,0.85)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>ID</span>
                   <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#ffb84d', letterSpacing: '0.06em' }}>{`CCLN-${String(alunoInscricaoNum).padStart(3, '0')}`}</span>
+                </div>
+              )}
+              {/* Quem está usando? — perfis acessíveis (o próprio + tutelados) */}
+              {perfis.length > 1 && !isAdminPreview && (
+                <div style={{ marginTop: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '10px 11px' }}>
+                  <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7 }}>Quem está usando?</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {perfis.map(pf => {
+                      const ativo = pf.student_id === perfilAtivo;
+                      return (
+                        <button key={pf.student_id} onClick={() => { trocarPerfil(pf.student_id); }} disabled={perfilLoading || ativo} className="press"
+                          style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '7px 9px', borderRadius: 10, border: ativo ? '1px solid rgba(255,146,0,0.45)' : '1px solid transparent', background: ativo ? 'rgba(255,146,0,0.10)' : 'transparent', cursor: ativo ? 'default' : 'pointer', textAlign: 'left' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,146,0,0.12)', color: '#FF9200', flexShrink: 0, overflow: 'hidden' }}>
+                            {pf.foto_url
+                              ? // eslint-disable-next-line @next/next/no-img-element
+                                <img src={pf.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              : <IconUser size={14} />}
+                          </span>
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#f5f5f4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pf.nome_completo}</span>
+                            <span style={{ display: 'block', fontSize: '0.66rem', color: ativo ? '#ffb84d' : '#8f8f8f', fontWeight: 600 }}>{ativo ? 'Perfil ativo' : pf.tipo === 'tutelado' ? 'Dependente' : 'Meu perfil · Aluno'}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

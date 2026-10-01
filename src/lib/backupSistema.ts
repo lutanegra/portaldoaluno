@@ -71,6 +71,9 @@ type Snapshot = {
     checkins: Record<string, unknown>[];
     tenants: Record<string, unknown>[];
     system_config: Record<string, unknown>[];
+    guardians?: Record<string, unknown>[];
+    guardian_links?: Record<string, unknown>[];
+    adolescent_authorizations?: Record<string, unknown>[];
   };
   arquivos: Record<string, unknown>; // chave no bucket → conteúdo JSON
 };
@@ -228,12 +231,15 @@ function nextRunAt(settings: BackupSettings, lastSuccessfulIso: string | null): 
 /* ── Geração do snapshot ───────────────────────────────────────────────── */
 
 async function buildSnapshot(): Promise<{ snapshot: Snapshot; contagens: Record<string, number> }> {
-  const [students, presencas, checkins, tenants, systemConfig] = await Promise.all([
+  const [students, presencas, checkins, tenants, systemConfig, guardians, guardianLinks, adolescentAuths] = await Promise.all([
     fetchAll('students', 'ordem_inscricao'),
     fetchAll('presencas', 'data_treino'),
     fetchAll('checkins', 'data'),
     fetchAll('tenants', 'id'),
     fetchAll('system_config', 'id'),
+    fetchAll('guardians', 'student_id'),
+    fetchAll('guardian_links', 'created_at'),
+    fetchAll('adolescent_authorizations', 'created_at'),
   ]);
   const keys = await listJsonKeys();
   const arquivos: Record<string, unknown> = {};
@@ -247,13 +253,19 @@ async function buildSnapshot(): Promise<{ snapshot: Snapshot; contagens: Record<
     checkins: checkins.length,
     nucleos: tenants.length,
     configuracoes: systemConfig.length,
+    responsaveis: guardians.length,
+    vinculos: guardianLinks.length,
+    autorizacoes: adolescentAuths.length,
     arquivos: keys.length,
   };
   return {
     snapshot: {
       versao: 2,
       criado_em: new Date().toISOString(),
-      banco: { students, presencas, checkins, tenants, system_config: systemConfig },
+      banco: {
+        students, presencas, checkins, tenants, system_config: systemConfig,
+        guardians, guardian_links: guardianLinks, adolescent_authorizations: adolescentAuths,
+      },
       arquivos,
     },
     contagens,
@@ -486,10 +498,30 @@ export async function restoreBackupSistema(filename: string, actor: string): Pro
   if (Array.isArray(snapshot.banco.system_config)) {
     restaurados.configuracoes = await upsertTable('system_config', snapshot.banco.system_config);
   }
+  // Responsáveis/vínculos/autorizações (backups antigos simplesmente não trazem)
+  if (Array.isArray(snapshot.banco.guardians)) {
+    restaurados.responsaveis = await upsertTable('guardians', snapshot.banco.guardians);
+  }
+  if (Array.isArray(snapshot.banco.guardian_links)) {
+    restaurados.vinculos = await upsertTable('guardian_links', snapshot.banco.guardian_links);
+  }
+  if (Array.isArray(snapshot.banco.adolescent_authorizations)) {
+    restaurados.autorizacoes = await upsertTable('adolescent_authorizations', snapshot.banco.adolescent_authorizations);
+  }
 
   const idsStudents = new Set(snapshot.banco.students.map(r => String(r.id)));
   const idsPresencas = new Set(snapshot.banco.presencas.map(r => String(r.id)));
   const idsCheckins = new Set(snapshot.banco.checkins.map(r => String(r.id)));
+  // Derivadas primeiro (FK para students), depois students
+  if (Array.isArray(snapshot.banco.adolescent_authorizations)) {
+    removidos.autorizacoes = await deleteNotIn('adolescent_authorizations', new Set(snapshot.banco.adolescent_authorizations.map(r => String(r.id))));
+  }
+  if (Array.isArray(snapshot.banco.guardian_links)) {
+    removidos.vinculos = await deleteNotIn('guardian_links', new Set(snapshot.banco.guardian_links.map(r => String(r.id))));
+  }
+  if (Array.isArray(snapshot.banco.guardians)) {
+    removidos.responsaveis = await deleteNotIn('guardians', new Set(snapshot.banco.guardians.map(r => String(r.id))));
+  }
   removidos.checkins = await deleteNotIn('checkins', idsCheckins);
   removidos.presencas = await deleteNotIn('presencas', idsPresencas);
   removidos.students = await deleteNotIn('students', idsStudents);

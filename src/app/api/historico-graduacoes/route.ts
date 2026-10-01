@@ -47,8 +47,10 @@ async function writeHistorico(studentId: string, records: RegistroGraduacao[]) {
 
 // GET /api/historico-graduacoes?student_id=xxx
 export async function GET(req: NextRequest) {
-  const studentId = req.nextUrl.searchParams.get('student_id');
-  if (!studentId) return NextResponse.json({ error: 'student_id obrigatório' }, { status: 400 });
+  const { resolverAtor } = await import('@/lib/ator');
+  const ator = await resolverAtor(req, req.nextUrl.searchParams.get('student_id'));
+  if (!ator || !ator.studentId) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  const studentId = ator.studentId;
   const records = await readHistorico(studentId);
   return NextResponse.json({ records });
 }

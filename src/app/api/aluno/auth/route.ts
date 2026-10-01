@@ -10,6 +10,10 @@ import {
   verifyAlunoSession,
   sessionCookieOptions,
 } from '@/lib/alunoSession';
+import { idadeEm, faixaCadastro, mensagemFaixa } from '@/lib/idade';
+import { readAlunoSessionFromReq } from '@/lib/alunoSession';
+import { readPanelSession } from '@/lib/panelSession';
+import { appendAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -144,9 +148,26 @@ export async function POST(req: NextRequest) {
       // Get student data (minimal, for session)
       const { data: student } = await supabaseAdmin
         .from('students')
-        .select('id, nome_completo, nucleo, graduacao, tipo_graduacao, foto_url, apelido, nome_social')
+        .select('id, nome_completo, nucleo, graduacao, tipo_graduacao, foto_url, apelido, nome_social, data_nascimento')
         .eq('id', account.student_id)
         .maybeSingle();
+
+      // Regras de idade: revogação de autorização bloqueia o login (15–17);
+      // pendente entra normalmente — a autorização é concluída dentro do app.
+      const idadeLogin = idadeEm(student?.data_nascimento || '');
+      if (idadeLogin >= 0 && faixaCadastro(idadeLogin) === 'precisa_autorizacao') {
+        const { data: authzL } = await supabaseAdmin
+          .from('adolescent_authorizations')
+          .select('status')
+          .eq('student_id', account.student_id)
+          .maybeSingle();
+        if (authzL?.status === 'revoked') {
+          return NextResponse.json({
+            error: 'A autorização do seu responsável foi revogada. Fale com o admin do seu núcleo.',
+            codigo: 'autorizacao_revogada',
+          }, { status: 403 });
+        }
+      }
 
       // Sessão persistente em cookie HttpOnly (30 dias)
       const store = await cookies();
@@ -164,6 +185,8 @@ export async function POST(req: NextRequest) {
     if (action === 'register') {
       // Support both student_id (legacy) and cpf/documento (self-registration)
       let { student_id, username, email, password, phone, cpf_or_doc } = body;
+      const dataNascimentoIn: string = typeof body.data_nascimento === 'string' ? body.data_nascimento : '';
+      const dataNascLimpa = dataNascimentoIn ? dataNascimentoIn.slice(0, 10) : '';
 
       // ── Validate required fields ──────────────────────────────────────────
       if (!username || !password) {
@@ -247,6 +270,28 @@ export async function POST(req: NextRequest) {
 
       if (!student) {
         return NextResponse.json({ error: 'Aluno não encontrado.' }, { status: 404 });
+      }
+
+      // ── GATE DE IDADE (configuração central em src/lib/idade.ts) ─────────
+      // A idade SEMPRE vem da data de nascimento real armazenada — nunca de
+      // um campo "idade" informado pelo usuário.
+      let dataNascFinal = dataNascLimpa;
+      if (!dataNascFinal) {
+        const { data: stNasc } = await supabaseAdmin
+          .from('students').select('data_nascimento').eq('id', (student_id as string)).maybeSingle();
+        dataNascFinal = String(stNasc?.data_nascimento || '').slice(0, 10);
+      }
+      if (dataNascLimpa && student_id) {
+        await supabaseAdmin.from('students')
+          .update({ data_nascimento: dataNascLimpa, menor_de_idade: idadeEm(dataNascLimpa) >= 0 ? idadeEm(dataNascLimpa) < 18 : false })
+          .eq('id', (student_id as string));
+      }
+      const idadeCadastro = idadeEm(dataNascFinal);
+      if (idadeCadastro >= 0 && faixaCadastro(idadeCadastro) === 'bloqueado') {
+        return NextResponse.json({
+          error: mensagemFaixa('bloqueado'),
+          codigo: 'menor_de_15',
+        }, { status: 422 });
       }
 
       const authMap = await loadAuthMap();
@@ -375,6 +420,19 @@ export async function POST(req: NextRequest) {
       if (!emailRegex.test(emailNorm)) {
         return NextResponse.json({ error: 'E-mail inválido.' }, { status: 400 });
       }
+      const dataNascimentoIn: string = typeof body.data_nascimento === 'string' ? body.data_nascimento : '';
+      const dataNascLimpa = dataNascimentoIn ? dataNascimentoIn.slice(0, 10) : '';
+      // A data de nascimento é obrigatória para aplicar as regras de idade
+      if (!dataNascLimpa || isNaN(new Date(`${dataNascLimpa}T12:00:00`).getTime()) || dataNascLimpa > new Date().toISOString().slice(0, 10)) {
+        return NextResponse.json({ error: 'Informe uma data de nascimento válida.' }, { status: 400 });
+      }
+      const idadeCadastro = idadeEm(dataNascLimpa);
+      if (idadeCadastro >= 0 && faixaCadastro(idadeCadastro) === 'bloqueado') {
+        return NextResponse.json({
+          error: mensagemFaixa('bloqueado'),
+          codigo: 'menor_de_15',
+        }, { status: 422 });
+      }
 
       // Normalize name for matching
       const normalizeName = (s: string) =>
@@ -399,12 +457,12 @@ export async function POST(req: NextRequest) {
         }
         const cpfIn = typeof body.cpf_or_doc === 'string' && body.cpf_or_doc.trim() ? body.cpf_or_doc.trim() : null;
         const phoneIn = typeof body.phone === 'string' && body.phone.trim() ? body.phone.trim() : null;
-        const base: Record<string, unknown> = { nome_completo: nomeTrim, email: emailNorm };
+        const base: Record<string, unknown> = { nome_completo: nomeTrim, email: emailNorm, data_nascimento: dataNascLimpa, menor_de_idade: idadeCadastro < 18 };
         if (cpfIn) base.cpf = cpfIn;
         if (phoneIn) base.telefone = phoneIn;
         // Placeholders para colunas legadas com NOT NULL (mesma estratégia de /api/inscricao)
         const placeholders: Record<string, unknown> = {
-          cpf: cpfIn || '', identidade: '', data_nascimento: '1900-01-01',
+          cpf: cpfIn || '', identidade: '', data_nascimento: dataNascLimpa,
           telefone: phoneIn || '', cep: '', endereco: '', numero: '', complemento: '',
           bairro: '', cidade: '', estado: '', graduacao: 'Cru', tipo_graduacao: 'corda',
           nucleo: '', nome_pai: '', nome_mae: '', nome_responsavel: '', cpf_responsavel: '',
@@ -436,6 +494,14 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: 'Este aluno já possui uma conta. Use recuperar senha.' }, { status: 409 });
         }
         // Inactive: fall through to overwrite
+      }
+      // Mantém a data de nascimento real atualizada (regras de idade usam a data armazenada)
+      if (existing) {
+        try {
+          await supabaseAdmin.from('students')
+            .update({ data_nascimento: dataNascLimpa, menor_de_idade: idadeCadastro < 18 })
+            .eq('id', target.id);
+        } catch { /* coluna pode não existir */ }
       }
       const emailTaken = Object.values(authMap).find(a => a.email && a.email.toLowerCase() === emailNorm);
       if (emailTaken) {
@@ -678,6 +744,10 @@ export async function POST(req: NextRequest) {
 
     // Admin: create account for existing student (admin-initiated)
     if (action === 'admin-create') {
+      // Ações administrativas exigem sessão do painel
+      if (!readPanelSession(req)) {
+        return NextResponse.json({ error: 'Sessão administrativa necessária.' }, { status: 401 });
+      }
       const { student_id, username, password, phone } = body;
       const authMap = await loadAuthMap();
 
@@ -704,6 +774,10 @@ export async function POST(req: NextRequest) {
 
     // Admin: create account with auto-generated username from student name + sequential ID
     if (action === 'admin-create-auto') {
+      // Ações administrativas exigem sessão do painel
+      if (!readPanelSession(req)) {
+        return NextResponse.json({ error: 'Sessão administrativa necessária.' }, { status: 401 });
+      }
       // Accept student data directly from caller to avoid internal HTTP fetches
       const {
         student_id,
@@ -827,6 +901,9 @@ export async function POST(req: NextRequest) {
 
     // Admin: reset password
     if (action === 'admin-reset-password') {
+      if (!readPanelSession(req)) {
+        return NextResponse.json({ error: 'Sessão administrativa necessária.' }, { status: 401 });
+      }
       const { student_id, new_password, notify_email, student_name } = body;
       const authMap = await loadAuthMap();
       if (!authMap[student_id]) return NextResponse.json({ error: 'Conta não encontrada.' }, { status: 404 });
@@ -857,6 +934,11 @@ export async function POST(req: NextRequest) {
     // ── Update profile (email, username) — requires session token (student_id)
     if (action === 'update-profile') {
       const { student_id, new_email, new_username, current_password } = body;
+      // Somente o próprio aluno logado pode alterar a própria conta
+      const sessPropria = readAlunoSessionFromReq(req);
+      if (!sessPropria || sessPropria.sid !== student_id) {
+        return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+      }
       if (!student_id) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
       const authMap = await loadAuthMap();
       const account = authMap[student_id];
@@ -893,6 +975,10 @@ export async function POST(req: NextRequest) {
     // ── Change password — requires current password verification
     if (action === 'change-password') {
       const { student_id, current_password, new_password } = body;
+      const sessPropria = readAlunoSessionFromReq(req);
+      if (!sessPropria || sessPropria.sid !== student_id) {
+        return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+      }
       if (!student_id) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
       const authMap = await loadAuthMap();
       const account = authMap[student_id];
@@ -918,6 +1004,10 @@ export async function POST(req: NextRequest) {
     // ── Delete account — removes login credentials (student record kept for history)
     if (action === 'delete-account') {
       const { student_id, current_password } = body;
+      const sessPropria = readAlunoSessionFromReq(req);
+      if (!sessPropria || sessPropria.sid !== student_id) {
+        return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+      }
       if (!student_id) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
       const authMap = await loadAuthMap();
       const account = authMap[student_id];
@@ -934,6 +1024,9 @@ export async function POST(req: NextRequest) {
 
     // ── Admin: edit account (username, email, phone) — no password required
     if (action === 'admin-edit-account') {
+      if (!readPanelSession(req)) {
+        return NextResponse.json({ error: 'Sessão administrativa necessária.' }, { status: 401 });
+      }
       const { student_id, new_username, new_email, new_phone } = body;
       if (!student_id) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
       const authMap = await loadAuthMap();
@@ -987,6 +1080,9 @@ export async function POST(req: NextRequest) {
 
     // ── Admin: reset phone validation — deactivates account so student can re-register with corrected phone
     if (action === 'admin-reset-phone-validation') {
+      if (!readPanelSession(req)) {
+        return NextResponse.json({ error: 'Sessão administrativa necessária.' }, { status: 401 });
+      }
       const { student_id } = body;
       if (!student_id) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
       const authMap = await loadAuthMap();
@@ -1023,6 +1119,9 @@ export async function POST(req: NextRequest) {
 
     // ── Admin: delete account — no password required (admin privilege)
     if (action === 'admin-delete-account') {
+      if (!readPanelSession(req)) {
+        return NextResponse.json({ error: 'Sessão administrativa necessária.' }, { status: 401 });
+      }
       const { student_id } = body;
       if (!student_id) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
       const authMap = await loadAuthMap();
@@ -1030,6 +1129,294 @@ export async function POST(req: NextRequest) {
       delete authMap[student_id];
       await saveAuthMap(authMap);
       return NextResponse.json({ success: true });
+    }
+
+    // ── STATUS DA CONTA (faixa de idade, autorização, perfis, tutelados) ─────
+    if (action === 'account-status') {
+      const sess = readAlunoSessionFromReq(req);
+      if (!sess) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+
+      const { data: st } = await supabaseAdmin
+        .from('students')
+        .select('id, nome_completo, data_nascimento, foto_url, nucleo, graduacao, menor_de_idade, assinatura_responsavel')
+        .eq('id', sess.sid)
+        .maybeSingle();
+      if (!st) return NextResponse.json({ error: 'Aluno não encontrado.' }, { status: 404 });
+
+      const idade = idadeEm(st.data_nascimento || '');
+      const faixa = idade >= 0 ? faixaCadastro(idade) : 'independente';
+
+      const { data: authz } = await supabaseAdmin
+        .from('adolescent_authorizations')
+        .select('status')
+        .eq('student_id', sess.sid)
+        .maybeSingle();
+
+      const { data: perfilResp } = await supabaseAdmin
+        .from('guardians')
+        .select('student_id, criado_em')
+        .eq('student_id', sess.sid)
+        .maybeSingle();
+
+      const ehAdulto = idade >= 18 || idade < 0;
+      // Autorização exigida apenas para contas próprias de 15–17
+      const autorizacaoStatus: 'necessaria_pendente' | 'autorizado' | 'revogado' | 'desnecessaria' =
+        faixa === 'precisa_autorizacao'
+          ? (authz?.status === 'authorized' ? 'autorizado' : authz?.status === 'revoked' ? 'revogado' : 'necessaria_pendente')
+          : 'desnecessaria';
+
+      // Conta liberada = adulto OU 15-17 com autorização authorized
+      const liberada = faixa === 'independente' || autorizacaoStatus === 'autorizado';
+      // O acesso do app continua valendo enquanto a autorização não for revogada
+      const acessoAtivo = autorizacaoStatus !== 'revogado';
+
+      let perfil_responsavel: { ativo: boolean; vinculos_ativos: number } | null = null;
+      if (perfilResp) {
+        const { count } = await supabaseAdmin
+          .from('guardian_links')
+          .select('id', { count: 'exact', head: true })
+          .eq('guardian_student_id', sess.sid)
+          .eq('status', 'active');
+        perfil_responsavel = { ativo: true, vinculos_ativos: count ?? 0 };
+      }
+
+      const { obterPerfilResponsavel, tutoradosDoResponsavel, vinculosPendentesDoAluno } = await import('@/lib/guardians');
+      const tuts = perfilResp ? await tutoradosDoResponsavel(sess.sid) : [];
+      const pendentes = await vinculosPendentesDoAluno(sess.sid);
+
+      return NextResponse.json({
+        student_id: sess.sid,
+        idade,
+        faixa,
+        eh_adulto: ehAdulto,
+        maior_de_idade: ehAdulto,
+        autorizacao_status: autorizacaoStatus,
+        conta_liberada: liberada,
+        acesso_ativo: acessoAtivo,
+        pode_ser_responsavel: ehAdulto,
+        perfil_responsavel,
+        tutelados: tuts,
+        vinculos_pendentes_recebidos: pendentes,
+        authz: authz || null,
+      });
+    }
+
+    // ── ATIVAR PERFIL DE RESPONSÁVEL (18+, mesma conta) ──────────────────────
+    if (action === 'become-guardian') {
+      const sess = readAlunoSessionFromReq(req);
+      if (!sess) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+      const cpf = String(body.cpf || '');
+      const { criarPerfilResponsavel } = await import('@/lib/guardians');
+      const r = await criarPerfilResponsavel(sess.sid, cpf);
+      if (!r.ok) return NextResponse.json({ error: r.error }, { status: 422 });
+      await appendAudit({
+        actor: sess.sid, actor_type: 'student', action: 'responsavel_perfil_ativado', target_id: sess.sid,
+      });
+      return NextResponse.json({ success: true });
+    }
+
+    // ── GERAR CÓDIGO DE VÍNCULO DO ALUNO (prova de contato) ─────────────────
+    if (action === 'link-code') {
+      const sess = readAlunoSessionFromReq(req);
+      const painel = readPanelSession(req);
+      if (!sess && !painel) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+      const studentId = String(body.student_id || sess?.sid || '');
+      if (!studentId) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
+      // Aluno só gera o próprio código; painel gera de qualquer aluno que vê
+      if (!painel && studentId !== sess?.sid) {
+        return NextResponse.json({ error: 'Você só pode gerar o seu próprio código.' }, { status: 403 });
+      }
+      const { publicarCodigoDoAluno } = await import('@/lib/guardians');
+      const r = await publicarCodigoDoAluno(studentId);
+      if (!r.ok) return NextResponse.json({ error: r.error }, { status: 404 });
+      return NextResponse.json({ success: true, codigo: r.codigo, expira_em: r.expira_em });
+    }
+
+    // ── VÍNCULO: responsável informa código + matrícula ─────────────────────
+    if (action === 'link-guardian') {
+      const sess = readAlunoSessionFromReq(req);
+      if (!sess) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+      const codigo = String(body.codigo || '');
+      const matricula = String(body.matricula || '');
+      const relacao = String(body.relacao || 'responsavel_legal');
+
+      const { consumirCodigoVinculo, criarVinculo, criarPerfilResponsavel } = await import('@/lib/guardians');
+      const { data: gRow } = await supabaseAdmin.from('guardians').select('student_id').eq('student_id', sess.sid).maybeSingle();
+      if (!gRow) return NextResponse.json({ error: 'Ative o perfil de responsável antes de adicionar tutelados.' }, { status: 422 });
+
+      const valido = await consumirCodigoVinculo(codigo, matricula);
+      if (!valido.ok) return NextResponse.json({ error: valido.error }, { status: 422 });
+      if (valido.student_id === sess.sid) {
+        return NextResponse.json({ error: 'Você não pode se adicionar como tutelado.' }, { status: 422 });
+      }
+      const vinc = await criarVinculo(sess.sid, String(valido.student_id), relacao, { viaPainel: false });
+      if (!vinc.ok) return NextResponse.json({ error: vinc.error }, { status: 422 });
+      await appendAudit({
+        actor: sess.sid, actor_type: 'student', action: 'vinculo_solicitado',
+        target_id: String(valido.student_id), target_name: valido.nome_aluno,
+        details: { relacao, status: vinc.status },
+      });
+      return NextResponse.json({
+        success: true,
+        status: vinc.status,
+        nome_aluno: valido.nome_aluno,
+        aguardando_aluno: vinc.status === 'pending',
+        mensagem: vinc.status === 'pending'
+          ? 'Solicitação registrada. O aluno precisa autorizar o acesso no app dele.'
+          : 'Vínculo ativo.',
+      });
+    }
+
+    // ── ALUNO decide solicitação de vínculo recebida ─────────────────────────
+    if (action === 'link-decide') {
+      const sess = readAlunoSessionFromReq(req);
+      if (!sess) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+      const guardianId = String(body.guardian_student_id || '');
+      const aprovar = !!body.aprovar;
+      const { alunoDecideVinculoPendente } = await import('@/lib/guardians');
+      const r = await alunoDecideVinculoPendente(sess.sid, guardianId, aprovar);
+      if (!r.ok) return NextResponse.json({ error: r.error }, { status: 422 });
+      await appendAudit({
+        actor: sess.sid, actor_type: 'student',
+        action: aprovar ? 'vinculo_aprovado' : 'vinculo_rejeitado',
+        target_id: guardianId,
+      });
+      return NextResponse.json({ success: true });
+    }
+
+    // ── REVOGAR vínculo (responsável ou aluno) ───────────────────────────────
+    if (action === 'link-revoke') {
+      const sess = readAlunoSessionFromReq(req);
+      if (!sess) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+      const guardianId = String(body.guardian_student_id || sess.sid);
+      const studentId = String(body.student_id || sess.sid);
+      const { revogarVinculo, podeAgirComo } = await import('@/lib/guardians');
+      // Quem revoga: o próprio responsável (guardian) ou o aluno com vínculo ativo
+      const ehGuardian = guardianId === sess.sid;
+      const ehAlunoVinculado = studentId === sess.sid || (await podeAgirComo(sess.sid, studentId));
+      if (!ehGuardian && !ehAlunoVinculado) {
+        return NextResponse.json({ error: 'Sem permissão para revogar este vínculo.' }, { status: 403 });
+      }
+      const r = await revogarVinculo(guardianId, studentId, `aluno:${sess.sid}`, String(body.motivo || ''));
+      if (!r.ok) return NextResponse.json({ error: r.error }, { status: 422 });
+      await appendAudit({
+        actor: sess.sid, actor_type: 'student', action: 'vinculo_revogado',
+        target_id: studentId, details: { por: ehGuardian ? 'responsavel' : 'aluno' },
+      });
+      return NextResponse.json({ success: true });
+    }
+
+    // ── CADASTRAR TUTELADO NOVO (responsável cadastra a criança do zero) ────
+    // Cria o perfil de aluno SEM CONTA (a criança nunca recebe login) e já
+    // nasce vinculado ao responsável (ativo). Matrícula segue a ordem oficial.
+    if (action === 'criar-tutelado') {
+      const sessT = readAlunoSessionFromReq(req);
+      if (!sessT) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+      const nomeTrim = String(body.nome_completo || '').trim().replace(/\s+/g, ' ');
+      const dataNasc = String(body.data_nascimento || '').slice(0, 10);
+      const cpfIn = String(body.cpf || '').replace(/\D/g, '');
+      const nucleo = String(body.nucleo || '').trim();
+      const relacao = String(body.relacao || 'responsavel_legal');
+      const graduacao = String(body.graduacao || 'Cru');
+
+      if (!sessT.sid) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+      const { data: gPerfil } = await supabaseAdmin.from('guardians').select('student_id').eq('student_id', sessT.sid).maybeSingle();
+      if (!gPerfil) return NextResponse.json({ error: 'Ative o perfil de responsável antes de cadastrar um tutelado.' }, { status: 422 });
+      if (nomeTrim.split(' ').filter(Boolean).length < 2) {
+        return NextResponse.json({ error: 'Informe o nome completo do tutelado.' }, { status: 400 });
+      }
+      if (!dataNasc || isNaN(new Date(`${dataNasc}T12:00:00`).getTime()) || dataNasc > new Date().toISOString().slice(0, 10)) {
+        return NextResponse.json({ error: 'Informe uma data de nascimento válida.' }, { status: 400 });
+      }
+      const { isValidCPF } = await import('@/lib/studentCompliance');
+      if (cpfIn && !isValidCPF(cpfIn)) {
+        return NextResponse.json({ error: 'CPF do tutelado inválido.' }, { status: 400 });
+      }
+
+      const idadeT = idadeEm(dataNasc);
+      if (idadeT >= 15) {
+        return NextResponse.json({
+          error: 'A partir de 15 anos a pessoa pode (e deve) criar a própria conta. Use "Adicionar tutelado" com o código do aluno para adolescentes que já têm cadastro.',
+        }, { status: 422 });
+      }
+
+      // Núcleo deve existir na tabela tenants (fonte da verdade)
+      let tenantNome = '';
+      if (nucleo) {
+        const { data: tenant } = await supabaseAdmin.from('tenants').select('nome').eq('id', nucleo).maybeSingle();
+        if (!tenant) return NextResponse.json({ error: 'Núcleo não encontrado.' }, { status: 400 });
+        tenantNome = tenant.nome || '';
+      }
+
+      // Próxima ordem de inscrição (fonte da verdade da matrícula CCLN-XXX)
+      const { data: maxRow } = await supabaseAdmin
+        .from('students').select('ordem_inscricao')
+        .not('ordem_inscricao', 'is', null)
+        .order('ordem_inscricao', { ascending: false }).limit(1).maybeSingle();
+      const proximaOrdem = (maxRow?.ordem_inscricao ?? 0) + 1;
+
+      const base: Record<string, unknown> = {
+        nome_completo: nomeTrim,
+        data_nascimento: dataNasc,
+        menor_de_idade: idadeT < 18,
+        ordem_inscricao: proximaOrdem,
+        graduacao,
+        tipo_graduacao: 'corda',
+      };
+      if (cpfIn) base.cpf = cpfIn;
+      if (tenantNome) base.nucleo = tenantNome;
+      const placeholders: Record<string, unknown> = {
+        cpf: cpfIn, identidade: '', data_nascimento: dataNasc, telefone: '',
+        cep: '', endereco: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
+        nome_pai: '', nome_mae: '', nome_responsavel: '', cpf_responsavel: '',
+        apelido: '', nome_social: '', sexo: '', nucleo: tenantNome,
+      };
+
+      let novo: { id: string; nome_completo: string } | null = null;
+      let payloadT: Record<string, unknown> = { ...base };
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const { data, error } = await supabaseAdmin
+          .from('students').insert(payloadT).select('id, nome_completo').single();
+        if (!error && data) { novo = data as { id: string; nome_completo: string }; break; }
+        if (error && /null value|not-null|NOT NULL/i.test(error.message || '')) {
+          payloadT = { ...placeholders, ...base };
+          continue;
+        }
+        return NextResponse.json({ error: error?.message || 'Erro ao cadastrar o tutelado.' }, { status: 500 });
+      }
+      if (!novo) return NextResponse.json({ error: 'Erro ao cadastrar o tutelado.' }, { status: 500 });
+
+      // Vínculo direto e ativo (o responsável que criou é o declarante)
+      const { error: vErr } = await supabaseAdmin.from('guardian_links').insert({
+        guardian_student_id: sessT.sid,
+        student_id: novo.id,
+        relacao,
+        status: 'active',
+        criado_por: `responsavel:${sessT.sid}`,
+        aprovado_em: new Date().toISOString(),
+      });
+      if (vErr) {
+        return NextResponse.json({ error: 'Tutelado cadastrado, mas o vínculo falhou. Procure o admin do seu núcleo.' }, { status: 500 });
+      }
+
+      // Backup de alunos dispara como nova inscrição
+      try {
+        const { autoBackupAfterChange } = await import('@/lib/backupAlunos');
+        await autoBackupAfterChange(`responsavel:${sessT.sid}`, 'inscricao');
+      } catch { /* não bloqueia */ }
+
+      await appendAudit({
+        actor: sessT.sid, actor_type: 'student', action: 'tutelado_cadastrado',
+        target_id: novo.id, target_name: novo.nome_completo,
+        details: { relacao, nucleo: tenantNome || null, matricula: proximaOrdem, sem_conta: true },
+      });
+
+      return NextResponse.json({
+        success: true,
+        student_id: novo.id,
+        nome: novo.nome_completo,
+        matricula: `CCLN-${String(proximaOrdem).padStart(3, '0')}`,
+      });
     }
 
     return NextResponse.json({ error: 'Ação desconhecida.' }, { status: 400 });

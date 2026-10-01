@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { readPanelSession } from '@/lib/panelSession';
+import { readAlunoSessionFromReq } from '@/lib/alunoSession';
+import { resolverAtor } from '@/lib/ator';
 import { alunoEmConformidade, resumoPendencias, isValidCPF, isValidRG, cpfDigits } from '@/lib/studentCompliance';
 
 export const dynamic = 'force-dynamic';
@@ -36,10 +38,14 @@ async function loadAuthEmail(student_id: string): Promise<string | null> {
 }
 
 // GET /api/aluno/dados?student_id=xxx
-// Returns ONLY the requesting student's own data — never another student's
+// Returns ONLY data the caller may see: the own profile, a tutelado with an
+// active guardian link, or any student when called from the admin panel.
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const student_id = searchParams.get('student_id');
+  const ator = await resolverAtor(req, req.nextUrl.searchParams.get('student_id'));
+  if (!ator) {
+    return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  }
+  const student_id = ator.studentId;
 
   if (!student_id) {
     return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
@@ -121,14 +127,40 @@ export async function POST(req: NextRequest) {
 }
 
 // PATCH /api/aluno/dados
-// Allows authenticated student to update their own profile fields
+// Permite atualizar o próprio perfil, um tutelado com vínculo ativo (campos
+// autorizados) ou qualquer aluno quando chamado pelo painel.
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { student_id, ...updates } = body;
+    const ator = await resolverAtor(req, body.student_id);
+    if (!ator) {
+      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    }
+    const student_id = ator.studentId;
+    const ehAdmin = ator.viaPainel;
+    const emNomeDeResponsavel = ator.emNomeDe === 'responsavel' && !ator.viaPainel;
+    const { ...updates } = body;
 
     if (!student_id) {
       return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
+    }
+
+    // Responsável acessando tutelado: campos de identidade/documentos são
+    // restritos ao aluno adulto e ao painel (minimização de dados).
+    const CAMPOS_RESPONSAVEL_AUTORIZADOS = new Set([
+      'telefone', 'email', 'cep', 'endereco', 'numero', 'complemento',
+      'bairro', 'cidade', 'estado', 'nome_pai', 'nome_mae', 'autoriza_imagem',
+    ]);
+    if (emNomeDeResponsavel) {
+      for (const chave of Object.keys(updates)) {
+        if (chave === 'student_id') continue;
+        if (!CAMPOS_RESPONSAVEL_AUTORIZADOS.has(chave)) {
+          return NextResponse.json(
+            { error: `Responsáveis não podem alterar o campo "${chave}" do tutelado.` },
+            { status: 403 },
+          );
+        }
+      }
     }
 
     // Verify student exists
@@ -220,20 +252,15 @@ export async function PATCH(req: NextRequest) {
 
     // Auto-compute menor_de_idade from data_nascimento if provided
     if (payload.data_nascimento) {
-      const dob = new Date((payload.data_nascimento as string) + 'T12:00:00');
-      const today = new Date();
-      let age = today.getFullYear() - dob.getFullYear();
-      const m = today.getMonth() - dob.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
-      payload.menor_de_idade = age < 18;
+      const { idadeEm } = await import('@/lib/idade');
+      const idade = idadeEm(String(payload.data_nascimento));
+      payload.menor_de_idade = idade >= 0 ? idade < 18 : false;
     }
 
     // ── Regras de obrigatoriedade (RG/CPF e termo de menor) ─────────────────
     // O aluno sempre pode COMPLETAR o cadastro; porém não pode deixá-lo
     // irregular: campos obrigatórios não podem ser enviados vazios, valores
     // preenchidos precisam ser válidos e um aluno conforme não perde dados.
-    const ehAdmin = !!readPanelSession(req);
-
     const vazio = (v: unknown) => v === null || v === undefined || (typeof v === 'string' && !v.trim());
     const novosDocs: Record<string, unknown> = { ...existing, ...(Object.fromEntries(Object.entries(payload).filter(([, v]) => !vazio(v)))) };
     const conflitos: string[] = [];

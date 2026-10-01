@@ -68,23 +68,32 @@ export async function GET(req: NextRequest) {
   const student_id = searchParams.get('student_id');
 
   if (student_id) {
+    // Identidade no servidor: próprio aluno, tutelado ativo ou painel
+    const { resolverAtor } = await import('@/lib/ator');
+    const ator = await resolverAtor(req, student_id);
+    if (!ator || !ator.studentId) {
+      return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
+    }
     // Banco primeiro, mapa antigo como fallback
     const { data: row } = await supabaseAdmin
       .from('students')
       .select('ordem_inscricao')
-      .eq('id', student_id)
+      .eq('id', ator.studentId)
       .maybeSingle();
     if (row?.ordem_inscricao != null) {
       return NextResponse.json({ display_id: formatId(row.ordem_inscricao) });
     }
     const idMap = await loadIdMap();
-    if (idMap[student_id]) {
-      return NextResponse.json({ display_id: idMap[student_id] });
+    if (idMap[ator.studentId]) {
+      return NextResponse.json({ display_id: idMap[ator.studentId] });
     }
     return NextResponse.json({ display_id: null });
   }
 
-  // Return full map rebuilt from DB
+  // Mapa completo: apenas painel autenticado
+  if (!readPanelSession(req)) {
+    return NextResponse.json({ error: 'Sessão administrativa necessária.' }, { status: 401 });
+  }
   const map = await rebuildMapFromDb();
   return NextResponse.json(map);
 }

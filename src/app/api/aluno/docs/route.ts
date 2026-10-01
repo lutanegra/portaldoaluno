@@ -43,8 +43,11 @@ function formatSize(bytes: number): string {
 
 /** GET /api/aluno/docs?student_id=xxx — list personal documents */
 export async function GET(req: NextRequest) {
-  const student_id = new URL(req.url).searchParams.get('student_id');
-  if (!student_id) return NextResponse.json({ error: 'student_id required' }, { status: 400 });
+  // Identidade resolvida no servidor (próprio, tutelado ativo ou painel)
+  const { resolverAtor } = await import('@/lib/ator');
+  const ator = await resolverAtor(req, new URL(req.url).searchParams.get('student_id'));
+  if (!ator || !ator.studentId) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  const student_id = ator.studentId;
 
   const folder = docsFolder(student_id);
   const { data: files, error } = await supabase.storage
@@ -80,10 +83,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
-    const student_id = formData.get('student_id') as string;
+    // Identidade resolvida no servidor (próprio, tutelado ativo ou painel)
+    const { resolverAtor } = await import('@/lib/ator');
+    const ator = await resolverAtor(req, (formData.get('student_id') as string) || null);
+    if (!ator || !ator.studentId) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    const student_id = ator.studentId;
     const file = formData.get('file') as File | null;
 
-    if (!student_id || !file) {
+    if (!file) {
       return NextResponse.json({ error: 'student_id e arquivo são obrigatórios.' }, { status: 400 });
     }
 

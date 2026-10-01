@@ -4,6 +4,7 @@ import { appendAudit } from '@/lib/audit';
 import { readPanelSession } from '@/lib/panelSession';
 import { loadCreds, accIsGeral, accNucleos, accHasNucleo, type PanelAccount } from '@/lib/panelCredentials';
 import { exigirConformidadeAluno } from '@/lib/alunoGate';
+import { resolverAtor } from '@/lib/ator';
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
@@ -197,16 +198,43 @@ function extrairJanela(
   return null;
 }
 
-// POST /api/checkins  body: { student }
-// Alunos passam pelas travas (núcleo, dia, horário, GPS).
-// Admins logados (cookie de sessão do painel) registram de qualquer lugar,
-// e o admin de núcleo só pode marcar presença de alunos do próprio núcleo.
+// POST /api/checkins  body: { student? }
+// A identidade do aluno vem SEMPRE da sessão/ator resolvido no servidor —
+// o corpo não escolhe quem marca presença. Alunos passam pelas travas
+// (núcleo, dia, horário, GPS); responsável pode marcar em nome do tutelado
+// (sem GPS do aluno, exige vínculo ativo). Admins do painel têm bypass com
+// filtro de núcleo.
 export async function POST(req: Request) {
-  const { student } = await req.json();
+  const body = await req.json().catch(() => ({}));
+  const ator = await resolverAtor(req, body?.student?.id || null);
+  if (!ator || !ator.studentId) {
+    return NextResponse.json(
+      { error: 'Não autenticado. Entre na sua conta para registrar presença.' },
+      { status: 401 },
+    );
+  }
 
-  // ── CONFORMIDADE CADASTRAL (aluno sem CPF/RG/termo não registra presença) ──
-  const gate = await exigirConformidadeAluno(req, String(student?.id || ''));
-  if (!gate.ok) return gate.response;
+  // Dados do aluno SEMPRE do banco — nunca do corpo da requisição
+  const { data: studentRow } = await admin
+    .from('students')
+    .select('id, nome_completo, graduacao, nucleo, foto_url, telefone, data_nascimento, menor_de_idade, assinatura_responsavel, nome_responsavel, cpf_responsavel')
+    .eq('id', ator.studentId)
+    .maybeSingle();
+  if (!studentRow) {
+    return NextResponse.json({ error: 'Aluno não encontrado.' }, { status: 404 });
+  }
+  type StudentCtx = {
+    id: string; nome_completo: string; graduacao: string | null; nucleo?: string;
+    foto_url: string | null; telefone: string | null; lat?: number | null; lng?: number | null;
+    local_nome?: string | null; local_endereco?: string | null; local_map_url?: string | null;
+  };
+  const student = studentRow as unknown as StudentCtx & { nucleo: string | null };
+
+  // ── CONFORMIDADE CADASTRAL (sem CPF/RG/termo não registra presença) ────────
+  // Responsável respondendo pelo tutelado não é bloqueado pelo termo do menor
+  // (a responsabilidade é dele), mas os documentos do aluno continuam exigidos.
+  const gate = await exigirConformidadeAluno(req, String(student.id));
+  if (!gate.ok && ator.emNomeDe !== 'responsavel') return gate.response;
 
   // ── SESSÃO DE ADMIN (bypass das travas, com filtro de núcleo) ──
   let adminNucleo: string | null = null; // null = sem admin; 'geral' = admin geral/owner
@@ -329,18 +357,18 @@ export async function POST(req: Request) {
 
   // Auditoria: registro de presença
   await appendAudit({
-    actor: adminNucleo ? `admin:${sess?.u || ''}` : student.id,
+    actor: adminNucleo ? `admin:${sess?.u || ''}` : (ator.emNomeDe === 'responsavel' ? `resp:${ator.studentId}` : student.id as string),
     actor_type: adminNucleo ? 'admin' : 'student',
     action: 'presenca_registrada',
-    target_id: student.id,
-    target_name: student.nome_completo,
+    target_id: student.id as string,
+    target_name: student.nome_completo as string,
     details: {
       nucleo: student.nucleo || 'Sem núcleo',
       local: student.local_nome || null,
       coords_origem: (student.nucleo && typeof student.lat === 'number' && typeof student.lng === 'number') ? 'nucleo_do_aluno' : 'gps_dispositivo',
       hora,
       data: today,
-      registrado_por: adminNucleo ? (sess?.u || 'admin') : 'proprio_aluno',
+      registrado_por: adminNucleo ? (sess?.u || 'admin') : (ator.emNomeDe === 'responsavel' ? 'responsavel' : 'proprio_aluno'),
       fora_do_dia_de_treino: false,
     },
   });
