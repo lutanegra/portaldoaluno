@@ -163,10 +163,19 @@ export function ChangelogModal({ open, onClose, aoAbrir }: { open: boolean; onCl
 }
 
 /** Rodapé oficial — usar em todas as telas de entrada do sistema. */
-export default function AppFooter({ variante = 'simples' }: { variante?: 'capa' | 'simples' }) {
+export default function AppFooter({ variante = 'simples', abrirAutomaticamente = false, onFechar }: { variante?: 'capa' | 'simples'; abrirAutomaticamente?: boolean; onFechar?: () => void }) {
   const [modalOpen, setModalOpen] = useState(false);
   const { temNovidade, marcarVista } = useNovidades();
   const ano = new Date().getFullYear();
+
+  useEffect(() => {
+    if (abrirAutomaticamente) setModalOpen(true);
+  }, [abrirAutomaticamente]);
+
+  const fechar = () => {
+    setModalOpen(false);
+    onFechar?.();
+  };
 
   return (
     <>
@@ -190,14 +199,18 @@ export default function AppFooter({ variante = 'simples' }: { variante?: 'capa' 
             )}
           </button>
         )}
-        <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.32)', lineHeight: 1.7 }}>
-          © {ano} Ginga Gestão · Todos os direitos reservados.
-          <br />
-          <span style={{ color: 'rgba(255,255,255,0.24)' }}>v{APP_VERSION}</span>
+          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.32)', lineHeight: 1.7 }}>
+            © {ano} Ginga Gestão · Todos os direitos reservados.
+            <br />
+            <span style={{ color: 'rgba(255,255,255,0.24)' }}>v{APP_VERSION}</span>
+          </div>
         </div>
-      </div>
 
-      <ChangelogModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <ChangelogModal
+        open={modalOpen}
+        onClose={fechar}
+        aoAbrir={() => marcarVista()}
+      />
     </>
   );
 }

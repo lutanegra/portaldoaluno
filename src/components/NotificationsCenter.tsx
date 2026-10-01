@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IconBell, IconX, IconCheck, IconGear, IconWarn, IconTrash } from '@/components/icons';
 import { usePush, type PushState } from '@/hooks/usePush';
+import { changelogParaAluno, versaoReferenciaAluno, CATEGORIA_META as CHANGELOG_META, type ChangelogCategoria } from '@/components/changelog';
 
 export type NotificacaoItem = {
   id: string;
@@ -62,6 +63,70 @@ const CATEGORIAS_CONFIG: Array<{ key: string; label: string; desc: string; col: 
   { key: 'sistema', label: 'Sistema', desc: 'Manutenções e novidades da plataforma', col: 'system_enabled' },
 ];
 
+/** Histórico de novidades (changelog) como o aluno vê — reutiliza o modal do rodapé. */
+const ORDEM_CATEGORIAS_NOVIDADES: ChangelogCategoria[] = ['novo', 'melhorias', 'interface', 'correcoes', 'seguranca', 'desempenho'];
+const NOVIDADES_SEEN_KEY = 'pa_changelog_visto';
+
+function dataBR(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function NovidadesView() {
+  const entradas = changelogParaAluno();
+  useEffect(() => {
+    try { localStorage.setItem(NOVIDADES_SEEN_KEY, versaoReferenciaAluno()); window.dispatchEvent(new Event('pa-changelog-visto')); } catch {}
+  }, []);
+  if (entradas.length === 0) {
+    return <div style={{ color: '#8f8f8f', fontSize: '0.82rem', textAlign: 'center', padding: 24 }}>Nenhuma novidade publicada ainda.</div>;
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <p style={{ margin: '2px 4px 0', fontSize: '0.78rem', color: '#a3a3a3', lineHeight: 1.5 }}>
+        O que mudou de verdade no seu app — recursos novos, correções e segurança.
+      </p>
+      {entradas.map((entry, ei) => {
+        const grupos = ORDEM_CATEGORIAS_NOVIDADES
+          .map(cat => ({ cat, itens: entry.itens.filter(i => i.categoria === cat) }))
+          .filter(g => g.itens.length > 0);
+        return (
+          <div key={entry.versao} style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '14px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.86rem', fontWeight: 800, color: ei === 0 ? '#FF9200' : '#f5f5f4' }}>v{entry.versao}</span>
+              <span style={{ fontSize: '0.72rem', color: '#8f8f8f' }}>{dataBR(entry.data)}</span>
+              {ei === 0 && (
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#4ade80', background: 'rgba(74,222,128,0.10)', border: '1px solid rgba(74,222,128,0.35)', borderRadius: 999, padding: '2px 8px' }}>Atual</span>
+              )}
+            </div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f5f5f4', margin: '6px 0 4px' }}>{entry.titulo}</div>
+            <p style={{ margin: 0, fontSize: '0.79rem', lineHeight: 1.5, color: '#b3b3b3' }}>{entry.descricao}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 10 }}>
+              {grupos.map(({ cat, itens }) => {
+                const meta = CHANGELOG_META[cat];
+                return (
+                  <div key={cat}>
+                    <span style={{ display: 'inline-block', fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.07em', textTransform: 'uppercase', color: meta.cor, background: meta.bg, border: `1px solid ${meta.border}`, borderRadius: 999, padding: '2px 9px', marginBottom: 5 }}>
+                      {meta.label}
+                    </span>
+                    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {itens.map((item, ii) => (
+                        <li key={ii} style={{ display: 'flex', gap: 8, fontSize: '0.78rem', lineHeight: 1.5, color: '#cfcfcf' }}>
+                          <span aria-hidden="true" style={{ color: meta.cor, flexShrink: 0, marginTop: 1 }}>•</span>
+                          <span>{item.texto}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function quando(iso: string): string {
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
@@ -95,7 +160,7 @@ export default function NotificationsCenter({
   onNavigate?: (destino: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<'lista' | 'config'>('lista');
+  const [view, setView] = useState<'lista' | 'config' | 'novidades'>('lista');
   const [items, setItems] = useState<NotificacaoItem[]>([]);
   const [prefs, setPrefs] = useState<Preferencias>(null);
   const [dispositivos, setDispositivos] = useState<DispositivoItem[]>([]);
@@ -103,7 +168,26 @@ export default function NotificationsCenter({
   const [carregando, setCarregando] = useState(false);
   const [msg, setMsg] = useState('');
   const [montado, setMontado] = useState(false);
+  const [temNovidade, setTemNovidade] = useState(false);
   const push = usePush(authenticated);
+
+  // Ponto laranja no sino enquanto houver novidade não vista (mesma regra do botão da capa).
+  const sincronizarNovidade = useCallback(() => {
+    try {
+      const visto = localStorage.getItem(NOVIDADES_SEEN_KEY) || '';
+      setTemNovidade(!!visto && visto !== versaoReferenciaAluno());
+    } catch { setTemNovidade(false); }
+  }, []);
+
+  useEffect(() => {
+    sincronizarNovidade();
+    window.addEventListener('pa-changelog-visto', sincronizarNovidade);
+    window.addEventListener('storage', sincronizarNovidade);
+    return () => {
+      window.removeEventListener('pa-changelog-visto', sincronizarNovidade);
+      window.removeEventListener('storage', sincronizarNovidade);
+    };
+  }, [sincronizarNovidade]);
 
   // O painel precisa de portal: dentro do header com backdrop-filter ele fica
   // preso no contexto de empilhamento do cabeçalho (altura do header apenas).
@@ -253,7 +337,24 @@ export default function NotificationsCenter({
                     Marcar todas como lidas ({naoLidas})
                   </button>
                 )}
+                {view === 'novidades' && (
+                  <span style={{ fontSize: '0.72rem', color: '#8f8f8f' }}>Histórico de atualizações</span>
+                )}
               </div>
+              {view === 'lista' && (
+                <button
+                  onClick={() => { setView('novidades'); sincronizarNovidade(); }}
+                  className="press"
+                  aria-label="Novidades — histórico de atualizações"
+                  title="Novidades"
+                  style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 999, border: '1px solid rgba(255,146,0,0.4)', background: 'rgba(255,146,0,0.10)', color: '#FF9200', fontWeight: 700, fontSize: '0.74rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  ✦ Novidades
+                  {temNovidade && (
+                    <span aria-label="Nova versão disponível" style={{ position: 'absolute', top: -3, right: -1, width: 10, height: 10, borderRadius: '50%', background: '#FF9200', boxShadow: '0 0 8px rgba(255,146,0,0.8)' }} />
+                  )}
+                </button>
+              )}
               <button onClick={() => (view === 'config' ? setView('lista') : setView('config'))} aria-label={view === 'config' ? 'Voltar às notificações' : 'Configurar notificações'} className="press"
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.05)', color: '#d4d4d4', cursor: 'pointer' }}>
                 {view === 'config' ? <IconChevronLeft /> : <IconGear size={16} />}
@@ -295,6 +396,8 @@ export default function NotificationsCenter({
                   })}
                 </>
               )}
+
+              {view === 'novidades' && <NovidadesView />}
 
               {view === 'config' && (
                 <>

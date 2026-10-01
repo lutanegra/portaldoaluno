@@ -76,6 +76,19 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.4.0',
+    data: '2026-10-01',
+    titulo: 'Entrada direta no app, Novidades no sino e assinatura eletrônica no termo',
+    descricao:
+      'Quem já tem conta agora entra direto no app, sem digitar senha de novo, e o sino de notificações ganhou acesso às novidades. O Termo de Responsabilidade passou a pedir a assinatura eletrônica do responsável, que aparece no documento para impressão/PDF junto com o nome do grupo.',
+    itens: [
+      { categoria: 'novo', texto: 'Login permanente: com a conta já criada, o app abre direto no seu perfil — a sessão se renova a cada visita e você só digita senha novamente se sair da conta.' },
+      { categoria: 'novo', texto: 'O responsável assina o Termo de Responsabilidade com assinatura eletrônica desenhada na tela, registrada com data e identificação do dispositivo.' },
+      { categoria: 'melhorias', texto: 'O sino de notificações agora tem a aba ✦ Novidades — o histórico de atualizações fica a um toque dentro do app (o botão continua na tela de login).' },
+      { categoria: 'melhorias', texto: 'O documento do termo para imprimir/PDF sai com a assinatura do responsável e o nome do grupo (Centro Cultural Luta Negra) no lugar do nome da plataforma.' },
+    ],
+  },
+  {
     versao: '1.3.3',
     data: '2026-10-01',
     titulo: 'Histórico de novidades separado por público',

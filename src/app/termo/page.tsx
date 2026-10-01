@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { menorDeIdade } from '@/lib/idade';
+import AssinaturaCanvas from '@/components/AssinaturaCanvas';
 
 interface Student {
   id: string;
@@ -19,22 +20,37 @@ interface Student {
   assinatura_pai: boolean;
   assinatura_mae: boolean;
   menor_de_idade: boolean;
+  assinatura_png?: string | null;
 }
+
+const ORG_PADRAO = 'Centro Cultural Luta Negra';
 
 function TermoContent() {
   const params = useSearchParams();
   const studentId = params.get('id');
 
   const [student, setStudent] = useState<Student | null>(null);
+  const [orgNome, setOrgNome] = useState(ORG_PADRAO);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [erro, setErro] = useState('');
+  const [assinaturaPng, setAssinaturaPng] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     nome_responsavel: '',
     cpf_responsavel: '',
   });
+  const [assinatura, setAssinatura] = useState('');
+
+  useEffect(() => {
+    // Nome do grupo vem da configuração do sistema (com fallback local)
+    fetch('/api/public/config')
+      .then(r => (r.ok ? r.json() : null))
+      .then(c => { if (c?.organization_name) setOrgNome(c.organization_name); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!studentId) { setNotFound(true); setLoading(false); return; }
@@ -49,6 +65,10 @@ function TermoContent() {
         const s = await res.json() as Student;
         setStudent(s);
         setForm({ nome_responsavel: s.nome_responsavel || '', cpf_responsavel: s.cpf_responsavel || '' });
+        if (s.assinatura_responsavel) {
+          setSaved(true);
+          setAssinaturaPng(s.assinatura_png || null);
+        }
         setLoading(false);
         return;
       }
@@ -62,6 +82,7 @@ function TermoContent() {
       const s = { ...data, assinatura_pai: data.assinatura_pai ?? false, assinatura_mae: data.assinatura_mae ?? false } as Student;
       setStudent(s);
       setForm({ nome_responsavel: s.nome_responsavel || '', cpf_responsavel: s.cpf_responsavel || '' });
+      if (s.assinatura_responsavel) setSaved(true);
     } catch {
       setNotFound(true);
     }
@@ -76,33 +97,51 @@ function TermoContent() {
     return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
   };
 
+  const cpfValido = (() => {
+    const d = form.cpf_responsavel.replace(/\D/g, '');
+    if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+    let soma = 0;
+    for (let i = 0; i < 9; i++) soma += parseInt(d[i]) * (10 - i);
+    let r = (soma * 10) % 11; if (r === 10 || r === 11) r = 0;
+    if (r !== parseInt(d[9])) return false;
+    soma = 0;
+    for (let i = 0; i < 10; i++) soma += parseInt(d[i]) * (11 - i);
+    r = (soma * 10) % 11; if (r === 10 || r === 11) r = 0;
+    return r === parseInt(d[10]);
+  })();
+
+  const podeAssinar = !!form.nome_responsavel.trim() && cpfValido && !!assinatura;
+
   const handleSave = async () => {
     if (!student) return;
     if (!form.nome_responsavel.trim()) {
-      alert('Preencha o nome do responsável antes de salvar.');
+      setErro('Preencha o nome do responsável antes de salvar.');
       return;
     }
+    if (!assinatura) {
+      setErro('Falta a assinatura — desenhe no espaço indicado.');
+      return;
+    }
+    setErro('');
     setSaving(true);
     try {
       // Salva via API server-side (usa service role, mais confiável)
       const res = await fetch(`/api/termo?id=${student.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome_responsavel: form.nome_responsavel, cpf_responsavel: form.cpf_responsavel }),
+        body: JSON.stringify({
+          nome_responsavel: form.nome_responsavel,
+          cpf_responsavel: form.cpf_responsavel,
+          assinatura_trajeto: assinatura,
+        }),
       });
-      if (!res.ok) throw new Error('api error');
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || 'api error');
+      if (d.assinatura_png) setAssinaturaPng(d.assinatura_png);
       setSaved(true);
       setStudent(prev => prev ? { ...prev, ...form, assinatura_responsavel: true } : prev);
-    } catch {
-      // Fallback direto ao Supabase
-      const { error } = await supabase.from('students').update({
-        nome_responsavel: form.nome_responsavel,
-        cpf_responsavel: form.cpf_responsavel,
-        assinatura_responsavel: true,
-      }).eq('id', student.id);
-      if (error) { alert('Erro ao salvar. Tente novamente.'); setSaving(false); return; }
-      setSaved(true);
-      setStudent(prev => prev ? { ...prev, ...form, assinatura_responsavel: true } : prev);
+    } catch (e) {
+      setErro(e instanceof Error && e.message !== 'api error' ? e.message : 'Erro ao salvar. Tente novamente.');
     }
     setSaving(false);
   };
@@ -140,7 +179,7 @@ function TermoContent() {
           <img src="/logo-portal-aluno.png" alt="Logo Portal Aluno" style={{ width: 110, height: 110, objectFit: 'contain', marginBottom: 14, display: 'block', margin: '0 auto 14px' }} />
           <h1 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: 4 }}>Termo de Autorização</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-            Portal Aluno
+            {orgNome}
           </p>
         </div>
 
@@ -175,14 +214,14 @@ function TermoContent() {
             {/* Texto do termo */}
             <p style={{ textAlign: 'justify', lineHeight: 1.9, marginBottom: 28, fontSize: '0.93rem' }}>
               Eu, responsável legal pelo menor inscrito, autorizo sua participação nas atividades de capoeira
-              realizadas pela <strong>Portal Aluno</strong>, estando ciente
+              realizadas pelo <strong>{orgNome}</strong>, estando ciente
               das atividades físicas envolvidas.
             </p>
 
             <hr style={{ border: 'none', borderTop: '1px dashed rgba(220,38,38,0.3)', marginBottom: 24 }} />
 
             {/* Campos responsável */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 28, fontFamily: 'sans-serif' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20, fontFamily: 'sans-serif' }}>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
                   Responsável <span style={{ color: '#dc2626' }}>*</span>
@@ -209,8 +248,39 @@ function TermoContent() {
               </div>
             </div>
 
+            {/* Assinatura eletrônica */}
+            <div style={{ fontFamily: 'sans-serif' }}>
+              <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+                Assinatura do Responsável <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              {saved ? (
+                assinaturaPng ? (
+                  <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 10, padding: 8, textAlign: 'center' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={assinaturaPng} alt="Assinatura do responsável" style={{ height: 90, maxWidth: '100%', objectFit: 'contain' }} />
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', border: '1.5px dashed var(--border)', borderRadius: 10, padding: 18, textAlign: 'center' }}>
+                    Assinatura registrada em {hoje}
+                  </div>
+                )
+              ) : (
+                <AssinaturaCanvas onTrajeto={(t, valido) => setAssinatura(valido ? t : '')} altura={150} />
+              )}
+              <div style={{ marginTop: 10, fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                A assinatura eletrônica registra a manifestação de vontade por meio eletrônico, com data, hora e identificação do dispositivo.
+              </div>
+            </div>
+
           </div>
         </div>
+
+        {/* Erro */}
+        {erro && (
+          <div style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.35)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, color: '#f87171', fontSize: '0.84rem', fontWeight: 600 }}>
+            {erro}
+          </div>
+        )}
 
         {/* Botão salvar / status */}
         {saved ? (
@@ -221,19 +291,19 @@ function TermoContent() {
         ) : (
           <button
             onClick={handleSave}
-            disabled={saving || !form.nome_responsavel.trim()}
+            disabled={saving || !podeAssinar}
             style={{
               width: '100%', padding: '16px',
-              background: form.nome_responsavel.trim() ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : 'var(--bg-input)',
-              border: form.nome_responsavel.trim() ? 'none' : '1px solid var(--border)',
-              color: form.nome_responsavel.trim() ? '#fff' : 'var(--text-secondary)',
+              background: podeAssinar ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : 'var(--bg-input)',
+              border: podeAssinar ? 'none' : '1px solid var(--border)',
+              color: podeAssinar ? '#fff' : 'var(--text-secondary)',
               borderRadius: 12, fontWeight: 700, fontSize: '1rem',
-              cursor: form.nome_responsavel.trim() ? 'pointer' : 'not-allowed',
+              cursor: podeAssinar ? 'pointer' : 'not-allowed',
               transition: 'all 0.2s',
-              boxShadow: form.nome_responsavel.trim() ? '0 4px 16px rgba(220,38,38,0.3)' : 'none',
+              boxShadow: podeAssinar ? '0 4px 16px rgba(220,38,38,0.3)' : 'none',
             }}
           >
-            {saving ? 'Salvando...' : '✍ Confirmar e Salvar Termo'}
+            {saving ? 'Salvando...' : '✍ Confirmar e Assinar Termo'}
           </button>
         )}
       </div>

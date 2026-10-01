@@ -17,6 +17,8 @@ import { idadeEm, menorDeIdade } from '@/lib/idade';
 import AppFooter from '@/components/AppFooter';
 import PerfilGuardiaoCard from '@/components/PerfilGuardiaoCard';
 import NotificationsCenter from '@/components/NotificationsCenter';
+import AssinaturaCanvas from '@/components/AssinaturaCanvas';
+import { useSystemConfig } from '@/hooks/useSystemConfig';
 import FrequenciaCard from './FrequenciaCard';
 
 /** Título de seção com ícone SVG à esquerda (substitui os h2 com emoji). */
@@ -136,6 +138,7 @@ function getGradColor(grad: string) {
 }
 
 export default function AlunoPage() {
+  const { config: sysConfig } = useSystemConfig();
   const [session, setSession] = useState<{ student_id: string; username: string } | null>(null);
   // Contexto de perfil: o próprio ou um tutelado (troca não muda a identidade logada)
   const [perfis, setPerfis] = useState<{ student_id: string; nome_completo: string; foto_url: string | null; tipo: 'proprio' | 'tutelado' | 'responsavel' }[]>([]);
@@ -284,6 +287,8 @@ export default function AlunoPage() {
   const [termoSaving, setTermoSaving] = useState(false);
   const [termoSaved, setTermoSaved] = useState(false);
   const [termoMsg, setTermoMsg] = useState('');
+  const [termoAssinatura, setTermoAssinatura] = useState('');
+  const [termoAssinaturaPng, setTermoAssinaturaPng] = useState<string | null>(null);
 
   // ── Ficha Financeira (inline view) ────────────────────────────────────────
   const [fichaFin, setFichaFin] = useState<Record<string, unknown> | null>(null);
@@ -345,14 +350,16 @@ export default function AlunoPage() {
         if (abaUrl) setActiveTab(abaUrl as Tab);
       } catch { /* ignore */ }
 
-      // Sessão persistente: cookie HttpOnly assinado (server valida e devolve o aluno)
+      // Sessão persistente: cookie HttpOnly assinado (server valida, renova e
+      // devolve o perfil ativo — o app abre direto no último usado)
       fetch('/api/aluno/auth', { cache: 'no-store' })
         .then(r => r.json())
         .then(d => {
           if (d.authenticated && d.session?.student_id) {
             setSession({ student_id: d.session.student_id, username: d.session.username });
             if (d.student) setStudent(d.student);
-            loadStudentData(d.session.student_id, true);
+            const alvo = d.perfil_ativo || d.session.student_id;
+            loadStudentData(alvo, true);
           } else {
             setLoading(false);
           }
@@ -792,8 +799,16 @@ export default function AlunoPage() {
         cpf_responsavel: student.cpf_responsavel as string || '',
       });
       if (student.assinatura_responsavel) setTermoSaved(true);
+      // Assinatura registrada volta como imagem (para o documento impresso)
+      if (student.assinatura_responsavel && !termoAssinaturaPng) {
+        fetch(`/api/termo?id=${student.id}`)
+          .then(r => (r.ok ? r.json() : null))
+          .then(d => { if (d?.assinatura_png) setTermoAssinaturaPng(d.assinatura_png); })
+          .catch(() => {});
+      }
     }
-  }, [student]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.id, student?.assinatura_responsavel]);
 
   // ── Conformidade cadastral (documentos + termo de menor) ───────────────────
   const docsAluno: StudentDocsLike | null = student ? {
@@ -3498,6 +3513,7 @@ export default function AlunoPage() {
             const cpfRespDigits = cpfDigits(termoForm.cpf_responsavel || '');
             if (!cpfRespDigits) { setTermoMsg('O CPF do responsável é obrigatório.'); return; }
             if (!isValidCPF(cpfRespDigits)) { setTermoMsg('CPF do responsável inválido — confira os 11 dígitos.'); return; }
+            if (!termoAssinatura) { setTermoMsg('Falta a assinatura do responsável — desenhe no espaço indicado.'); return; }
             setTermoSaving(true); setTermoMsg('');
             try {
               const res = await fetch('/api/aluno/dados', {
@@ -3510,35 +3526,51 @@ export default function AlunoPage() {
                 }),
               });
               if (!res.ok) throw new Error('api');
-              // Also set assinatura_responsavel via the termo API
-              await fetch(`/api/termo?id=${session.student_id}`, {
+              // Registra assinatura + evidências e marca o termo como assinado
+              const resTermo = await fetch(`/api/termo?id=${session.student_id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nome_responsavel: termoForm.nome_responsavel, cpf_responsavel: termoForm.cpf_responsavel }),
+                body: JSON.stringify({
+                  nome_responsavel: termoForm.nome_responsavel,
+                  cpf_responsavel: termoForm.cpf_responsavel,
+                  assinatura_trajeto: termoAssinatura,
+                }),
               });
+              const dTermo = await resTermo.json().catch(() => ({}));
+              if (!resTermo.ok) throw new Error(dTermo.error || 'termo');
+              if (dTermo.assinatura_png) setTermoAssinaturaPng(dTermo.assinatura_png);
               setTermoSaved(true);
               setStudent(prev => prev ? { ...prev, nome_responsavel: termoForm.nome_responsavel, cpf_responsavel: termoForm.cpf_responsavel, assinatura_responsavel: true } : prev);
-              setTermoMsg('Termo assinado e salvo com sucesso!');
-            } catch { setTermoMsg('Erro ao salvar. Tente novamente.'); }
+              setTermoMsg('✓ Termo assinado e salvo com sucesso!');
+            } catch (e) { setTermoMsg(e instanceof Error && e.message !== 'api' && e.message !== 'termo' ? e.message : 'Erro ao salvar. Tente novamente.'); }
             setTermoSaving(false);
           };
+          const orgNome = sysConfig.organization_name || 'Centro Cultural Luta Negra';
+          const assinaturaImg = termoAssinaturaPng;
           const handlePrint = () => {
             const w = window.open('', '_blank', 'width=720,height=900');
             if (!w) return;
-            w.document.write(`<!DOCTYPE html><html><head><title>Termo — ${student.nome_completo}</title><style>body{font-family:Georgia,serif;max-width:680px;margin:40px auto;padding:20px;color:#111}h1{text-align:center;font-size:1.3rem}p{line-height:1.9;text-align:justify}.box{background:#f9f9f9;border:1px solid #ccc;padding:14px 18px;border-radius:8px;margin-bottom:20px;font-family:sans-serif}.label{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.06em;color:#666}.value{font-weight:700;font-size:0.95rem}.sig{margin-top:40px;display:flex;justify-content:space-between}.line{border-top:1px solid #333;width:260px;text-align:center;padding-top:6px;font-size:0.8rem;font-family:sans-serif}</style></head><body>
+            const assinaturaHtml = assinaturaImg
+              ? `<div style="text-align:center"><img src="${assinaturaImg}" alt="Assinatura do responsável" width="220" height="71" style="display:block;margin:0 auto" /></div>`
+              : '';
+            w.document.write(`<!DOCTYPE html><html><head><title>Termo — ${student.nome_completo}</title><style>body{font-family:Georgia,serif;max-width:680px;margin:40px auto;padding:20px;color:#111}h1{text-align:center;font-size:1.3rem}p{line-height:1.9;text-align:justify}.box{background:#f9f9f9;border:1px solid #ccc;padding:14px 18px;border-radius:8px;margin-bottom:20px;font-family:sans-serif}.label{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.06em;color:#666}.value{font-weight:700;font-size:0.95rem}.sig{margin-top:40px;display:flex;justify-content:space-between;align-items:flex-end}.line{border-top:1px solid #333;width:260px;text-align:center;padding-top:6px;font-size:0.8rem;font-family:sans-serif}.evid{margin-top:26px;font-size:0.68rem;color:#555;font-family:sans-serif;text-align:center;border-top:1px solid #ddd;padding-top:10px}</style></head><body>
               <h1>Termo de Autorização para Prática de Capoeira</h1>
-              <p style="text-align:center;font-size:0.9rem;margin-bottom:24px">Portal Aluno</p>
+              <p style="text-align:center;font-size:0.9rem;margin-bottom:24px">${orgNome}</p>
               <div class="box">
                 <div class="label">Aluno</div><div class="value">${student.nome_completo}</div>
                 <div class="label" style="margin-top:8px">Núcleo</div><div class="value">${student.nucleo || '—'}</div>
                 <div class="label" style="margin-top:8px">Data de Nascimento</div><div class="value">${student.data_nascimento ? new Date((student.data_nascimento as string)+'T12:00:00').toLocaleDateString('pt-BR') : '—'}</div>
                 <div class="label" style="margin-top:8px">Data</div><div class="value">${hoje}</div>
               </div>
-              <p>Eu, <strong>${termoForm.nome_responsavel || '________________________'}</strong>, portador(a) do CPF <strong>${termoForm.cpf_responsavel || '___.___.___-__'}</strong>, responsável legal pelo menor <strong>${student.nome_completo}</strong>, autorizo sua participação nas atividades de capoeira realizadas pela <strong>Portal Aluno</strong>, estando ciente das atividades físicas envolvidas, e assumindo a responsabilidade integral pela participação do menor nas referidas atividades.</p>
+              <p>Eu, <strong>${termoForm.nome_responsavel || '________________________'}</strong>, portador(a) do CPF <strong>${termoForm.cpf_responsavel || '___.___.___-__'}</strong>, responsável legal pelo menor <strong>${student.nome_completo}</strong>, autorizo sua participação nas atividades de capoeira realizadas pelo <strong>${orgNome}</strong>, estando ciente das atividades físicas envolvidas, e assumindo a responsabilidade integral pela participação do menor nas referidas atividades.</p>
               <div class="sig">
-                <div class="line">Assinatura do Responsável</div>
+                <div>
+                  ${assinaturaHtml}
+                  <div class="line">Assinatura do Responsável</div>
+                </div>
                 <div class="line">Local e Data</div>
               </div>
+              <div class="evid">Documento assinado eletronicamente pelo responsável em ${hoje}, com registro de evidências (data, hora e dispositivo) no sistema ${orgNome === 'Centro Cultural Luta Negra' ? 'do grupo' : ''}. ${assinaturaImg ? 'Assinatura eletrônica reproduzida acima.' : ''}</div>
             </body></html>`);
             w.document.close();
             w.focus();
@@ -3606,7 +3638,7 @@ export default function AlunoPage() {
                     <div><span style={{ color: '#a3a3a3' }}>Data: </span><strong>{hoje}</strong></div>
                   </div>
                   <p style={{ textAlign: 'justify', lineHeight: 1.9, marginBottom: 22, fontSize: '0.9rem' }}>
-                    Eu, responsável legal pelo menor acima identificado, autorizo sua participação nas atividades de capoeira realizadas pela <strong>Portal Aluno</strong>, estando ciente das atividades físicas envolvidas, e assumindo a responsabilidade integral pela participação do menor nas referidas atividades.
+                    Eu, responsável legal pelo menor acima identificado, autorizo sua participação nas atividades de capoeira realizadas pelo <strong>{orgNome}</strong>, estando ciente das atividades físicas envolvidas, e assumindo a responsabilidade integral pela participação do menor nas referidas atividades.
                   </p>
                   <hr style={{ border: 'none', borderTop: '1px dashed rgba(0,0,0,0.15)', marginBottom: 20 }} />
                   {/* Campos do responsável */}
@@ -3630,17 +3662,41 @@ export default function AlunoPage() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                       <div style={{ fontSize: '0.78rem', color: '#a3a3a3', lineHeight: 1.5 }}>
-                        Assinatura digital via sistema Portal Aluno<br />
+                        Assinatura eletrônica registrada com data e dispositivo<br />
                         <span style={{ fontSize: '0.7rem' }}>{hoje}</span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Assinatura eletrônica do responsável */}
+                  <div style={{ marginTop: 18 }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#d4d4d4', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+                      Assinatura do Responsável <span style={{ color: '#f87171' }}>*</span>
+                    </label>
+                    {termoSaved ? (
+                      termoAssinaturaPng ? (
+                        <div style={{ background: '#fff', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: 8, textAlign: 'center' }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={termoAssinaturaPng} alt="Assinatura do responsável" style={{ height: 90, maxWidth: '100%', objectFit: 'contain' }} />
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.78rem', color: '#a3a3a3', border: '1.5px dashed #d1d5db', borderRadius: 10, padding: '18px', textAlign: 'center' }}>
+                          Assinatura registrada em {hoje}
+                        </div>
+                      )
+                    ) : (
+                      <AssinaturaCanvas
+                        onTrajeto={(t, valido) => setTermoAssinatura(valido ? t : '')}
+                        altura={150}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
 
               {!termoSaved ? (
-                <button onClick={handleSaveTermo} disabled={termoSaving || !termoForm.nome_responsavel.trim() || !cpfDigits(termoForm.cpf_responsavel || '')}
-                  style={{ background: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') ? `linear-gradient(135deg, #dc2626, #b91c1c)` : '#2e2e2e', color: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') ? '#fff' : '#9ca3af', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') ? 'pointer' : 'not-allowed', boxShadow: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') ? '0 4px 14px rgba(220,38,38,0.35)' : 'none' }}>
+                <button onClick={handleSaveTermo} disabled={termoSaving || !termoForm.nome_responsavel.trim() || !cpfDigits(termoForm.cpf_responsavel || '') || !termoAssinatura}
+                  style={{ background: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') && termoAssinatura ? `linear-gradient(135deg, #dc2626, #b91c1c)` : '#2e2e2e', color: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') && termoAssinatura ? '#fff' : '#9ca3af', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') && termoAssinatura ? 'pointer' : 'not-allowed', boxShadow: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') && termoAssinatura ? '0 4px 14px rgba(220,38,38,0.35)' : 'none' }}>
                   {termoSaving ? 'Salvando...' : 'Confirmar e Assinar Termo'}
                 </button>
               ) : (
