@@ -65,6 +65,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Apenas Owner ou Admin Geral podem excluir alunos definitivamente.' }, { status: 403 });
     }
 
+    // Backup completo do estado atual ANTES da exclusão definitiva (rede de segurança).
+    const { backupPreOperacao } = await import('@/lib/backupSistema');
+    await backupPreOperacao(key, 'exclusao_definitiva_aluno');
+
     // 1) Snapshot do aluno (para auditoria e limpeza da lixeira)
     const { data: student } = await supabaseAdmin
       .from('students')

@@ -145,3 +145,6 @@ export const IconMail = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
 
 export const IconSearch = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
   base(size, style, strokeWidth, <><circle cx="11" cy="11" r="6.5" /><path d="m16 16 5 5" /></>);
+
+export const IconDownload = ({ size = 20, style, strokeWidth = 2 }: IconProps) =>
+  base(size, style, strokeWidth, <><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></>);

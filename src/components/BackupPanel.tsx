@@ -115,7 +115,7 @@ export default function BackupPanel({ onImported }: { onImported?: () => void })
         <div>
           <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>Backup dos Alunos</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-            Cópia de segurança automática a cada inscrição, edição ou exclusão — com histórico de 30 cópias no servidor.
+            Cópia da planilha de alunos a cada inscrição ou exclusão. O backup completo do sistema (presenças, chamadas, contas e configurações) fica na aba Config. Backup.
           </div>
         </div>
       </div>

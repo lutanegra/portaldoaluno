@@ -19,6 +19,10 @@ export async function POST(req: NextRequest) {
     const rows: Record<string, string>[] = body.rows || [];
     if (!rows.length) return NextResponse.json({ error: 'Nenhum registro enviado.' }, { status: 400 });
 
+    // Backup completo do estado atual ANTES da importação em massa (rede de segurança).
+    const { backupPreOperacao } = await import('@/lib/backupSistema');
+    await backupPreOperacao(__g.session.u, 'importacao_csv');
+
     const result = await applyStudentRows(rows);
     return NextResponse.json(result);
   } catch (err) {

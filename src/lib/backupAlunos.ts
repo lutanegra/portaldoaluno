@@ -6,8 +6,8 @@ import { getTenantId } from '@/lib/tenants';
  * Backup automático dos alunos.
  * - Gera o MESMO CSV canônico do botão "Exportar CSV Completo".
  * - Guarda no bucket privado "photos", pasta backups/.
- * - Mantém cópia estável (alunos-latest.csv) + histórico rotativo (30 cópias)
- *   indexado em backups/index.json.
+ * - Mantém cópia estável (alunos-latest.csv) + histórico rotativo
+ *   (quantidade definida em Config. Backup) indexado em backups/index.json.
  * - A restauração reaproveita a mesma lógica de upsert da importação manual.
  */
 
@@ -20,7 +20,15 @@ const BUCKET = 'photos';
 const DIR = 'backups';
 const LATEST_KEY = `${DIR}/alunos-latest.csv`;
 const INDEX_KEY = `${DIR}/index.json`;
-const KEEP = 30;
+
+/** Limite de cópias: segue a retenção configurada em Config. Backup (mín. 3, padrão 30). */
+async function keepLimit(): Promise<number> {
+  try {
+    const { loadSettings } = await import('@/lib/backupSistema');
+    const s = await loadSettings();
+    return Math.max(3, s.manter);
+  } catch { return 30; }
+}
 
 export type BackupIndexItem = {
   filename: string;
@@ -176,7 +184,8 @@ export async function runBackupAlunos(actor: string): Promise<{ ok: true; item: 
       por: actor || 'sistema',
     };
     const old = await readIndex();
-    const history = [item, ...old.filter(i => i.filename !== filename)].slice(0, KEEP);
+    const keep = await keepLimit();
+    const history = [item, ...old.filter(i => i.filename !== filename)].slice(0, keep);
     await writeIndex(history);
 
     // Remove cópias antigas fora da janela de retenção

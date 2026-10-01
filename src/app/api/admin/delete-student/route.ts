@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requirePanelAdmin } from '@/lib/adminGuard';
-import { autoBackupAfterChange } from '@/lib/backupAlunos';
+import { backupPreOperacao } from '@/lib/backupSistema';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'dummy-key-for-build';
+
+// Use service role to bypass RLS
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // DELETE /api/admin/delete-student - Delete a student using service role
 export async function DELETE(req: NextRequest) {
@@ -18,8 +21,8 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'ID do aluno é obrigatório' }, { status: 400 });
     }
 
-    // Use service role to bypass RLS
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Backup completo do estado atual ANTES da exclusão da lixeira (rede de segurança).
+    try { await backupPreOperacao(__g.session.u, 'exclusao_aluno'); } catch {}
 
     const { error } = await supabase
       .from('students')
@@ -30,9 +33,6 @@ export async function DELETE(req: NextRequest) {
       console.error('Erro ao excluir aluno:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    // Backup automático pós-exclusão (melhor esforço, não bloqueia a resposta)
-    try { await autoBackupAfterChange(__g.session.u, 'exclusao_aluno'); } catch {}
 
     return NextResponse.json({ ok: true });
   } catch (err) {

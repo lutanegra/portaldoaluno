@@ -109,6 +109,12 @@ async function saveConfig(config: SystemConfig): Promise<void> {
 // GET - Carrega configuracoes
 export async function GET() {
   try {
+    // Rede de segurança do backup automático: cada leitura da configuração
+    // verifica no servidor se a cópia agendada venceu (melhor esforço, sem custo).
+    try {
+      const { runDueBackupIfNeeded } = await import('@/lib/backupSistema');
+      runDueBackupIfNeeded(false).catch(() => {});
+    } catch { /* nunca bloqueia a configuração */ }
     const config = await loadConfig();
     return NextResponse.json(config);
   } catch (err: any) {

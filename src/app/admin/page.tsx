@@ -17,6 +17,7 @@ import { invalidateConfigCache } from '@/hooks/useSystemConfig';
 import EditAccountModal from '@/components/EditAccountModal';
 import MyAccountCard from '@/components/MyAccountCard';
 import BackupPanel from '@/components/BackupPanel';
+import BackupSistemaPanel from '@/components/BackupSistemaPanel';
 import { IconHome, IconUser, IconLogout, IconMenu, IconX, IconFolder, IconMapPin, IconWallet, IconChart, IconChevron, IconMedal, IconDoc, IconGear, IconTrash, IconEye, IconLock, IconBell, IconNote, IconMusic, IconBerimbau, IconBag, IconStar, IconWarn, IconMail as IconMailOk, IconRefresh } from '@/components/icons';
 
 
@@ -663,7 +664,7 @@ const TAB_ICONS: Record<string, IconComp> = {
   '🔭': IconEye, '👤': IconUser, '🎓': IconMedal, '🔐': IconLock, '📌': IconBell,
   '📝': IconNote, '📚': IconDoc, '📣': IconBell, '🎵': IconMusic, '🥋': IconBerimbau,
   '💰': IconWallet, '📧': IconNote, '🏛️': IconFolder, '📦': IconBag, '💝': IconStar,
-  '🏢': IconFolder, '*': IconGear, '📊': IconChart, '🏆': IconStar, '🔍': IconChart,
+  '🛡️': IconLock, '🏢': IconFolder, '*': IconGear, '📊': IconChart, '🏆': IconStar, '🔍': IconChart,
   '⚠️': IconWarn,
 };
 
@@ -931,7 +932,7 @@ export default function AdminPage() {
   const [deleteAdminPass, setDeleteAdminPass] = useState('');
   const [matriculaEditNum, setMatriculaEditNum] = useState('');
   const [matriculaEditPass, setMatriculaEditPass] = useState('');
-  const [activeTab, setActiveTab] = useState<'alunos' | 'presencas' | 'relatorio' | 'ranking' | 'certificado' | 'financeiro' | 'doacoes' | 'editais' | 'materiais' | 'patrimonio' | 'rascunhos' | 'dados-faltantes' | 'manual' | 'eventos' | 'lixeira' | 'justificativas' | 'contas' | 'auditoria' | 'responsaveis' | 'docs-historicos' | 'bibliografia' | 'estatuto' | 'regimento' | 'informacoes' | 'playlist' | 'minha-conta' | 'email-config' | 'mural' | 'aluno-view' | 'restauracao' | 'organograma' | 'hierarquia' | 'nucleos' | 'system-config'>('alunos');
+  const [activeTab, setActiveTab] = useState<'alunos' | 'presencas' | 'relatorio' | 'ranking' | 'certificado' | 'financeiro' | 'doacoes' | 'editais' | 'materiais' | 'patrimonio' | 'rascunhos' | 'dados-faltantes' | 'manual' | 'eventos' | 'lixeira' | 'justificativas' | 'contas' | 'auditoria' | 'responsaveis' | 'docs-historicos' | 'bibliografia' | 'estatuto' | 'regimento' | 'informacoes' | 'playlist' | 'minha-conta' | 'email-config' | 'backup' | 'mural' | 'aluno-view' | 'restauracao' | 'organograma' | 'hierarquia' | 'nucleos' | 'system-config'>('alunos');
   const [institucionalExpanded, setInstitucionalExpanded] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   // Área do Aluno — visualização pelo admin
@@ -2435,6 +2436,7 @@ export default function AdminPage() {
               buttons: [
                 { key: 'financeiro',  icon: '💰', label: 'Administrativo', badge: finAlertCount > 0 ? finAlertCount : undefined },
                 { key: 'email-config', icon: '📧', label: 'Config. E-mail', geralOnly: true },
+                { key: 'backup', icon: '🛡️', label: 'Config. Backup', geralOnly: true },
                 { key: 'patrimonio',  icon: '🏛️', label: 'Patrimonio' },
                 { key: 'materiais',   icon: '📦', label: 'Materiais' },
                 { key: 'doacoes',     icon: '💝', label: 'Doacoes', geralOnly: true },
@@ -12230,6 +12232,19 @@ Suporte Ginga Gestão.`
       )}
 
       {/* ===== ABA CONFIGURACOES DO SISTEMA (Owner only) ===== */}
+      {/* ===== ABA CONFIG. BACKUP (Owner/Admin Geral) ===== */}
+      {activeTab === 'backup' && activeNucleo === 'geral' && (
+        <div style={{ paddingTop: 24 }}>
+          <div style={{ marginBottom: 20 }}>
+            <h2 style={{ margin: '0 0 4px', fontSize: '1.15rem', color: 'var(--text-primary)' }}>Configurações → Backup</h2>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              Cópia completa e automática de todos os dados do sistema, com histórico, retenção e restauração.
+            </p>
+          </div>
+          <BackupSistemaPanel isOwner={isOwner} />
+        </div>
+      )}
+
       {activeTab === 'system-config' && isOwner && (
         <div style={{ paddingTop: 24 }}>
           <div style={{ marginBottom: 20 }}>

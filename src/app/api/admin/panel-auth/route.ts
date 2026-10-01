@@ -30,6 +30,7 @@ import {
   type PanelRole,
 } from '@/lib/panelSession';
 import { sendEmail } from '@/lib/email';
+import { runDueBackupIfNeeded } from '@/lib/backupSistema';
 
 export const dynamic = 'force-dynamic';
 
@@ -133,6 +134,9 @@ export async function POST(req: NextRequest) {
       action: 'login_admin',
       details: { nucleo: user.nucleo, nucleos: accNucleos(user), papel: role },
     });
+    // Rede de segurança do backup automático: cada login no painel verifica no
+    // servidor se a cópia agendada venceu (disparo assíncrono, resposta imediata).
+    runDueBackupIfNeeded(false).catch(() => {});
     const res = NextResponse.json({
       ok: true,
       nucleo: user.nucleo,
