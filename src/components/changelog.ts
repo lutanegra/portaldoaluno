@@ -76,6 +76,20 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.4.1',
+    data: '2026-10-01',
+    titulo: 'Correções no cadastro e salvamento de dados',
+    descricao:
+      'A criação de conta voltou a funcionar: todos os dados do formulário são salvos e o número de matrícula é gerado automaticamente. Cadastros feitos pelo painel e pelo aluno voltaram a salvar de verdade — inclusive núcleo e data de nascimento.',
+    itens: [
+      { categoria: 'correcoes', texto: 'Criação de conta de aluno e de responsável restaurada: nome, e-mail, telefone, data de nascimento e CPF são gravados e a conta nasce logada.' },
+      { categoria: 'correcoes', texto: 'Editar cadastro no painel salva novamente todas as informações — havia um bloqueio de segurança do banco que impedia a gravação sem avisar.', publico: 'admin' },
+      { categoria: 'correcoes', texto: 'Núcleo escolhido na edição volta a ficar salvo no aluno.', publico: 'admin' },
+      { categoria: 'correcoes', texto: 'Data de nascimento não desaparece mais do formulário de edição ao reabrir o cadastro salvo.', publico: 'admin' },
+      { categoria: 'seguranca', texto: 'Regra de proteção de dados do banco complementada para permitir exatamente as gravações do painel — nada além disso.', publico: 'admin' },
+    ],
+  },
+  {
     versao: '1.4.0',
     data: '2026-10-01',
     titulo: 'Entrada direta no app, Novidades no sino e assinatura eletrônica no termo',

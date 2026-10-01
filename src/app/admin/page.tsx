@@ -9,7 +9,6 @@ import Link from 'next/link';
 import Carteirinha from '@/components/Carteirinha';
 import AlunoViewer from '@/components/AlunoViewer';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
-import { getTenantIdByKey } from '@/lib/tenants';
 import WhatsappFilaPanel from '@/components/WhatsappFilaPanel';
 import ResponsaveisPanel from '@/components/ResponsaveisPanel';
 import MuralAdmin from '@/components/MuralAdmin';
@@ -1629,9 +1628,15 @@ export default function AdminPage() {
 
       // Auto-compute menor_de_idade from data_nascimento
       let menorDeIdadeComputed = editForm.menor_de_idade ?? false;
-      if (editForm.data_nascimento) {
+      // Normaliza a data para AAAA-MM-DD: o input date não aceita timestamp
+      // (ex.: "2005-04-12T03:00:00.000Z") e o valor ficava em branco ao reabrir.
+      const dataNascEdit = (() => {
+        const bruta = String(editForm.data_nascimento || '').trim();
+        return bruta ? bruta.slice(0, 10) : '';
+      })();
+      if (dataNascEdit) {
         try {
-          const dob = new Date(editForm.data_nascimento + 'T12:00:00');
+          const dob = new Date(dataNascEdit + 'T12:00:00');
           const today = new Date();
           const age = today.getFullYear() - dob.getFullYear() -
             (today < new Date(today.getFullYear(), dob.getMonth(), dob.getDate()) ? 1 : 0);
@@ -1639,16 +1644,17 @@ export default function AdminPage() {
         } catch { /* keep existing */ }
       }
 
-      // Auto-compute tenant_id from nucleo (dinamico)
-      const nucleoSlug = dynamicNucleos.find(n => n.nome === editForm.nucleo)?.slug ?? 'geral';
-      const tenantIdComputed = getTenantIdByKey(nucleoSlug) ?? undefined;
+      // Vínculo núcleo → tenant_id: o id vem direto da lista carregada do banco
+      // (tenants). O antigo mapa por slug marcava tudo como 'geral' e gravava o
+      // núcleo errado quando o aluno mudava de núcleo na edição.
+      const nucleoIdEdit = dynamicNucleos.find(n => n.nome === editForm.nucleo)?.id;
 
       // Core fields — always present in DB
       const corePayload: Record<string, any> = {
         nome_completo: editForm.nome_completo,
         cpf: editForm.cpf,
         identidade: editForm.identidade,
-        data_nascimento: editForm.data_nascimento,
+        data_nascimento: dataNascEdit,
         telefone: editForm.telefone,
         cep: editForm.cep,
         endereco: editForm.endereco,
@@ -1667,7 +1673,7 @@ export default function AdminPage() {
         menor_de_idade: menorDeIdadeComputed,
         autoriza_imagem: !!(editForm as any).autoriza_imagem,
         foto_url,
-        ...(tenantIdComputed ? { tenant_id: tenantIdComputed } : {}),
+        ...(nucleoIdEdit ? { tenant_id: nucleoIdEdit } : {}),
         // email included in core so it's saved even if optional columns (apelido/sexo) are missing
         email: (editForm as any).email !== undefined ? ((editForm as any).email || null) : undefined,
       };
