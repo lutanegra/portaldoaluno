@@ -30,7 +30,7 @@ export default function NucleoIndexPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(160deg,#0f172a,#1e293b)',
+      background: 'radial-gradient(1100px 520px at 50% -10%, rgba(255,146,0,0.14), rgba(11,11,12,1) 60%)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -45,7 +45,7 @@ export default function NucleoIndexPage() {
           alt={systemShort}
           style={{ width: 110, height: 'auto', marginBottom: 14, filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.5))' }}
         />
-        <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>
+        <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>
           Sistema de Gestao
         </div>
         <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', marginBottom: 6 }}>{systemShort}</div>

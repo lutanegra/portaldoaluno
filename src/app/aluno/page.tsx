@@ -821,7 +821,7 @@ export default function AlunoPage() {
               <div className="pa-alert pa-alert-error">{registerError}</div>
             )}
             {registerSuccess && (
-              <div className="pa-alert pa-alert-success">✅ {registerSuccess}</div>
+              <div className="pa-alert pa-alert-success">{registerSuccess}</div>
             )}
 
             <div className="pa-alert pa-alert-info">
@@ -1585,7 +1585,7 @@ export default function AlunoPage() {
                               style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 10px', fontSize: '0.85rem', outline: 'none' }} />
                           </div>
                         )}
-                        {solBatizadoMsg && <div style={{ fontSize: '0.78rem', color: solBatizadoMsg.startsWith('✅') ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{solBatizadoMsg}</div>}
+                        {solBatizadoMsg && <div style={{ fontSize: '0.78rem', color: solBatizadoMsg.startsWith('✓') ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{solBatizadoMsg}</div>}
                         <button disabled={solBatizadoSaving} onClick={async () => {
                           if (!session) return;
                           if (!exigirConformidade(pendencias.some(p => p.campo === 'termo') ? 'termo' : 'dados')) return;
@@ -1603,14 +1603,14 @@ export default function AlunoPage() {
                             const updated = { ...ficha, batizado, student_id: session.student_id };
                             const saveRes = await fetch('/api/financeiro', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) });
                             if (!saveRes.ok) throw new Error();
-                            setSolBatizadoMsg('✅ Solicitação enviada! O administrador irá configurar os valores.');
+                            setSolBatizadoMsg('Solicitação enviada! O administrador irá configurar os valores.');
                             setFichaFinLoading(true);
                             fetch(`/api/financeiro?student_id=${session.student_id}`).then(r=>r.json()).then(d=>{setFichaFin(d);setFichaFinLoading(false);}).catch(()=>setFichaFinLoading(false));
                             setShowSolBatizado(false);
                           } catch { setSolBatizadoMsg('Erro ao enviar solicitação. Tente novamente.'); }
                           setSolBatizadoSaving(false);
                         }} style={{ padding: '8px 0', background: solBatizadoSaving ? '#2e2e2e' : 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: solBatizadoSaving ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}>
-                          {solBatizadoSaving ? '⏳ Enviando...' : '🥋 Enviar Solicitação'}
+                          {solBatizadoSaving ? 'Enviando...' : 'Enviar Solicitação'}
                         </button>
                       </div>
                     )}
@@ -1648,7 +1648,7 @@ export default function AlunoPage() {
                             style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 8px', fontSize: '0.85rem', outline: 'none' }} />
                         </div>
                       </div>
-                      {solUnifMsg && <div style={{ fontSize: '0.78rem', color: solUnifMsg.startsWith('✅') ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{solUnifMsg}</div>}
+                      {solUnifMsg && <div style={{ fontSize: '0.78rem', color: solUnifMsg.startsWith('✓') ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{solUnifMsg}</div>}
                       <button disabled={solUnifSaving || !solUnifItem.trim()} onClick={async () => {
                         if (!session || !solUnifItem.trim()) return;
                         if (!exigirConformidade(pendencias.some(p => p.campo === 'termo') ? 'termo' : 'dados')) return;
@@ -1661,7 +1661,7 @@ export default function AlunoPage() {
                           const updated = { ...ficha, uniformes: [...(ficha.uniformes || []), novoItem], student_id: session.student_id };
                           const saveRes = await fetch('/api/financeiro', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) });
                           if (!saveRes.ok) throw new Error();
-                          setSolUnifMsg('✅ Solicitação enviada!');
+                          setSolUnifMsg('Solicitação enviada!');
                           setSolUnifItem(''); setSolUnifTam('M'); setSolUnifQtd(1);
                           setFichaFinLoading(true);
                           fetch(`/api/financeiro?student_id=${session.student_id}`).then(r=>r.json()).then(d=>{setFichaFin(d);setFichaFinLoading(false);}).catch(()=>setFichaFinLoading(false));
@@ -1669,7 +1669,7 @@ export default function AlunoPage() {
                         } catch { setSolUnifMsg('Erro ao enviar solicitação. Tente novamente.'); }
                         setSolUnifSaving(false);
                       }} style={{ padding: '8px 0', background: (solUnifSaving || !solUnifItem.trim()) ? '#2e2e2e' : 'linear-gradient(135deg,#d97706,#b45309)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: (solUnifSaving || !solUnifItem.trim()) ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}>
-                        {solUnifSaving ? '⏳ Enviando...' : '👕 Enviar Solicitação'}
+                        {solUnifSaving ? 'Enviando...' : 'Enviar Solicitação'}
                       </button>
                     </div>
                   )}
@@ -1688,7 +1688,7 @@ export default function AlunoPage() {
             {!fichaFinLoading && fichaFin && (() => {
               const fin = fichaFin as any;
               const statusColor = (s: string) => s === 'pago' ? '#16a34a' : s === 'atrasado' ? '#dc2626' : '#f59e0b';
-              const statusLabel = (s: string) => s === 'pago' ? '✅ Pago' : s === 'atrasado' ? '❌ Atrasado' : '⏳ Pendente';
+              const statusLabel = (s: string) => s === 'pago' ? 'Pago' : s === 'atrasado' ? 'Atrasado' : 'Pendente';
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
@@ -1764,7 +1764,7 @@ export default function AlunoPage() {
                           <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', padding: '6px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.05)' }}>
                             <span>{u.descricao}{u.tamanho ? ` (${u.tamanho})` : ''} × {u.quantidade}</span>
                             <span style={{ color: u.status === 'entregue' ? '#16a34a' : u.status === 'cancelado' ? '#dc2626' : '#f59e0b', fontWeight: 700 }}>
-                              {u.status === 'entregue' ? '✅ Entregue' : u.status === 'confirmado' ? '✓ Confirmado' : u.status === 'cancelado' ? '✕ Cancelado' : '⏳ Solicitado'}
+                              {u.status === 'entregue' ? 'Entregue' : u.status === 'confirmado' ? '✓ Confirmado' : u.status === 'cancelado' ? '✕ Cancelado' : 'Solicitado'}
                             </span>
                           </div>
                         ))}
@@ -1925,8 +1925,8 @@ export default function AlunoPage() {
             <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 14 }}>Enviar nova justificativa</div>
               {justMsg && (
-                <div style={{ background: justMsgType === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${justMsgType === 'success' ? '#bbf7d0' : '#fecaca'}`, color: justMsgType === 'success' ? '#166534' : '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: '0.83rem' }}>
-                  {justMsgType === 'success' ? '✅ ' : '❌ '}{justMsg}
+                <div style={{ background: justMsgType === 'success' ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${justMsgType === 'success' ? 'rgba(34,197,94,0.35)' : 'rgba(220,38,38,0.35)'}`, color: justMsgType === 'success' ? '#86efac' : '#fca5a5', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: '0.83rem' }}>
+                  {justMsgType === 'success' ? '' : ''}{justMsg}
                 </div>
               )}
               <form onSubmit={handleSubmitJustificativa} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1975,9 +1975,9 @@ export default function AlunoPage() {
                       <span style={{
                         flexShrink: 0, padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700,
                         background: j.status === 'aprovado' ? '#dcfce7' : j.status === 'recusado' ? '#fee2e2' : '#fef9c3',
-                        color: j.status === 'aprovado' ? '#166534' : j.status === 'recusado' ? '#991b1b' : '#854d0e',
+                        color: j.status === 'aprovado' ? '#4ade80' : j.status === 'recusado' ? '#f87171' : '#fbbf24',
                       }}>
-                        {j.status === 'aprovado' ? '✅ Aprovada' : j.status === 'recusado' ? '❌ Recusada' : '⏳ Pendente'}
+                        {j.status === 'aprovado' ? 'Aprovada' : j.status === 'recusado' ? 'Recusada' : 'Pendente'}
                       </span>
                     </div>
                   ))}
@@ -2016,7 +2016,7 @@ export default function AlunoPage() {
             </div>
 
             {fotosMsg && (
-              <div style={{ padding: '10px 14px', background: fotosMsg.startsWith('✓') ? '#f0fdf4' : '#fef2f2', border: `1px solid ${fotosMsg.startsWith('✓') ? '#bbf7d0' : '#fecaca'}`, borderRadius: 10, fontSize: '0.83rem', color: fotosMsg.startsWith('✓') ? '#166534' : '#991b1b', fontWeight: 600 }}>
+              <div style={{ padding: '10px 14px', background: fotosMsg.startsWith('✓') ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${fotosMsg.startsWith('✓') ? 'rgba(34,197,94,0.35)' : 'rgba(220,38,38,0.35)'}`, borderRadius: 10, fontSize: '0.83rem', color: fotosMsg.startsWith('✓') ? '#86efac' : '#fca5a5', fontWeight: 600 }}>
                 {fotosMsg}
               </div>
             )}
@@ -2104,7 +2104,7 @@ export default function AlunoPage() {
             </div>
 
             {docsMsg && (
-              <div style={{ padding: '10px 14px', background: docsMsg.startsWith('✓') ? '#f0fdf4' : '#fef2f2', border: `1px solid ${docsMsg.startsWith('✓') ? '#bbf7d0' : '#fecaca'}`, borderRadius: 10, fontSize: '0.83rem', color: docsMsg.startsWith('✓') ? '#166534' : '#991b1b', fontWeight: 600 }}>
+              <div style={{ padding: '10px 14px', background: docsMsg.startsWith('✓') ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${docsMsg.startsWith('✓') ? 'rgba(34,197,94,0.35)' : 'rgba(220,38,38,0.35)'}`, borderRadius: 10, fontSize: '0.83rem', color: docsMsg.startsWith('✓') ? '#86efac' : '#fca5a5', fontWeight: 600 }}>
                 {docsMsg}
               </div>
             )}
@@ -2243,7 +2243,7 @@ export default function AlunoPage() {
                         style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     {contaMsg && (
-                      <div style={{ padding: '10px 14px', borderRadius: 10, background: contaMsgType === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${contaMsgType === 'success' ? '#bbf7d0' : '#fecaca'}`, color: contaMsgType === 'success' ? '#166534' : '#991b1b', fontSize: '0.83rem', fontWeight: 600 }}>
+                      <div style={{ padding: '10px 14px', borderRadius: 10, background: contaMsgType === 'success' ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${contaMsgType === 'success' ? 'rgba(34,197,94,0.35)' : 'rgba(220,38,38,0.35)'}`, color: contaMsgType === 'success' ? '#86efac' : '#fca5a5', fontSize: '0.83rem', fontWeight: 600 }}>
                         {contaMsg}
                       </div>
                     )}
@@ -2268,7 +2268,7 @@ export default function AlunoPage() {
                       } catch { setContaMsg('Erro de conexão.'); setContaMsgType('error'); }
                       setContaLoading(false);
                     }} style={{ background: 'linear-gradient(135deg,#1d4ed8,#1e40af)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontWeight: 700, fontSize: '0.9rem', cursor: contaLoading ? 'wait' : 'pointer', opacity: contaLoading ? 0.7 : 1 }}>
-                      {contaLoading ? '⏳ Salvando...' : 'Salvar Alterações'}
+                      {contaLoading ? 'Salvando...' : 'Salvar Alterações'}
                     </button>
                   </div>
                 </div>
@@ -2297,7 +2297,7 @@ export default function AlunoPage() {
                       </div>
                     ))}
                     {contaMsg && (
-                      <div style={{ padding: '10px 14px', borderRadius: 10, background: contaMsgType === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${contaMsgType === 'success' ? '#bbf7d0' : '#fecaca'}`, color: contaMsgType === 'success' ? '#166534' : '#991b1b', fontSize: '0.83rem', fontWeight: 600 }}>
+                      <div style={{ padding: '10px 14px', borderRadius: 10, background: contaMsgType === 'success' ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${contaMsgType === 'success' ? 'rgba(34,197,94,0.35)' : 'rgba(220,38,38,0.35)'}`, color: contaMsgType === 'success' ? '#86efac' : '#fca5a5', fontSize: '0.83rem', fontWeight: 600 }}>
                         {contaMsg}
                       </div>
                     )}
@@ -2354,7 +2354,7 @@ export default function AlunoPage() {
                         style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     {contaMsg && (
-                      <div style={{ padding: '10px 14px', borderRadius: 10, background: contaMsgType === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${contaMsgType === 'success' ? '#bbf7d0' : '#fecaca'}`, color: contaMsgType === 'success' ? '#166534' : '#991b1b', fontSize: '0.83rem', fontWeight: 600 }}>
+                      <div style={{ padding: '10px 14px', borderRadius: 10, background: contaMsgType === 'success' ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${contaMsgType === 'success' ? 'rgba(34,197,94,0.35)' : 'rgba(220,38,38,0.35)'}`, color: contaMsgType === 'success' ? '#86efac' : '#fca5a5', fontSize: '0.83rem', fontWeight: 600 }}>
                         {contaMsg}
                       </div>
                     )}
@@ -2372,7 +2372,7 @@ export default function AlunoPage() {
                       } catch { setContaMsg('Erro de conexão.'); setContaMsgType('error'); }
                       setContaLoading(false);
                     }} style={{ background: deleteConfirmText === 'EXCLUIR' ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : '#2e2e2e', color: deleteConfirmText === 'EXCLUIR' ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: '12px', fontWeight: 700, fontSize: '0.9rem', cursor: (contaLoading || deleteConfirmText !== 'EXCLUIR') ? 'not-allowed' : 'pointer', opacity: contaLoading ? 0.7 : 1 }}>
-                      {contaLoading ? '⏳ Excluindo...' : 'Excluir Minha Conta Definitivamente'}
+                      {contaLoading ? 'Excluindo...' : 'Excluir Minha Conta Definitivamente'}
                     </button>
                   </div>
                 </div>
@@ -2424,7 +2424,7 @@ export default function AlunoPage() {
                 setPlaylistItems(prev => [data.item, ...prev]);
                 setPlaylistAddUrl('');
                 setPlaylistAddTitle('');
-                setPlaylistMsg('✅ Link adicionado!');
+                setPlaylistMsg('Link adicionado!');
                 setPlaylistMsgType('success');
               } else {
                 setPlaylistMsg(data.error || 'Erro ao adicionar.');
@@ -2488,13 +2488,13 @@ export default function AlunoPage() {
                     style={{ width: '100%', border: '1.5px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                   {playlistMsg && (
-                    <div style={{ padding: '8px 12px', borderRadius: 8, background: playlistMsgType === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${playlistMsgType === 'success' ? '#bbf7d0' : '#fecaca'}`, color: playlistMsgType === 'success' ? '#166534' : '#991b1b', fontSize: '0.82rem', fontWeight: 600 }}>
+                    <div style={{ padding: '8px 12px', borderRadius: 8, background: playlistMsgType === 'success' ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${playlistMsgType === 'success' ? 'rgba(34,197,94,0.35)' : 'rgba(220,38,38,0.35)'}`, color: playlistMsgType === 'success' ? '#86efac' : '#fca5a5', fontSize: '0.82rem', fontWeight: 600 }}>
                       {playlistMsg}
                     </div>
                   )}
                   <button onClick={handleAddPlaylist} disabled={playlistAdding || !playlistAddUrl.trim()}
                     style={{ background: playlistAdding || !playlistAddUrl.trim() ? '#3a3a3a' : 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px', fontWeight: 700, fontSize: '0.88rem', cursor: playlistAdding || !playlistAddUrl.trim() ? 'not-allowed' : 'pointer' }}>
-                    {playlistAdding ? '⏳ Adicionando...' : 'Adicionar à Playlist'}
+                    {playlistAdding ? 'Adicionando...' : 'Adicionar à Playlist'}
                   </button>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
@@ -2694,7 +2694,7 @@ export default function AlunoPage() {
                     });
                   } catch { /* sincronização de e-mail é melhor-esforço */ }
                 }
-                setDadosMsg('✅ Dados salvos com sucesso!');
+                setDadosMsg('Dados salvos com sucesso!');
                 setDadosMsgType('success');
                 if (data.student) setStudent(data.student);
               } else {
@@ -2715,7 +2715,7 @@ export default function AlunoPage() {
               const data = await res.json();
               if (res.ok && data.foto_url) {
                 setStudent(prev => prev ? { ...prev, foto_url: data.foto_url } : prev);
-                setFotoMsg('✅ Foto atualizada com sucesso!');
+                setFotoMsg('Foto atualizada com sucesso!');
               } else {
                 setFotoMsg(data.error || 'Erro ao enviar foto.');
               }
@@ -2764,7 +2764,7 @@ export default function AlunoPage() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f5f5f4', marginBottom: 2 }}>Foto de Perfil</div>
                   <div style={{ fontSize: '0.72rem', color: '#a3a3a3', marginBottom: 8 }}>JPG, PNG — máx. 5 MB. Aparece na carteirinha e no painel.</div>
-                  {fotoMsg && <div style={{ fontSize: '0.75rem', color: fotoMsg.startsWith('✅') ? '#16a34a' : '#dc2626', marginBottom: 6, fontWeight: 600 }}>{fotoMsg}</div>}
+                  {fotoMsg && <div style={{ fontSize: '0.75rem', color: fotoMsg.startsWith('✓') ? '#16a34a' : '#dc2626', marginBottom: 6, fontWeight: 600 }}>{fotoMsg}</div>}
                   <input ref={fotoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFotoPick(f); e.target.value = ''; }} />
                   <button onClick={() => fotoInputRef.current?.click()} disabled={fotoUploading}
                     style={{ background: fotoUploading ? '#3a3a3a' : 'rgba(255,146,0,0.10)', color: fotoUploading ? '#8f8f8f' : '#FF9200', border: '1.5px solid rgba(255,146,0,0.4)', borderRadius: 8, padding: '7px 16px', fontWeight: 700, fontSize: '0.8rem', cursor: fotoUploading ? 'not-allowed' : 'pointer' }}>
@@ -2817,7 +2817,7 @@ export default function AlunoPage() {
               )}
 
               {dadosMsg && (
-                <div style={{ padding: '10px 14px', borderRadius: 10, background: dadosMsgType === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${dadosMsgType === 'success' ? '#bbf7d0' : '#fecaca'}`, color: dadosMsgType === 'success' ? '#166534' : '#991b1b', fontSize: '0.83rem', fontWeight: 600 }}>
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: dadosMsgType === 'success' ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${dadosMsgType === 'success' ? 'rgba(34,197,94,0.35)' : 'rgba(220,38,38,0.35)'}`, color: dadosMsgType === 'success' ? '#86efac' : '#fca5a5', fontSize: '0.83rem', fontWeight: 600 }}>
                   {dadosMsg}
                 </div>
               )}
@@ -2915,7 +2915,7 @@ export default function AlunoPage() {
                         const age = (new Date().getFullYear()) - parseInt(dob.slice(0,4));
                         const isMinor = age < 18;
                         if (isMinor) {
-                          setDadosMsg('⚠️ Aluno menor de idade detectado. O Termo de Responsabilidade é obrigatório — acesse a aba Termo.');
+                          setDadosMsg('Aluno menor de idade detectado. O Termo de Responsabilidade é obrigatório — acesse a aba Termo.');
                           setDadosMsgType('error');
                         }
                       }
@@ -2926,7 +2926,7 @@ export default function AlunoPage() {
                       if (age >= 18) return null;
                       return (
                         <div style={{ marginTop: 6, background: 'rgba(250,204,21,0.10)', border: '1px solid rgba(250,204,21,0.4)', borderRadius: 8, padding: '7px 10px', fontSize: '0.75rem', color: '#854d0e' }}>
-                          ⚠️ Menor de idade — Termo de Responsabilidade obrigatório.{' '}
+                          Menor de idade — Termo de Responsabilidade obrigatório.{' '}
                           <button type="button" onClick={() => setActiveTab('termo')} style={{ background: '#854d0e', color: '#fff', border: 'none', borderRadius: 5, padding: '2px 8px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', marginLeft: 4 }}>Assinar Termo →</button>
                         </div>
                       );
@@ -2969,7 +2969,7 @@ export default function AlunoPage() {
                           const r = await fetch(`/api/check-email?email=${encodeURIComponent(val)}&exclude_id=${session.student_id}`);
                           const d = await r.json();
                           if (d.exists) {
-                            setDadosMsg(`⚠️ Este e-mail já está cadastrado para outro aluno: ${d.nome}`);
+                            setDadosMsg(`Este e-mail já está cadastrado para outro aluno: ${d.nome}`);
                             setDadosMsgType('error');
                           }
                         } catch { /* silent */ }
@@ -2977,7 +2977,7 @@ export default function AlunoPage() {
                       style={fs} placeholder="seu@email.com" />
                     {!dadosForm.email.trim() && (
                       <div style={{ marginTop: 6, background: 'rgba(255,146,0,0.10)', border: '1px solid rgba(255,146,0,0.35)', borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: '#9a3412', lineHeight: 1.5 }}>
-                        ⚠️ <strong>Sem e-mail vinculado, você corre o risco de perder o acesso à conta</strong> se esquecer sua senha — sem e-mail não há recuperação automática. Nesse caso, será preciso contatar o admin responsável do seu núcleo para redefinir o acesso.
+                        <strong>Sem e-mail vinculado, você corre o risco de perder o acesso à conta</strong> se esquecer sua senha — sem e-mail não há recuperação automática. Nesse caso, será preciso contatar o admin responsável do seu núcleo para redefinir o acesso.
                       </div>
                     )}
                   </div>
@@ -3103,7 +3103,7 @@ export default function AlunoPage() {
 
               <button onClick={handleSaveDados} disabled={dadosLoading}
                 style={{ background: dadosLoading ? '#3a3a3a' : 'linear-gradient(135deg, #FF9200, #d97706)', color: '#fff', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: dadosLoading ? 'not-allowed' : 'pointer', boxShadow: dadosLoading ? 'none' : '0 4px 14px rgba(255,146,0,0.35)' }}>
-                {dadosLoading ? '⏳ Salvando...' : 'Salvar Meus Dados'}
+                {dadosLoading ? 'Salvando...' : 'Salvar Meus Dados'}
               </button>
 
               <div style={{ fontSize: '0.72rem', color: '#8f8f8f', textAlign: 'center', lineHeight: 1.5 }}>
@@ -3149,7 +3149,7 @@ export default function AlunoPage() {
               });
               setTermoSaved(true);
               setStudent(prev => prev ? { ...prev, nome_responsavel: termoForm.nome_responsavel, cpf_responsavel: termoForm.cpf_responsavel, assinatura_responsavel: true } : prev);
-              setTermoMsg('✅ Termo assinado e salvo com sucesso!');
+              setTermoMsg('Termo assinado e salvo com sucesso!');
             } catch { setTermoMsg('Erro ao salvar. Tente novamente.'); }
             setTermoSaving(false);
           };
@@ -3198,10 +3198,10 @@ export default function AlunoPage() {
               </div>
 
               {/* Status badge */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: termoSaved ? '#f0fdf4' : '#fffbeb', border: `1px solid ${termoSaved ? '#bbf7d0' : '#fde68a'}`, borderRadius: 12, padding: '12px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: termoSaved ? 'rgba(34,197,94,0.1)' : '#fffbeb', border: `1px solid ${termoSaved ? '#bbf7d0' : '#fde68a'}`, borderRadius: 12, padding: '12px 16px' }}>
                 <span style={{ display: 'flex', color: termoSaved ? '#4ade80' : '#FF9200' }}>{termoSaved ? <IconStar size={26} /> : <IconClock size={26} />}</span>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: termoSaved ? '#166534' : '#92400e' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: termoSaved ? '#4ade80' : '#fbbf24' }}>
                     {termoSaved ? 'Termo assinado' : 'Assinatura pendente'}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: termoSaved ? '#15803d' : '#78350f' }}>
@@ -3216,7 +3216,7 @@ export default function AlunoPage() {
               </div>
 
               {termoMsg && (
-                <div style={{ padding: '10px 14px', borderRadius: 10, background: termoMsg.startsWith('✅') ? '#f0fdf4' : '#fef2f2', border: `1px solid ${termoMsg.startsWith('✅') ? '#bbf7d0' : '#fecaca'}`, color: termoMsg.startsWith('✅') ? '#166534' : '#991b1b', fontSize: '0.83rem', fontWeight: 600 }}>
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: termoMsg.startsWith('✓') ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${termoMsg.startsWith('✓') ? 'rgba(34,197,94,0.35)' : 'rgba(220,38,38,0.35)'}`, color: termoMsg.startsWith('✓') ? '#86efac' : '#fca5a5', fontSize: '0.83rem', fontWeight: 600 }}>
                   {termoMsg}
                 </div>
               )}
@@ -3272,7 +3272,7 @@ export default function AlunoPage() {
               {!termoSaved ? (
                 <button onClick={handleSaveTermo} disabled={termoSaving || !termoForm.nome_responsavel.trim() || !cpfDigits(termoForm.cpf_responsavel || '')}
                   style={{ background: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') ? `linear-gradient(135deg, #dc2626, #b91c1c)` : '#2e2e2e', color: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') ? '#fff' : '#9ca3af', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') ? 'pointer' : 'not-allowed', boxShadow: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') ? '0 4px 14px rgba(220,38,38,0.35)' : 'none' }}>
-                  {termoSaving ? '⏳ Salvando...' : 'Confirmar e Assinar Termo'}
+                  {termoSaving ? 'Salvando...' : 'Confirmar e Assinar Termo'}
                 </button>
               ) : (
                 <button onClick={handlePrint}

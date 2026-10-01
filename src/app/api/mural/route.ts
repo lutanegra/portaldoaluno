@@ -32,10 +32,33 @@ type MuralItem = {
   imagem_path?: string;
   autor: string;
   autor_login: string;
+  /** Legado: um núcleo (nome OU slug). Novo: nucleos[] com slugs. */
   nucleo?: string;
+  nucleos?: string[];
   created_at: string;
   updated_at?: string;
 };
+
+/** Slugs de todos os núcleos cujo nome corresponde ao valor legado gravado no item. */
+async function slugsLegados(nomes: string[]): Promise<string[]> {
+  const limpos = nomes.filter(Boolean);
+  if (limpos.length === 0) return [];
+  try {
+    const { data } = await supabaseAdmin.from('tenants').select('slug, nome');
+    const linhas = (data || []) as Array<{ slug: string; nome: string }>;
+    const alvo = limpos.map(v => v.toLowerCase());
+    return linhas.filter(l => alvo.includes(l.nome.toLowerCase()) || alvo.includes(l.slug.toLowerCase())).map(l => l.slug);
+  } catch {
+    return [];
+  }
+}
+
+/** Núcleos-alvo do item, sempre como slugs (legado nucleo + novo nucleos[]). */
+async function alvosDoItem(item: MuralItem): Promise<string[]> {
+  const novos = Array.isArray(item.nucleos) ? item.nucleos.filter(Boolean) : [];
+  const legado = item.nucleo ? await slugsLegados([item.nucleo]) : [];
+  return Array.from(new Set([...novos, ...legado]));
+}
 
 async function loadMural(): Promise<MuralItem[]> {
   try {
@@ -73,7 +96,28 @@ export async function GET(req: NextRequest) {
   const scope = params.get('scope') || '';
   const nucleoAluno = (params.get('nucleo') || '').trim();
   const items = await loadMural();
-  if (scope !== 'aluno') return NextResponse.json({ items });
+  if (scope !== 'aluno') {
+    // Painel: resolve nomes de exibição dos núcleos (etiquetas são slugs) e do autor
+    let mapa: Record<string, string> = {};
+    try {
+      const { data } = await supabaseAdmin.from('tenants').select('slug, nome');
+      mapa = Object.fromEntries(((data || []) as Array<{ slug: string; nome: string }>).map(l => [l.slug, l.nome]));
+    } catch {}
+    let creds: Record<string, PanelAccount> = {};
+    try { creds = await loadCreds(); } catch {}
+    const enriquecidos = await Promise.all(items.map(async i => {
+      const alvos = await alvosDoItem(i);
+      const legados = i.nucleo && !i.nucleos?.includes(i.nucleo) ? [i.nucleo] : [];
+      return {
+        ...i,
+        nucleos: alvos,
+        nucleos_nomes: alvos.map(s => mapa[s] || s),
+        nucleo_legado: legados[0],
+        autor_nome: creds[i.autor_login]?.nome?.trim() || i.autor || i.autor_login,
+      };
+    }));
+    return NextResponse.json({ items: enriquecidos });
+  }
 
   // Credenciais carregadas uma vez: itens sem etiqueta só alcançam todos os
   // núcleos quando o autor é owner/admin geral.
@@ -84,10 +128,27 @@ export async function GET(req: NextRequest) {
     return !!acc && accIsGeral(acc);
   };
 
-  const filtrados = items.filter(i => {
-    if (!i.nucleo) return autorEhGeral(i.autor_login);
-    return !!nucleoAluno && i.nucleo === nucleoAluno;
-  });
+  // Núcleo do aluno chega como nome de exibição — converto para slug para casar
+  // com as etiquetas (gravadas como slug). Legado: etiqueta gravada com nome.
+  let slugAluno = nucleoAluno.toLowerCase();
+  if (nucleoAluno) {
+    try {
+      const { data } = await supabaseAdmin.from('tenants').select('slug, nome');
+      const achou = ((data || []) as Array<{ slug: string; nome: string }>).find(l => l.nome.toLowerCase() === nucleoAluno.toLowerCase());
+      if (achou) slugAluno = String(achou.slug).toLowerCase();
+    } catch { /* segue com o valor bruto */ }
+  }
+
+  const filtrados: MuralItem[] = [];
+  for (const i of items) {
+    const alvos = await alvosDoItem(i);
+    if (alvos.length === 0) {
+      // Sem etiqueta: só owner/admin geral publicam para todos
+      if (autorEhGeral(i.autor_login)) filtrados.push(i);
+    } else if (slugAluno && alvos.includes(slugAluno)) {
+      filtrados.push(i);
+    }
+  }
   return NextResponse.json({ items: filtrados });
 }
 
@@ -110,15 +171,17 @@ export async function POST(req: NextRequest) {
     if (tipo === 'cartaz' && !imagemPath) return NextResponse.json({ error: 'Selecione a imagem do cartaz.' }, { status: 400 });
     if (tipo === 'aviso' && !texto) return NextResponse.json({ error: 'Escreva o texto do aviso.' }, { status: 400 });
 
-    // Admin de núcleo: precisa etiquetar um dos núcleos que gerencia
+    // Admin de núcleo: precisa etiquetar um dos núcleos que gerencia.
+    // Owner/admin geral: "exibir para todos" (sem etiqueta) ou múltiplos núcleos.
     const meusNucleos = Array.isArray(admin.acc.nucleos) ? admin.acc.nucleos.filter(Boolean) : [];
-    if (!admin.isGeral) {
-      if (!nucleo) {
-        return NextResponse.json({ error: 'Como admin de núcleo, selecione para qual dos seus núcleos o aviso será exibido.' }, { status: 403 });
-      }
-      if (meusNucleos.length > 0 && !meusNucleos.includes(nucleo)) {
-        return NextResponse.json({ error: 'Você só pode publicar para os núcleos que gerencia.' }, { status: 403 });
-      }
+    const slugsPedidos = Array.isArray(body.nucleos)
+      ? Array.from(new Set((body.nucleos as unknown[]).map(v => String(v).trim()).filter(Boolean)))
+      : (nucleo ? [nucleo] : []);
+    if (!admin.isGeral && slugsPedidos.length === 0) {
+      return NextResponse.json({ error: 'Como admin de núcleo, selecione para qual dos seus núcleos o aviso será exibido.' }, { status: 403 });
+    }
+    if (!admin.isGeral && meusNucleos.length > 0 && slugsPedidos.some(s => !meusNucleos.includes(s))) {
+      return NextResponse.json({ error: 'Você só pode publicar para os núcleos que gerencia.' }, { status: 403 });
     }
 
     const items = await loadMural();
@@ -130,7 +193,8 @@ export async function POST(req: NextRequest) {
       imagem_path: imagemPath || undefined,
       autor: admin.displayName,
       autor_login: admin.login,
-      nucleo: nucleo || undefined,
+      nucleo: undefined,
+      nucleos: slugsPedidos.length > 0 ? slugsPedidos : undefined,
       created_at: new Date().toISOString(),
     };
     items.unshift(novo);
@@ -142,7 +206,7 @@ export async function POST(req: NextRequest) {
       action: 'mural_criar',
       target_id: novo.id,
       target_name: titulo,
-      details: { tipo, nucleo: nucleo || null, com_imagem: !!imagemPath },
+      details: { tipo, nucleos: slugsPedidos, com_imagem: !!imagemPath },
     });
 
     return NextResponse.json({ ok: true, item: novo });
@@ -179,21 +243,27 @@ export async function PATCH(req: NextRequest) {
   const nucleo = String(body.nucleo ?? '').trim();
   if (!titulo) return NextResponse.json({ error: 'Informe um título.' }, { status: 400 });
 
-  // Admin de núcleo não pode soltar a etiqueta nem apontar para núcleo estranho
+  // Etiquetas-alvo: lista nova (nucleos[]) ou compat de um único valor.
+  // Admin de núcleo não pode soltar a etiqueta nem apontar para núcleo estranho.
   const meusNucleos = Array.isArray(admin.acc.nucleos) ? admin.acc.nucleos.filter(Boolean) : [];
-  if (!admin.isGeral) {
-    if (!nucleo) return NextResponse.json({ error: 'Selecione o núcleo do aviso.' }, { status: 403 });
-    if (meusNucleos.length > 0 && !meusNucleos.includes(nucleo)) {
-      return NextResponse.json({ error: 'Você só pode publicar para os núcleos que gerencia.' }, { status: 403 });
-    }
+  const slugsPedidos = Array.isArray(body.nucleos)
+    ? Array.from(new Set((body.nucleos as unknown[]).map(v => String(v).trim()).filter(Boolean)))
+    : (body.nucleo !== undefined ? (nucleo ? [nucleo] : []) : await alvosDoItem(alvo));
+  if (!admin.isGeral && slugsPedidos.length === 0) {
+    return NextResponse.json({ error: 'Selecione pelo menos um dos núcleos que você gerencia.' }, { status: 403 });
+  }
+  if (!admin.isGeral && meusNucleos.length > 0 && slugsPedidos.some(s => !meusNucleos.includes(s))) {
+    return NextResponse.json({ error: 'Você só pode publicar para os núcleos que gerencia.' }, { status: 403 });
   }
 
   alvo.titulo = titulo;
   alvo.texto = texto || undefined;
-  if (admin.isGeral) {
-    alvo.nucleo = nucleo || undefined;
+  const alvosAtuais = await alvosDoItem(alvo);
+  if (alvosAtuais.length === 0 && slugsPedidos.length === 0) {
+    // Legado "para todos" criado por owner/geral: sem etiqueta nova, permanece assim
   } else {
-    alvo.nucleo = nucleo;
+    alvo.nucleos = slugsPedidos.length > 0 ? slugsPedidos : undefined;
+    alvo.nucleo = undefined;
   }
   alvo.updated_at = new Date().toISOString();
   await saveMural(items);
@@ -204,7 +274,7 @@ export async function PATCH(req: NextRequest) {
     action: 'mural_editar',
     target_id: id,
     target_name: titulo,
-    details: { nucleo: alvo.nucleo || null },
+    details: { nucleos: slugsPedidos },
   });
 
   return NextResponse.json({ ok: true, item: alvo });

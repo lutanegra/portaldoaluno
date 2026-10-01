@@ -3,13 +3,13 @@
 /**
  * MuralAdmin — aba do painel para publicar avisos e cartazes no mural do aluno.
  * - Aviso: título + texto. Cartaz: título + imagem (upload para o bucket privado).
- * - Alvo: "Todos os núcleos" (só owner/admin geral) ou um núcleo específico.
+ * - Alvo: "Todos os núcleos" (só owner/admin geral) ou múltiplos núcleos.
  *   Admin de núcleo publica exclusivamente para os núcleos que gerencia.
  * - Edições: owner/admin geral gerenciam qualquer item; admin de núcleo só os
  *   próprios (também reforçado no servidor).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { IconBell, IconImage, IconMapPin, IconPencil, IconTrash, IconRefresh, IconWarn } from '@/components/icons';
+import { IconBell, IconImage, IconMapPin, IconPencil, IconTrash, IconRefresh, IconWarn, IconUser } from '@/components/icons';
 
 type MuralItem = {
   id: string;
@@ -19,12 +19,16 @@ type MuralItem = {
   imagem_path?: string;
   autor: string;
   autor_login: string;
-  nucleo?: string;
+  autor_nome?: string;
+  nucleo?: string;       // legado (nome bruto gravado antes dos slugs)
+  nucleo_legado?: string;
+  nucleos?: string[];    // slugs resolvidos pelo servidor
+  nucleos_nomes?: string[];
   created_at: string;
   updated_at?: string;
 };
 
-type MeInfo = { username: string; display_name?: string; nome?: string; is_owner: boolean; role?: string };
+type MeInfo = { username: string; display_name?: string; nome?: string; is_owner: boolean; role?: string; nucleos?: string[]; nucleo?: string };
 
 export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?: string }[] }) {
   const [items, setItems] = useState<MuralItem[]>([]);
@@ -32,7 +36,7 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
   const [tipo, setTipo] = useState<'aviso' | 'cartaz'>('aviso');
   const [titulo, setTitulo] = useState('');
   const [texto, setTexto] = useState('');
-  const [nucleo, setNucleo] = useState('');
+  const [alvos, setAlvos] = useState<string[]>([]); // slugs selecionados
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>('');
   const [saving, setSaving] = useState(false);
@@ -42,20 +46,31 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
   const [me, setMe] = useState<MeInfo | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Estado de edição (somente título/texto/etiqueta; a imagem do cartaz não muda)
+  // Estado de edição (somente título/texto/etiquetas; a imagem do cartaz não muda)
   const [editId, setEditId] = useState('');
   const [editTitulo, setEditTitulo] = useState('');
   const [editTexto, setEditTexto] = useState('');
-  const [editNucleo, setEditNucleo] = useState('');
+  const [editAlvos, setEditAlvos] = useState<string[]>([]);
   const [editSaving, setEditSaving] = useState(false);
 
   // Estado do formulário de confirmação de remoção
-  const [removeId, setRemoveId] = useState('');
   const [removeItem, setRemoveItem] = useState<MuralItem | null>(null);
   const [removeConfirm, setRemoveConfirm] = useState('');
   const [removeSending, setRemoveSending] = useState(false);
 
   const ehGeral = !!me && (me.is_owner || me.role === 'owner' || me.role === 'admin_geral');
+
+  // Núcleos que esta conta pode etiquetar (slugs; fallback para nome quando o
+  // seletor da página não trouxer slug — matching por nome no servidor).
+  const meusSlugs: string[] = Array.isArray(me?.nucleos) && me!.nucleos!.length > 0
+    ? me!.nucleos!
+    : (me?.nucleo ? [me.nucleo] : []);
+  const nucleosExibiveis = ehGeral
+    ? nucleos
+    : nucleos.filter(n => {
+        const s = (n.slug || n.nome).toLowerCase();
+        return meusSlugs.some(m => String(m).toLowerCase() === s);
+      });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -84,6 +99,7 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
     if (!titulo.trim()) { setErr('Dê um título ao aviso.'); return; }
     if (tipo === 'cartaz' && !file) { setErr('Selecione a imagem do cartaz.'); return; }
     if (tipo === 'aviso' && !texto.trim()) { setErr('Escreva o texto do aviso.'); return; }
+    if (!ehGeral && alvos.length === 0) { setErr('Selecione pelo menos um dos seus núcleos.'); return; }
     setSaving(true);
     try {
       let imagemPath = '';
@@ -98,12 +114,12 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
       const res = await fetch('/api/mural', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo, titulo: titulo.trim(), texto: texto.trim(), imagem_path: imagemPath, nucleo: nucleo.trim() }),
+        body: JSON.stringify({ tipo, titulo: titulo.trim(), texto: texto.trim(), imagem_path: imagemPath, nucleos: alvos }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'Erro ao publicar.');
       setMsg(tipo === 'cartaz' ? 'Cartaz publicado no mural!' : 'Aviso publicado no mural!');
-      setTitulo(''); setTexto(''); setNucleo(''); onFile(null);
+      setTitulo(''); setTexto(''); setAlvos([]); onFile(null);
       if (fileRef.current) fileRef.current.value = '';
       await load();
     } catch (e) {
@@ -116,7 +132,8 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
     setEditId(item.id);
     setEditTitulo(item.titulo);
     setEditTexto(item.texto || '');
-    setEditNucleo(item.nucleo || '');
+    // Etiquetas atuais do item; itens legados "para todos" começam sem seleção
+    setEditAlvos(Array.isArray(item.nucleos) ? item.nucleos : []);
     setMsg(''); setErr('');
   };
 
@@ -128,7 +145,7 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
       const res = await fetch('/api/mural', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: editId, titulo: editTitulo.trim(), texto: editTexto.trim(), nucleo: editNucleo.trim() }),
+        body: JSON.stringify({ id: editId, titulo: editTitulo.trim(), texto: editTexto.trim(), nucleos: editAlvos }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'Erro ao salvar a edição.');
@@ -143,7 +160,6 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
 
   const abrirRemocao = (item: MuralItem) => {
     setRemoveItem(item);
-    setRemoveId(item.id);
     setRemoveConfirm('');
     setMsg(''); setErr('');
   };
@@ -153,12 +169,11 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
     if (removeConfirm.trim() !== removeItem.titulo.trim()) return;
     setRemoveSending(true);
     try {
-      const res = await fetch(`/api/mural?id=${encodeURIComponent(removeId)}`, { method: 'DELETE' });
+      const res = await fetch(`/api/mural?id=${encodeURIComponent(removeItem.id)}`, { method: 'DELETE' });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'Erro ao remover.');
       setMsg('Item removido do mural.');
       setRemoveItem(null);
-      setRemoveId('');
       await load();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Erro ao remover.');
@@ -175,6 +190,59 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
     borderRadius: 10, padding: '10px 12px', fontSize: '0.88rem', color: '#f5f5f4', outline: 'none',
   };
   const lbl: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 700, color: '#a3a3a3', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' };
+
+  // Alternador reutilizável de núcleos (checkboxes estilizados)
+  const seletorNucleos = (selecionados: string[], setSel: (v: string[]) => void) => (
+    <div>
+      <label style={lbl}>Exibir para</label>
+      {ehGeral ? (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8, cursor: 'pointer', fontSize: '0.85rem', color: '#f5f5f4' }}>
+          <input
+            type="checkbox"
+            checked={selecionados.length === 0}
+            onChange={() => setSel([])}
+            style={{ width: 16, height: 16, accentColor: '#FF9200' }}
+          />
+          Todos os núcleos (sem etiqueta)
+        </label>
+      ) : null}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+        {nucleosExibiveis.map(n => {
+          const slug = (n.slug || n.nome).toLowerCase();
+          const on = selecionados.includes(slug);
+          return (
+            <button
+              key={slug}
+              type="button"
+              aria-pressed={on}
+              onClick={() => setSel(on ? selecionados.filter(x => x !== slug) : [...selecionados, slug])}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontWeight: 700, fontSize: '0.76rem',
+                padding: '7px 13px', borderRadius: 20,
+                border: on ? '1.5px solid rgba(255,146,0,0.65)' : '1px solid rgba(255,255,255,0.12)',
+                background: on ? 'rgba(255,146,0,0.14)' : 'rgba(255,255,255,0.04)',
+                color: on ? '#FF9200' : '#a3a3a3',
+                boxShadow: on ? '0 0 12px rgba(255,146,0,0.12)' : 'none',
+              }}
+            >
+              <IconMapPin size={12} /> {n.nome}
+            </button>
+          );
+        })}
+      </div>
+      <p style={{ margin: '8px 0 0', fontSize: '0.72rem', color: '#6b6b6b' }}>
+        {ehGeral
+          ? 'Sem núcleo selecionado, o aviso aparece para todos os alunos do app. Etiquete um ou mais núcleos para restringir.'
+          : 'Escolha um ou mais dos núcleos que você gerencia — só os alunos deles verão o aviso.'}
+      </p>
+    </div>
+  );
+
+  const rotulosAlvos = (item: MuralItem): string[] => {
+    if (Array.isArray(item.nucleos_nomes) && item.nucleos_nomes.length > 0) return item.nucleos_nomes;
+    if (item.nucleo_legado) return [item.nucleo_legado];
+    return [];
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -255,18 +323,7 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
             </div>
           )}
 
-          <div style={{ maxWidth: 340 }}>
-            <label style={lbl}>Exibir para</label>
-            <select style={inp} value={nucleo} onChange={e => setNucleo(e.target.value)}>
-              <option value="">{ehGeral ? 'Todos os núcleos' : 'Selecione o núcleo...'}</option>
-              {nucleos.map(n => <option key={n.nome} value={n.nome}>{n.nome}</option>)}
-            </select>
-            <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: '#6b6b6b' }}>
-              {ehGeral
-                ? 'Sem núcleo selecionado, o aviso aparece para todos os alunos do app.'
-                : 'Como admin de núcleo, escolha um dos núcleos que você gerencia — só os alunos dele verão o aviso.'}
-            </p>
-          </div>
+          {seletorNucleos(alvos, setAlvos)}
 
           <button onClick={publicar} disabled={saving}
             style={{
@@ -301,6 +358,7 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
           {filtrados.map(item => {
             const gerenciavel = podeGerenciar(item);
+            const rotulos = rotulosAlvos(item);
             return (
               <div key={item.id} style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 {item.tipo === 'cartaz' && item.imagem_path && (
@@ -312,10 +370,12 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
                       {item.tipo === 'cartaz' ? <IconImage size={10} /> : <IconBell size={10} />}
                       {item.tipo === 'cartaz' ? 'Cartaz' : 'Aviso'}
                     </span>
-                    {item.nucleo ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: '#a3a3a3', borderRadius: 7, padding: '2.5px 8px', fontSize: '0.64rem', fontWeight: 700 }}>
-                        <IconMapPin size={10} /> {item.nucleo}
-                      </span>
+                    {rotulos.length > 0 ? (
+                      rotulos.map(r => (
+                        <span key={r} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: '#a3a3a3', borderRadius: 7, padding: '2.5px 8px', fontSize: '0.64rem', fontWeight: 700 }}>
+                          <IconMapPin size={10} /> {r}
+                        </span>
+                      ))
                     ) : (
                       <span style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: '#a3a3a3', borderRadius: 7, padding: '2.5px 8px', fontSize: '0.64rem', fontWeight: 700 }}>Todos os núcleos</span>
                     )}
@@ -323,8 +383,8 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
                   <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#f5f5f4', lineHeight: 1.3 }}>{item.titulo}</div>
                   {item.texto && <div style={{ fontSize: '0.8rem', color: '#c9c9c9', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{item.texto}</div>}
                   <div style={{ marginTop: 'auto', paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.68rem', color: '#8f8f8f' }}>
-                      Publicado por <strong style={{ color: '#d4d4d4' }}>{item.autor || item.autor_login}</strong>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', color: '#8f8f8f' }}>
+                      <IconUser size={11} /> Publicado por <strong style={{ color: '#d4d4d4' }}>{item.autor_nome || item.autor || item.autor_login}</strong>
                       {' · '}{new Date(item.created_at).toLocaleDateString('pt-BR')}
                       {item.updated_at ? ` · editado ${new Date(item.updated_at).toLocaleDateString('pt-BR')}` : ''}
                     </span>
@@ -367,13 +427,7 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
                 <label style={lbl}>Texto</label>
                 <textarea style={{ ...inp, minHeight: 80, resize: 'vertical' }} value={editTexto} onChange={e => setEditTexto(e.target.value)} maxLength={1200} />
               </div>
-              <div>
-                <label style={lbl}>Exibir para</label>
-                <select style={inp} value={editNucleo} onChange={e => setEditNucleo(e.target.value)}>
-                  <option value="">{ehGeral ? 'Todos os núcleos' : 'Selecione o núcleo...'}</option>
-                  {nucleos.map(n => <option key={n.nome} value={n.nome}>{n.nome}</option>)}
-                </select>
-              </div>
+              {seletorNucleos(editAlvos, setEditAlvos)}
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
                 <button onClick={() => setEditId('')} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#e5e5e5', borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
                   Cancelar
@@ -397,24 +451,32 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
                 <IconWarn size={17} />
               </span>
               <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#fecaca' }}>Remover do mural</h3>
+            </div>            <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: '#e7c9c9', lineHeight: 1.5 }}>
+              Você está removendo <strong style={{ color: '#fecaca' }}>{removeItem.tipo === 'cartaz' ? 'o cartaz' : 'o aviso'}</strong> publicado por <strong style={{ color: '#fecaca' }}>{removeItem.autor_nome || removeItem.autor || removeItem.autor_login}</strong>.
+              Para confirmar, digite o título exato da publicação abaixo.
+            </p>
+            <div style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
+              <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#f8b4b4', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>Publicação</div>
+              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#fecaca' }}>{removeItem.titulo}</div>
             </div>
-            <p style={{ margin: '0 0 6px', fontSize: '0.85rem', color: '#e5e5e5', lineHeight: 1.55 }}>
-              Você está removendo <strong style={{ color: '#fca5a5' }}>"{removeItem.titulo}"</strong> ({removeItem.tipo === 'cartaz' ? 'cartaz' : 'aviso'}
-              {removeItem.nucleo ? ` · ${removeItem.nucleo}` : ' · todos os núcleos'}) publicado por {removeItem.autor || removeItem.autor_login}.
-            </p>
-            <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: '#a3a3a3', lineHeight: 1.5 }}>
-              {removeItem.imagem_path ? 'A imagem do cartaz também será apagada. ' : ''}Os alunos deixam de ver este item imediatamente.
-            </p>
-            <label style={lbl}>Digite o título do aviso para confirmar</label>
-            <input style={{ ...inp, marginBottom: 12 }} value={removeConfirm} onChange={e => setRemoveConfirm(e.target.value)}
-              placeholder={removeItem.titulo} autoFocus onKeyDown={e => { if (e.key === 'Enter') confirmarRemocao(); }} />
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <label style={lbl}>Digite o título para confirmar</label>
+            <input
+              style={{ ...inp, borderColor: 'rgba(220,38,38,0.35)' }}
+              value={removeConfirm}
+              onChange={e => setRemoveConfirm(e.target.value)}
+              placeholder={removeItem.titulo}
+              autoFocus
+            />
+            {removeConfirm.trim().length > 0 && removeConfirm.trim() !== removeItem.titulo.trim() && (
+              <div style={{ marginTop: 7, fontSize: '0.74rem', color: '#fca5a5' }}>O texto não corresponde ao título.</div>
+            )}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
               <button onClick={() => setRemoveItem(null)} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#e5e5e5', borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
                 Cancelar
               </button>
               <button onClick={confirmarRemocao} disabled={removeSending || removeConfirm.trim() !== removeItem.titulo.trim()}
-                style={{ background: removeConfirm.trim() === removeItem.titulo.trim() ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : 'rgba(220,38,38,0.3)', border: 'none', color: '#fff', borderRadius: 10, padding: '9px 18px', fontWeight: 800, fontSize: '0.82rem', cursor: removeSending ? 'wait' : 'pointer', opacity: removeConfirm.trim() === removeItem.titulo.trim() ? 1 : 0.55 }}>
-                {removeSending ? 'Removendo...' : 'Remover definitivamente'}
+                style={{ background: removeConfirm.trim() !== removeItem.titulo.trim() ? 'rgba(220,38,38,0.35)' : 'linear-gradient(135deg,#dc2626,#b91c1c)', border: 'none', color: '#fff', borderRadius: 10, padding: '9px 18px', fontWeight: 800, fontSize: '0.82rem', cursor: removeSending ? 'wait' : 'pointer', opacity: removeSending ? 0.7 : 1 }}>
+                {removeSending ? 'Removendo...' : 'Remover do mural'}
               </button>
             </div>
           </div>
@@ -424,7 +486,6 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
   );
 }
 
-/** Carrega a imagem assinada do bucket privado. */
 function MuralImage({ path }: { path: string }) {
   const [url, setUrl] = useState('');
   useEffect(() => {
@@ -435,12 +496,11 @@ function MuralImage({ path }: { path: string }) {
       .catch(() => {});
     return () => { alive = false; };
   }, [path]);
-
-  if (!url) return <div style={{ height: 140, background: 'rgba(255,255,255,0.04)' }} />;
+  if (!url) return <div style={{ aspectRatio: '16/9', background: 'rgba(255,255,255,0.04)' }} />;
   return (
-    <div style={{ maxHeight: 260, overflow: 'hidden', display: 'flex', justifyContent: 'center', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+    <div style={{ maxHeight: 260, overflow: 'hidden', display: 'flex', justifyContent: 'center', background: 'rgba(255,255,255,0.03)' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt="" style={{ width: '100%', objectFit: 'cover', maxHeight: 260 }} />
+      <img src={url} alt="" style={{ width: '100%', objectFit: 'cover' }} />
     </div>
   );
 }

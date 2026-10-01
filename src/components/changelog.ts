@@ -43,6 +43,21 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.1.0',
+    data: '2026-10-01',
+    titulo: 'Mural multi-núcleo, Minha Conta corrigida e padronização visual',
+    descricao:
+      'Correções nos fluxos do painel para contas que gerenciam vários núcleos e varredura de padronização visual: menos emojis, mais ícones de traço, e o mesmo vidro escuro com acento laranja em todas as telas.',
+    itens: [
+      { categoria: 'correcoes', texto: 'Mural: avisos voltaram a salvar para admin de núcleo (erro "não autorizado" / "sessão expirada" eliminado) e o nome de quem publicou agora aparece sempre correto.' },
+      { categoria: 'novo', texto: 'Mural: seleção múltipla de núcleos — o aviso pode ser exibido para vários núcleos de uma vez; admin de núcleo vê apenas os núcleos que gerencia.' },
+      { categoria: 'correcoes', texto: 'Gerenciar Núcleos: conta com mais de um núcleo agora enxerga e edita todos, não só o principal.' },
+      { categoria: 'correcoes', texto: 'Minha Conta: nome de exibição em todo o painel passa a ser o nome do admin (não mais o do núcleo); CPF continua salvo ao editar outros dados e o e-mail de recuperação aparece corretamente.' },
+      { categoria: 'interface', texto: 'Gerenciar Núcleos, Minha Conta, Config. E-mail e Área do Aluno (visualização) repaginados no padrão dark premium com ícones de traço no lugar de emojis.' },
+      { categoria: 'interface', texto: 'Documentos Históricos com nova aparência consistente e barra de documentos duplicada removida da visualização do aluno.' },
+    ],
+  },
+  {
     versao: '1.0.0',
     data: '2026-10-01',
     titulo: 'Primeira versão oficial',

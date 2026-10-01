@@ -7,7 +7,6 @@ import { getCheckins, getHistorico, removeCheckin, CheckinRecord } from '@/lib/c
 import ChamadaPanel from '@/components/ChamadaPanel';
 import Link from 'next/link';
 import Carteirinha from '@/components/Carteirinha';
-import DocumentsBar from '@/components/DocumentsBar';
 import AlunoViewer from '@/components/AlunoViewer';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { getTenantIdByKey } from '@/lib/tenants';
@@ -20,7 +19,7 @@ import BackupPanel from '@/components/BackupPanel';
 import BackupSistemaPanel from '@/components/BackupSistemaPanel';
 import VersionsCard from '@/components/VersionsCard';
 import AppFooter from '@/components/AppFooter';
-import { IconHome, IconUser, IconLogout, IconMenu, IconX, IconFolder, IconMapPin, IconWallet, IconChart, IconChevron, IconMedal, IconDoc, IconGear, IconTrash, IconEye, IconLock, IconBell, IconNote, IconMusic, IconBerimbau, IconBag, IconStar, IconWarn, IconMail as IconMailOk, IconRefresh } from '@/components/icons';
+import { IconHome, IconUser, IconLogout, IconMenu, IconX, IconFolder, IconMapPin, IconWallet, IconChart, IconChevron, IconMedal, IconDoc, IconGear, IconTrash, IconEye, IconLock, IconBell, IconNote, IconMusic, IconBerimbau, IconBag, IconStar, IconWarn, IconMail as IconMailOk, IconRefresh, IconShieldCheck, IconMail, IconPencil, IconClock } from '@/components/icons';
 
 
 
@@ -244,9 +243,9 @@ function GpsMap({ checkins, containerRef, leafletMapRef }: {
 
   return (
     <div style={{ marginBottom: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
-      <div style={{ background: 'linear-gradient(135deg,#0ea5e9,#0284c7)', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+      <div style={{ background: 'linear-gradient(135deg,#FF9200,#d97706)', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.9rem' }}>🗺 Localização GPS em Tempo Real</span>
+          <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.9rem' }}>Localização GPS em Tempo Real</span>
           <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.75rem', marginLeft: 10 }}>
             {withGps.length} de {checkins.length} alunos com GPS
           </span>
@@ -349,12 +348,12 @@ function OrgHierTab({ tab }: { tab: 'organograma' | 'hierarquia' }) {
           <a href={viewUrl} target="_blank" rel="noreferrer"
             style={{ padding: '9px 16px', borderRadius: 9, background: 'var(--bg-input)', border: `1px solid ${color}50`,
               color, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
-            👁 Ver página
+            Ver página
           </a>
           <button onClick={handleSave} disabled={saving}
             style={{ padding: '9px 20px', borderRadius: 9, background: `linear-gradient(135deg,${color},${color}cc)`,
               border: 'none', color: '#fff', fontWeight: 800, fontSize: '0.85rem', cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.7 : 1 }}>
-            {saving ? '⏳ Salvando...' : '💾 Salvar e Publicar'}
+            {saving ? 'Salvando...' : 'Salvar e Publicar'}
           </button>
         </div>
       </div>
@@ -612,7 +611,7 @@ function DbStatusPanel({ ds, dbCopied, setDbCopied }: { ds: Record<string,unknow
         </div>
         <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 16px', minWidth: 140 }}>
           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: ds.needs_manual_sql ? '#f87171' : '#4ade80' }}>
-            {ds.needs_manual_sql ? '⚠ SQL Pendente' : '✅ Configurado'}
+            {ds.needs_manual_sql ? 'SQL Pendente' : 'Configurado'}
           </div>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.72rem', marginTop: 2 }}>status das colunas</div>
         </div>
@@ -631,7 +630,7 @@ function DbStatusPanel({ ds, dbCopied, setDbCopied }: { ds: Record<string,unknow
       )}
       {fr && (
         <div style={{ background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: '0.78rem' }}>
-          ✅ tenant_id preenchido — <strong>{String(fr.updated ?? 0)}</strong> atualizados,{' '}
+          tenant_id preenchido — <strong>{String(fr.updated ?? 0)}</strong> atualizados,{' '}
           <strong>{String(fr.already_set ?? 0)}</strong> já tinham,{' '}
           <strong>{String(fr.update_errors ?? 0)}</strong> erros
         </div>
@@ -639,17 +638,17 @@ function DbStatusPanel({ ds, dbCopied, setDbCopied }: { ds: Record<string,unknow
       {!!(ds.needs_manual_sql) && !!(ds.sql_to_run) && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#f87171' }}>⚠ Execute este SQL no Supabase Dashboard → SQL Editor:</div>
+            <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#f87171' }}>Atenção: execute este SQL no Supabase Dashboard → SQL Editor:</div>
             <button onClick={() => { navigator.clipboard.writeText(String(ds.sql_to_run)); setDbCopied(true); setTimeout(() => setDbCopied(false), 2000); }}
               style={{ background: dbCopied ? 'rgba(22,163,74,0.2)' : 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: dbCopied ? '#4ade80' : 'var(--text-secondary)', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}>
-              {dbCopied ? '✓ Copiado!' : '📋 Copiar SQL'}
+              {dbCopied ? '✓ Copiado!' : 'Copiar SQL'}
             </button>
           </div>
           <pre style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '14px 16px', fontSize: '0.72rem', color: '#94a3b8', overflowX: 'auto', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 320, overflowY: 'auto' }}>
             {String(ds.sql_to_run)}
           </pre>
           <div style={{ marginTop: 10, padding: '10px 14px', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 8, fontSize: '0.75rem', color: '#fbbf24' }}>
-            💡 Depois de executar o SQL, clique em <strong>"🏷️ Preencher tenant_id"</strong> na aba <strong>Alunos</strong> para preencher os dados de todos os 120 alunos.
+            Dica: depois de executar o SQL, clique em <strong>"Preencher tenant_id"</strong> na aba <strong>Alunos</strong> para preencher os dados de todos os 120 alunos.
           </div>
         </div>
       )}
@@ -2281,7 +2280,7 @@ export default function AdminPage() {
             {/* Current profile badge — so mostra quando tem 1 nucleo */}
             {availableNucleos.length <= 1 && currentProfile && (
               <span className={'adm-chip' + (isOwner ? ' is-owner' : '')} style={{ cursor: 'default' }}>
-                {isOwner ? 'Owner' : (loginLabel && !isOwner && activeNucleo !== 'geral' ? `${currentProfile.label} · ${loginLabel}` : currentProfile.label)}
+                {isOwner ? 'Owner' : (myAccountNome && !isOwner && activeNucleo !== 'geral' ? `${myAccountNome}` : currentProfile.label)}
               </span>
             )}
             <Link href="/" className="adm-chip">
@@ -2368,7 +2367,7 @@ export default function AdminPage() {
             }
             if (key === 'minha-conta') {
               fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'me' }) }).then(r => r.json()).then(d => {
-                if (d.authenticated) { setMyAccountEmail(d.email || ''); setMyAccountCpf(d.cpf || ''); setMyAccountNome(d.nome || ''); }
+                if (d.authenticated) { setMyAccountEmail(d.email || ''); setMyAccountCpf(d.cpf || ''); setMyAccountNome(d.nome || ''); if (d.display_name) setLoginLabel(d.display_name); }
               }).catch(() => {});
             }
             if (key === 'mural') {
@@ -2845,7 +2844,7 @@ export default function AdminPage() {
             if (d.success) alert(`✅ tenant_id atualizado!\n\n• Atualizados agora: ${d.updated}\n• Já tinham tenant_id: ${d.already_had_tenant_id}\n• Com erro: ${d.skipped}\n• Total: ${d.total}`);
             else alert('Erro: ' + (d.error || JSON.stringify(d)));
           }} style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.35)', color: '#34d399', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
-            🏷️ Preencher tenant_id (Multi-tenant)
+            Preencher tenant_id (Multi-tenant)
           </button>
           {activeNucleo === 'geral' && (
             <>
@@ -3179,9 +3178,9 @@ _Portal Aluno_`
               <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
               <button
                 onClick={() => setShowGpsMap(v => !v)}
-                style={{ background: showGpsMap ? 'linear-gradient(135deg,#0ea5e9,#0284c7)' : 'var(--bg-input)', border: showGpsMap ? 'none' : '1px solid var(--border)', color: showGpsMap ? '#fff' : 'var(--text-secondary)', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6 }}
+                style={{ background: showGpsMap ? 'linear-gradient(135deg,#FF9200,#d97706)' : 'var(--bg-input)', border: showGpsMap ? 'none' : '1px solid var(--border)', color: showGpsMap ? '#fff' : 'var(--text-secondary)', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6 }}
               >
-                🗺 {showGpsMap ? t('admin_hide_map') : t('admin_view_map')}
+                {showGpsMap ? t('admin_hide_map') : t('admin_view_map')}
               </button>
             </div>
 
@@ -3255,7 +3254,7 @@ _Portal Aluno_`
                                 rel="noopener noreferrer"
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.74rem', color: '#3b82f6', textDecoration: 'none', fontWeight: 600 }}
                               >
-                                📍 {c.local_nome}
+                                {c.local_nome}
                                 {c.local_endereco && <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>— {c.local_endereco}</span>}
                               </a>
                               {c.lat && c.lng && (
@@ -3985,7 +3984,7 @@ _Portal Aluno_`
                     {/* Header */}
                     <div style={{ background: 'linear-gradient(135deg,#1e3a8a,#1d4ed8)', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                       <div>
-                        <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem' }}>📊 Gráfico Mensal de Presenças e Faltas</div>
+                        <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem' }}>Gráfico Mensal de Presenças e Faltas</div>
                         <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', marginTop: 2 }}>Presenças registradas por mês · {total} alunos no total</div>
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
@@ -4211,7 +4210,7 @@ _Portal Aluno_`
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
               <div style={{ width: 4, height: 26, background: 'linear-gradient(180deg,#6366f1,#4f46e5)', borderRadius: 2 }} />
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>👤 Contas de Acesso Cadastradas</h3>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>Contas de Acesso Cadastradas</h3>
                 <p style={{ margin: '2px 0 0', fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
                   {nucleoFilter ? `Exibindo contas do núcleo: ${nucleoFilter}` : 'Todos os núcleos'}
                 </p>
@@ -4248,7 +4247,7 @@ _Portal Aluno_`
                     {nucleoFilter ? `${t('admin_no_accounts_for')} ${nucleoFilter}.` : t('admin_no_accounts')}
                   </div>
                   <div style={{ marginTop: 8, fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                    Crie contas na aba 👤 Contas Alunos.
+                    Crie contas na aba Contas Alunos.
                   </div>
                 </div>
               );
@@ -4316,7 +4315,7 @@ _Portal Aluno_`
           {/* ── Sub-tabs de Financeiro ── */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
             {([
-              { key: 'visao', label: '📊 Visão Geral' },
+              { key: 'visao', label: 'Visão Geral' },
               { key: 'batizado', label: '🥋 Batizado' },
               { key: 'uniformes', label: '👕 Uniformes' },
               { key: 'mensalidades', label: '📅 Mensalidades' },
@@ -4335,7 +4334,7 @@ _Portal Aluno_`
               {/* Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
                 <div style={{ fontWeight: 800, fontSize: '1rem', color: '#34d399', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  📊 Visão Geral dos Lançamentos Financeiros
+                  Visão Geral dos Lançamentos Financeiros
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   <button
@@ -4393,7 +4392,7 @@ _Portal Aluno_`
                 const pageItems = filtered.slice(finVisaoPage * FIN_VISAO_PAGE_SIZE, (finVisaoPage + 1) * FIN_VISAO_PAGE_SIZE);
 
                 const statusColor: Record<string,string> = { pago: '#4ade80', pendente: '#fbbf24', atrasado: '#f87171', solicitado: '#60a5fa', confirmado: '#a78bfa', entregue: '#4ade80', cancelado: '#64748b', nao_definido: '#64748b' };
-                const statusLabel: Record<string,string> = { pago: '✓ Pago', pendente: '⏳ Pendente', atrasado: '⚠ Atrasado', solicitado: '📋 Solicitado', confirmado: '✓ Confirmado', entregue: '🎁 Entregue', cancelado: '✗ Cancelado', nao_definido: '— N/D' };
+                const statusLabel: Record<string,string> = { pago: '✓ Pago', pendente: 'Pendente', atrasado: '⚠ Atrasado', solicitado: '📋 Solicitado', confirmado: '✓ Confirmado', entregue: '🎁 Entregue', cancelado: '✗ Cancelado', nao_definido: '— N/D' };
                 const tipoLabel: Record<string,string> = { mensalidade: '📅 Mensalidade', batizado: '🥋 Batizado', contribuicao: '🤝 Contribuição', uniforme: '👕 Uniforme' };
                 const tipoColor: Record<string,string> = { mensalidade: '#0891b2', batizado: '#7c3aed', contribuicao: '#16a34a', uniforme: '#d97706' };
 
@@ -4660,7 +4659,7 @@ _Portal Aluno_`
           {finSubTab === 'batizado' && (() => {
             const allLanc: any[] = (finVisao?.lancamentos || []).filter((l: any) => l.tipo === 'batizado' && (!nucleoFilter || l.nucleo === nucleoFilter));
             const statusColor: Record<string,string> = { pago: '#4ade80', pendente: '#fbbf24', atrasado: '#f87171' };
-            const statusLabel: Record<string,string> = { pago: '✓ Pago', pendente: '⏳ Pendente', atrasado: '⚠ Atrasado' };
+            const statusLabel: Record<string,string> = { pago: '✓ Pago', pendente: 'Pendente', atrasado: '⚠ Atrasado' };
             const tab = 'batizado';
             const tabNucleos = [...new Set(allLanc.map((l:any) => l.nucleo))].sort();
             return (
@@ -4804,7 +4803,7 @@ _Portal Aluno_`
           {finSubTab === 'mensalidades' && (() => {
             const allLanc: any[] = (finVisao?.lancamentos || []).filter((l: any) => l.tipo === 'mensalidade' && (!nucleoFilter || l.nucleo === nucleoFilter));
             const statusColor: Record<string,string> = { pago: '#4ade80', pendente: '#fbbf24', atrasado: '#f87171' };
-            const statusLabel: Record<string,string> = { pago: '✓ Pago', pendente: '⏳ Pendente', atrasado: '⚠ Atrasado' };
+            const statusLabel: Record<string,string> = { pago: '✓ Pago', pendente: 'Pendente', atrasado: '⚠ Atrasado' };
             const tab = 'mensalidades';
             const tabNucleos = [...new Set(allLanc.map((l:any) => l.nucleo))].sort();
             return (
@@ -4874,7 +4873,7 @@ _Portal Aluno_`
           {finSubTab === 'contribuicao' && (() => {
             const allLanc: any[] = (finVisao?.lancamentos || []).filter((l: any) => l.tipo === 'contribuicao' && (!nucleoFilter || l.nucleo === nucleoFilter));
             const statusColor: Record<string,string> = { pago: '#4ade80', pendente: '#fbbf24', atrasado: '#f87171' };
-            const statusLabel: Record<string,string> = { pago: '✓ Pago', pendente: '⏳ Pendente', atrasado: '⚠ Atrasado' };
+            const statusLabel: Record<string,string> = { pago: '✓ Pago', pendente: 'Pendente', atrasado: '⚠ Atrasado' };
             const tab = 'contribuicao';
             const tabNucleos = [...new Set(allLanc.map((l:any) => l.nucleo))].sort();
             return (
@@ -6148,79 +6147,116 @@ _Portal Aluno_`
       )}
 
       {/* ===== ABA GERENCIAR NÚCLEOS ===== */}
-      {activeTab === 'nucleos' && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: '1.05rem', background: 'linear-gradient(90deg,#0ea5e9,#0284c7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Gerenciar Nucleos</div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: 2 }}>
-                {isOwner ? 'Cadastre e gerencie os nucleos (tenants) do sistema' : 'Edite os dados do seu núcleo'}
+      {activeTab === 'nucleos' && (() => {
+        // Núcleos que esta conta pode ver/gerenciar na aba:
+        // Owner/Admin Geral = todos; admin de núcleo = principal + vinculados.
+        const souGestor = isOwner || activeNucleo === 'geral';
+        const gerenciados = (availableNucleos || []).filter(nk => nk !== 'geral');
+        const nucleosVisiveis = souGestor
+          ? nucleosList
+          : nucleosList.filter(n => gerenciados.some(g => String(g).toLowerCase() === String(n.slug).toLowerCase()));
+        const DIAS_ABREV: Record<string, string> = { segunda: 'Seg', terca: 'Ter', quarta: 'Qua', quinta: 'Qui', sexta: 'Sex', sabado: 'Sáb', domingo: 'Dom' };
+        const inpDark: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 9, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' };
+        const lblDark: React.CSSProperties = { display: 'block', fontSize: '0.72rem', fontWeight: 700, marginBottom: 4, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' };
+        const foneIcon = (
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+        );
+        const gpsIcon = (
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="7" /><path d="M12 2v3" /><path d="M12 19v3" /><path d="M2 12h3" /><path d="M19 12h3" /></svg>
+        );
+        return (
+        <div style={{ paddingTop: 24, maxWidth: 1080, margin: '0 auto' }}>
+          {/* Cabeçalho */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: 12, background: 'radial-gradient(circle at 32% 26%, rgba(255,146,0,0.28), rgba(255,146,0,0.08))', border: '1px solid rgba(255,146,0,0.3)', color: '#FF9200', boxShadow: '0 0 16px rgba(255,146,0,0.16)' }}>
+                <IconMapPin size={19} />
+              </span>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>Gerenciar Núcleos</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: 2 }}>
+                  {souGestor
+                    ? 'Cadastre e gerencie os núcleos (unidades) do sistema'
+                    : gerenciados.length > 1
+                      ? `Você gerencia ${gerenciados.length} núcleos — edite dados, dias de treino e coordenadas de cada um`
+                      : 'Edite os dados, dias de treino e coordenadas do seu núcleo'}
+                </div>
               </div>
             </div>
-            {(isOwner || activeNucleo === 'geral') ? (
+            {souGestor ? (
               <button
                 onClick={() => { setNucleoForm({ nome: '', endereco: '', cidade: '', estado: '', telefone: '', email: '', lat: '', lng: '', dias_treino: [], admin_login: '', admin_senha: '', admin_nome: '', admin_email: '', admin_cpf: '' }); setNucleoFormMsg(''); setShowCreateNucleoModal(true); }}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: 'linear-gradient(135deg,#0ea5e9,#0284c7)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(14,165,233,0.3)' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: 'linear-gradient(135deg,#FF9200,#d97706)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 4px 18px rgba(255,146,0,0.25)' }}
               >
-                <span style={{ fontSize: '1rem' }}>+</span> Criar Novo Nucleo
+                <span style={{ fontSize: '1rem' }}>+</span> Criar Novo Núcleo
               </button>
             ) : (
-              <div style={{ padding: '10px 18px', background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.3)', borderRadius: 10, color: '#0284c7', fontWeight: 600, fontSize: '0.82rem' }}>
-                Você pode editar os dados do seu núcleo no botão ✏️ Editar
+              <div style={{ padding: '10px 16px', background: 'rgba(255,146,0,0.08)', border: '1px solid rgba(255,146,0,0.25)', borderRadius: 10, color: '#fdba74', fontWeight: 600, fontSize: '0.8rem' }}>
+                Use o botão Editar em cada cartão abaixo
               </div>
             )}
           </div>
-          
-          {/* Aviso de permissão */}
+
+          {/* Aviso de permissão — Admin Geral */}
           {!isOwner && activeNucleo === 'geral' && (
-            <div style={{ marginBottom: 20, padding: 16, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12 }}>
-              <div style={{ fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>Acesso de Admin Geral</div>
-              <div style={{ fontSize: '0.82rem', color: '#d97706' }}>
-                Você pode criar, editar e excluir núcleos, definir o login e a senha de cada admin de núcleo.
+            <div style={{ marginBottom: 18, padding: '13px 16px', background: 'rgba(255,146,0,0.08)', border: '1px solid rgba(255,146,0,0.28)', borderRadius: 12, display: 'flex', gap: 10, alignItems: 'center' }}>
+              <IconShieldCheck size={17} style={{ color: '#FF9200', flexShrink: 0 }} />
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                <strong style={{ color: '#fdba74' }}>Acesso de Admin Geral:</strong> criar, editar, ativar/desativar e excluir núcleos, além de definir o login de cada admin.
               </div>
             </div>
           )}
 
           {loadingNucleos ? (
             <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-secondary)' }}>Carregando núcleos...</div>
-          ) : nucleosList.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 60, background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 14 }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>🏢</div>
+          ) : nucleosVisiveis.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 60, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10, color: 'var(--text-tertiary)' }}><IconMapPin size={40} /></div>
               <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>Nenhum núcleo cadastrado</div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Nenhum núcleo cadastrado ainda. Use &quot;Criar Novo Núcleo&quot; para começar</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Use &quot;Criar Novo Núcleo&quot; para começar</div>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
-              {nucleosList.filter(n => activeNucleo === 'geral' || n.slug === activeNucleo).map(nucleo => (
-                <div key={nucleo.id} style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
-                  <div style={{ background: nucleo.ativo ? 'linear-gradient(135deg,#0ea5e9,#0284c7)' : 'linear-gradient(135deg,#6b7280,#4b5563)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem' }}>{nucleo.nome}</div>
-                    <span style={{ background: nucleo.ativo ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.68rem', padding: '2px 8px', borderRadius: 20, fontWeight: 700 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
+              {nucleosVisiveis.map(nucleo => {
+                const temGps = nucleo.lat != null && nucleo.lng != null;
+                return (
+                <div key={nucleo.id} style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                  {/* Cabeçalho do cartão */}
+                  <div style={{ padding: '13px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,146,0,0.05)' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{nucleo.nome}</div>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: nucleo.ativo ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.15)', border: `1px solid ${nucleo.ativo ? 'rgba(34,197,94,0.35)' : 'rgba(107,114,128,0.3)'}`, color: nucleo.ativo ? '#4ade80' : '#9ca3af', fontSize: '0.66rem', padding: '3px 9px', borderRadius: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: nucleo.ativo ? '#4ade80' : '#9ca3af' }} />
                       {nucleo.ativo ? 'Ativo' : 'Inativo'}
                     </span>
                   </div>
-                  <div style={{ padding: '14px 16px' }}>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 10 }}>
-                      <strong>Slug:</strong> {nucleo.slug}
+                  <div style={{ padding: '13px 16px', display: 'flex', flexDirection: 'column', gap: 7, flex: 1 }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', fontFamily: 'monospace' }}>{nucleo.slug}</div>
+                    {(((nucleo as any).dias_treino as string[] | undefined)?.length ?? 0) > 0 && (
+                      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                        {((nucleo as any).dias_treino as string[]).map((d: string) => (
+                          <span key={d} style={{ display: 'inline-flex', padding: '3px 9px', borderRadius: 14, fontSize: '0.68rem', fontWeight: 700, background: 'rgba(255,146,0,0.09)', border: '1px solid rgba(255,146,0,0.25)', color: '#fdba74' }}>
+                            {DIAS_ABREV[d] || d}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {nucleo.endereco && <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: 'var(--text-secondary)' }}><IconMapPin size={13} style={{ color: '#FF9200', flexShrink: 0 }} /> {nucleo.endereco}</div>}
+                    {(nucleo.cidade || nucleo.estado) && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', paddingLeft: 19 }}>{[nucleo.cidade, nucleo.estado].filter(Boolean).join(' - ')}</div>}
+                    {nucleo.telefone && <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: 'var(--text-secondary)' }}><span style={{ color: '#FF9200', display: 'flex' }}>{foneIcon}</span> {nucleo.telefone}</div>}
+                    {nucleo.email && <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: 'var(--text-secondary)' }}><IconMail size={13} style={{ color: '#FF9200', flexShrink: 0 }} /> {nucleo.email}</div>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: temGps ? '#4ade80' : '#f59e0b' }}>
+                      <span style={{ display: 'flex', flexShrink: 0 }}>{gpsIcon}</span>
+                      {temGps ? <>Coordenadas cadastradas — presença por GPS ativa</> : <>Sem coordenadas — presença por GPS desativada</>}
                     </div>
-                    {(nucleo as any).dias_treino?.length > 0 && (
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 4 }}>
-                        📅 {(nucleo as any).dias_treino.map((d: string) => ({ segunda: 'Seg', terca: 'Ter', quarta: 'Qua', quinta: 'Qui', sexta: 'Sex', sabado: 'Sáb', domingo: 'Dom' } as Record<string, string>)[d] || d).join(', ')}
-                      </div>
-                    )}
-                    {nucleo.endereco && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 4 }}>📍 {nucleo.endereco}</div>}
-                    {(nucleo.cidade || nucleo.estado) && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 4 }}>🏙️ {[nucleo.cidade, nucleo.estado].filter(Boolean).join(' - ')}</div>}
-                    {nucleo.telefone && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 4 }}>📞 {nucleo.telefone}</div>}
-                    {nucleo.email && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 4 }}>✉️ {nucleo.email}</div>}
                     {nucleo.admin_login && (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>
-                        🔑 Admin: <strong style={{ fontFamily: 'monospace' }}>{String(nucleo.admin_login)}</strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                        <IconUser size={12} style={{ color: '#FF9200', flexShrink: 0 }} /> Admin: <strong style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{String(nucleo.admin_login)}</strong>
                       </div>
                     )}
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: 10 }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: 'auto', paddingTop: 9, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                       Criado em {new Date(nucleo.created_at).toLocaleDateString('pt-BR')}
                     </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                       <button
                         onClick={() => {
                           setNucleoEditForm({
@@ -6228,199 +6264,211 @@ _Portal Aluno_`
                           });
                           setNucleoEditMsg(''); setNucleoEditAuth({ user: sessionUser(), pass: '' });
                         }}
-                        style={{ flex: 1, padding: '8px 12px', background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.3)', color: '#0284c7', borderRadius: 8, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}
+                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 12px', background: 'rgba(255,146,0,0.1)', border: '1px solid rgba(255,146,0,0.35)', color: '#FF9200', borderRadius: 9, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}
                       >
-                        ✏️ Editar
+                        <IconPencil size={12} /> Editar
                       </button>
                       {isOwner && (
-                      <button
-                        onClick={async () => {
-                          const newAtivo = !nucleo.ativo;
-                          const res = await fetch('/api/admin/nucleos', {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json', },
-                            body: JSON.stringify({ id: nucleo.id, ativo: newAtivo }),
-                          });
-                          if (res.ok) {
-                            setNucleosList(prev => prev.map(n => n.id === nucleo.id ? { ...n, ativo: newAtivo } : n));
-                          }
-                        }}
-                        style={{ flex: 1, padding: '8px 12px', background: nucleo.ativo ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)', border: `1px solid ${nucleo.ativo ? 'rgba(245,158,11,0.3)' : 'rgba(34,197,94,0.3)'}`, color: nucleo.ativo ? '#f59e0b' : '#22c55e', borderRadius: 8, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}
-                      >
-                        {nucleo.ativo ? 'Desativar' : 'Ativar'}
-                      </button>
+                        <button
+                          onClick={async () => {
+                            const newAtivo = !nucleo.ativo;
+                            const res = await fetch('/api/admin/nucleos', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json', },
+                              body: JSON.stringify({ id: nucleo.id, ativo: newAtivo }),
+                            });
+                            if (res.ok) {
+                              setNucleosList(prev => prev.map(n => n.id === nucleo.id ? { ...n, ativo: newAtivo } : n));
+                            }
+                          }}
+                          style={{ flex: 1, padding: '9px 12px', background: nucleo.ativo ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)', border: `1px solid ${nucleo.ativo ? 'rgba(245,158,11,0.35)' : 'rgba(34,197,94,0.35)'}`, color: nucleo.ativo ? '#fbbf24' : '#4ade80', borderRadius: 9, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}
+                        >
+                          {nucleo.ativo ? 'Desativar' : 'Ativar'}
+                        </button>
                       )}
-                      <button
-                        onClick={() => setNucleoDeleteConfirm(nucleo)}
-                        style={{ padding: '8px 12px', background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#f87171', borderRadius: 8, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}
-                      >
-                        Excluir
-                      </button>
+                      {(isOwner || activeNucleo === 'geral') && (
+                        <button
+                          onClick={() => setNucleoDeleteConfirm(nucleo)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '9px 12px', background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.35)', color: '#f87171', borderRadius: 9, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}
+                        >
+                          <IconTrash size={12} /> Excluir
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
-          {/* Modal Criar Nucleo - Owner ou Admin Geral */}
-          {showCreateNucleoModal && (isOwner || activeNucleo === 'geral') && (
-            <div onClick={e => { if (e.target === e.currentTarget) setShowCreateNucleoModal(false); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20 }}>
-              <div style={{ background: '#fff', borderRadius: 16, padding: '24px', width: '100%', maxWidth: 480, boxShadow: '0 8px 40px rgba(0,0,0,0.3)', maxHeight: '90vh', overflowY: 'auto' }}>
-                <h3 style={{ margin: '0 0 4px', color: '#0284c7', fontWeight: 800, fontSize: '1.05rem' }}>Criar Novo Nucleo</h3>
-                <p style={{ margin: '0 0 20px', fontSize: '0.78rem', color: '#6b7280' }}>Preencha os dados do novo núcleo/unidade</p>
+          {/* Modal Criar Núcleo — Owner ou Admin Geral */}
+          {showCreateNucleoModal && souGestor && (
+            <div onClick={e => { if (e.target === e.currentTarget) setShowCreateNucleoModal(false); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20 }}>
+              <div role="dialog" aria-modal="true" aria-label="Criar novo núcleo" style={{ background: 'linear-gradient(165deg, #1c1c1e, #101012)', border: '1px solid rgba(255,146,0,0.25)', borderRadius: 18, padding: '24px', width: '100%', maxWidth: 520, boxShadow: '0 24px 70px rgba(0,0,0,0.6)', maxHeight: '90vh', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, background: 'rgba(255,146,0,0.12)', border: '1px solid rgba(255,146,0,0.3)', color: '#FF9200' }}>
+                    <IconMapPin size={16} />
+                  </span>
+                  <h3 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 800, fontSize: '1.05rem' }}>Criar Novo Núcleo</h3>
+                </div>
+                <p style={{ margin: '0 0 20px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Preencha os dados do novo núcleo/unidade</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Nome do Núcleo *</label>
+                    <label style={lblDark}>Nome do Núcleo *</label>
                     <input
                       type="text"
                       value={nucleoForm.nome}
                       onChange={e => setNucleoForm(f => ({ ...f, nome: e.target.value }))}
                       placeholder="Ex: Núcleo Centro"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                      style={inpDark}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Endereço</label>
+                    <label style={lblDark}>Endereço *</label>
                     <input
                       type="text"
                       value={nucleoForm.endereco}
                       onChange={e => setNucleoForm(f => ({ ...f, endereco: e.target.value }))}
                       placeholder="Rua, número, bairro..."
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                      style={inpDark}
                     />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Cidade</label>
+                      <label style={lblDark}>Cidade</label>
                       <input
                         type="text"
                         value={nucleoForm.cidade}
                         onChange={e => setNucleoForm(f => ({ ...f, cidade: e.target.value }))}
                         placeholder="Cidade"
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                        style={inpDark}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Estado</label>
+                      <label style={lblDark}>Estado (UF)</label>
                       <input
                         type="text"
                         value={nucleoForm.estado}
                         onChange={e => setNucleoForm(f => ({ ...f, estado: e.target.value }))}
                         placeholder="UF"
                         maxLength={2}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                        style={inpDark}
                       />
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Telefone</label>
+                      <label style={lblDark}>Telefone</label>
                       <input
                         type="tel"
                         value={nucleoForm.telefone}
                         onChange={e => setNucleoForm(f => ({ ...f, telefone: e.target.value }))}
                         placeholder="(00) 00000-0000"
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                        style={inpDark}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>E-mail</label>
+                      <label style={lblDark}>E-mail</label>
                       <input
                         type="email"
                         value={nucleoForm.email}
                         onChange={e => setNucleoForm(f => ({ ...f, email: e.target.value }))}
                         placeholder="email@exemplo.com"
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                        style={inpDark}
                       />
                     </div>
                   </div>
-                  {/* Coordenadas para presenca por GPS */}
-                  <div style={{ padding: 12, background: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.2)', borderRadius: 10 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#0284c7', marginBottom: 8 }}>Coordenadas GPS (para registro de presenca)</div>
+                  {/* Coordenadas para presença por GPS */}
+                  <div style={{ padding: 13, background: 'rgba(255,146,0,0.06)', border: '1px solid rgba(255,146,0,0.25)', borderRadius: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: '0.8rem', color: '#FF9200', marginBottom: 9 }}>
+                      <span style={{ display: 'flex' }}>{gpsIcon}</span> Coordenadas do polo (GPS da presença)
+                    </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Latitude</label>
+                        <label style={lblDark}>Latitude</label>
                         <input
                           type="text"
                           value={(nucleoForm as any).lat || ''}
                           onChange={e => setNucleoForm(f => ({ ...f, lat: e.target.value }))}
                           placeholder="Ex: -22.7077"
-                          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.82rem' }}
+                          style={inpDark}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Longitude</label>
+                        <label style={lblDark}>Longitude</label>
                         <input
                           type="text"
                           value={(nucleoForm as any).lng || ''}
                           onChange={e => setNucleoForm(f => ({ ...f, lng: e.target.value }))}
                           placeholder="Ex: -43.1451"
-                          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.82rem' }}
+                          style={inpDark}
                         />
                       </div>
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 6 }}>
-                      Dica: Use o Google Maps para obter as coordenadas do local de treino.
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: 7 }}>
+                      Sem coordenadas, o aluno não consegue registrar presença por GPS neste núcleo. Dica: Google Maps → toque e segure no local → copie as coordenadas.
                     </div>
                   </div>
                   {/* Dados de acesso do admin do núcleo */}
-                  <div style={{ padding: 12, background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)', borderRadius: 10 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#16a34a', marginBottom: 8 }}>Acesso do Admin deste Núcleo</div>
+                  <div style={{ padding: 13, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: '0.8rem', color: '#4ade80', marginBottom: 9 }}>
+                      <IconUser size={13} /> Acesso do Admin deste Núcleo
+                    </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Login do Admin *</label>
+                        <label style={lblDark}>Login do Admin *</label>
                         <input
                           type="text"
                           value={nucleoForm.admin_login}
                           onChange={e => setNucleoForm(f => ({ ...f, admin_login: e.target.value.toLowerCase().replace(/\s+/g, '_') }))}
                           placeholder="ex: ciep229"
-                          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.82rem' }}
+                          style={inpDark}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Nome do Admin (opcional)</label>
+                        <label style={lblDark}>Nome do Admin (opcional)</label>
                         <input
                           type="text"
                           value={nucleoForm.admin_nome}
                           onChange={e => setNucleoForm(f => ({ ...f, admin_nome: e.target.value }))}
                           placeholder="Nome do responsável"
-                          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.82rem' }}
+                          style={inpDark}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>E-mail do Admin (opcional)</label>
+                        <label style={lblDark}>E-mail do Admin (opcional)</label>
                         <input
                           type="email"
                           value={(nucleoForm as any).admin_email || ''}
                           onChange={e => setNucleoForm(f => ({ ...f, admin_email: e.target.value }))}
-                          placeholder="email@exemplo.com — usado no Esqueci minha senha"
-                          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.82rem' }}
+                          placeholder="Para recuperação de senha"
+                          style={inpDark}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>CPF do Admin (opcional)</label>
+                        <label style={lblDark}>CPF do Admin (opcional)</label>
                         <input
                           type="text"
                           inputMode="numeric"
                           value={(nucleoForm as any).admin_cpf || ''}
                           onChange={e => setNucleoForm(f => ({ ...f, admin_cpf: e.target.value.replace(/\D/g, '').slice(0, 11) }))}
                           placeholder="Também funciona como login"
-                          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.82rem' }}
+                          style={inpDark}
                         />
                       </div>
                     </div>
                     <div style={{ marginTop: 10 }}>
-                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Senha do Admin (opcional)</label>
+                      <label style={lblDark}>Senha do Admin (opcional)</label>
                       <input
                         type="text"
                         value={nucleoForm.admin_senha}
                         onChange={e => setNucleoForm(f => ({ ...f, admin_senha: e.target.value }))}
                         placeholder="Deixe vazio = senha padrão (nome do núcleo)"
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.82rem', fontFamily: 'monospace' }}
+                        style={{ ...inpDark, fontFamily: 'monospace' }}
                       />
                       {nucleoForm.nome.trim() && (
-                        <div style={{ fontSize: '0.7rem', color: '#16a34a', marginTop: 5 }}>
+                        <div style={{ fontSize: '0.7rem', color: '#4ade80', marginTop: 5 }}>
                           Sem senha definida, o acesso será o nome do núcleo: <strong style={{ fontFamily: 'monospace' }}>{nucleoForm.nome.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '')}</strong>
                         </div>
                       )}
@@ -6428,8 +6476,10 @@ _Portal Aluno_`
                   </div>
 
                   {/* Dias de treino do núcleo */}
-                  <div style={{ padding: 12, background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 10 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#7c3aed', marginBottom: 8 }}>Dias de Treino *</div>
+                  <div style={{ padding: 13, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: '0.8rem', color: '#fdba74', marginBottom: 9 }}>
+                      <IconClock size={13} /> Dias de Treino *
+                    </div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {DIAS_TREINO_LABELS.map(d => {
                         const on = nucleoForm.dias_treino.includes(d.k);
@@ -6437,28 +6487,29 @@ _Portal Aluno_`
                           <button
                             key={d.k}
                             type="button"
+                            aria-pressed={on}
                             onClick={() => setNucleoForm(f => ({ ...f, dias_treino: on ? f.dias_treino.filter(x => x !== d.k) : [...f.dias_treino, d.k] }))}
-                            style={{ padding: '7px 12px', borderRadius: 20, cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', border: `1.5px solid ${on ? '#7c3aed' : '#d1d5db'}`, background: on ? '#7c3aed' : '#fff', color: on ? '#fff' : '#6b7280' }}
+                            style={{ padding: '7px 13px', borderRadius: 20, cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', border: on ? '1.5px solid rgba(255,146,0,0.65)' : '1px solid rgba(255,255,255,0.12)', background: on ? 'rgba(255,146,0,0.14)' : 'rgba(255,255,255,0.04)', color: on ? '#FF9200' : '#a3a3a3' }}
                           >
                             {d.l}
                           </button>
                         );
                       })}
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 6 }}>
-                      O admin do núcleo também pode ajustar os dias depois, editando o núcleo.
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: 7 }}>
+                      A chamada só pode ser salva nos dias de treino marcados aqui.
                     </div>
                   </div>
 
                   {nucleoFormMsg && (
-                    <div style={{ padding: '10px 14px', borderRadius: 8, background: nucleoFormMsg.startsWith('✓') ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${nucleoFormMsg.startsWith('✓') ? 'rgba(34,197,94,0.3)' : 'rgba(220,38,38,0.3)'}`, color: nucleoFormMsg.startsWith('✓') ? '#22c55e' : '#ef4444', fontSize: '0.82rem', fontWeight: 600 }}>
+                    <div style={{ padding: '10px 14px', borderRadius: 10, background: nucleoFormMsg.startsWith('✓') ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${nucleoFormMsg.startsWith('✓') ? 'rgba(34,197,94,0.35)' : 'rgba(220,38,38,0.35)'}`, color: nucleoFormMsg.startsWith('✓') ? '#86efac' : '#fca5a5', fontSize: '0.82rem', fontWeight: 600 }}>
                       {nucleoFormMsg}
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
                     <button
                       onClick={() => setShowCreateNucleoModal(false)}
-                      style={{ flex: 1, padding: '12px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 10, color: '#374151', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
+                      style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
                     >
                       Cancelar
                     </button>
@@ -6486,7 +6537,7 @@ _Portal Aluno_`
                         }
                         setNucleoFormSaving(false);
                       }}
-                      style={{ flex: 1, padding: '12px', background: nucleoFormSaving || !nucleoForm.nome.trim() || !nucleoForm.endereco.trim() || !nucleoForm.admin_login.trim() || nucleoForm.dias_treino.length === 0 ? '#9ca3af' : 'linear-gradient(135deg,#0ea5e9,#0284c7)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: nucleoFormSaving || !nucleoForm.nome.trim() || !nucleoForm.endereco.trim() || !nucleoForm.admin_login.trim() || nucleoForm.dias_treino.length === 0 ? 'not-allowed' : 'pointer' }}
+                      style={{ flex: 1, padding: '12px', background: nucleoFormSaving || !nucleoForm.nome.trim() || !nucleoForm.endereco.trim() || !nucleoForm.admin_login.trim() || nucleoForm.dias_treino.length === 0 ? 'rgba(255,146,0,0.35)' : 'linear-gradient(135deg,#FF9200,#d97706)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: nucleoFormSaving ? 'wait' : 'pointer', boxShadow: '0 4px 18px rgba(255,146,0,0.25)' }}
                     >
                       {nucleoFormSaving ? 'Salvando...' : 'Criar Núcleo'}
                     </button>
@@ -6496,100 +6547,107 @@ _Portal Aluno_`
             </div>
           )}
 
-          {/* Modal Editar Nucleo — owner/admin ou o próprio admin do núcleo */}
+          {/* Modal Editar Núcleo — owner/admin geral ou o próprio admin do núcleo */}
           {nucleoEditForm && (
-            <div onClick={e => { if (e.target === e.currentTarget) setNucleoEditForm(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20 }}>
-              <div style={{ background: '#fff', borderRadius: 16, padding: '24px', width: '100%', maxWidth: 480, boxShadow: '0 8px 40px rgba(0,0,0,0.3)', maxHeight: '90vh', overflowY: 'auto' }}>
-                <h3 style={{ margin: '0 0 4px', color: '#0284c7', fontWeight: 800, fontSize: '1.05rem' }}>Editar Núcleo</h3>
-                <p style={{ margin: '0 0 20px', fontSize: '0.78rem', color: '#6b7280' }}>
-                  {isOwner || activeNucleo === 'geral' ? 'Atualize nome, endereço e dias de treino' : 'Atualize os dados do seu núcleo'}
+            <div onClick={e => { if (e.target === e.currentTarget) setNucleoEditForm(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20 }}>
+              <div role="dialog" aria-modal="true" aria-label="Editar núcleo" style={{ background: 'linear-gradient(165deg, #1c1c1e, #101012)', border: '1px solid rgba(255,146,0,0.25)', borderRadius: 18, padding: '24px', width: '100%', maxWidth: 520, boxShadow: '0 24px 70px rgba(0,0,0,0.6)', maxHeight: '90vh', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, background: 'rgba(255,146,0,0.12)', border: '1px solid rgba(255,146,0,0.3)', color: '#FF9200' }}>
+                    <IconPencil size={16} />
+                  </span>
+                  <h3 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 800, fontSize: '1.05rem' }}>Editar Núcleo</h3>
+                </div>
+                <p style={{ margin: '0 0 20px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  {souGestor ? 'Atualize dados, dias de treino e coordenadas' : 'Atualize os dados do seu núcleo'}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Nome do Núcleo *</label>
+                    <label style={lblDark}>Nome do Núcleo *</label>
                     <input
                       type="text"
                       value={nucleoEditForm.nome}
-                      onChange={e => setNucleoEditForm(f => ({ ...f, nome: e.target.value }))}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                      onChange={e => setNucleoEditForm(f => f && ({ ...f, nome: e.target.value }))}
+                      style={inpDark}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Endereço *</label>
+                    <label style={lblDark}>Endereço *</label>
                     <input
                       type="text"
                       value={nucleoEditForm.endereco}
-                      onChange={e => setNucleoEditForm(f => ({ ...f, endereco: e.target.value }))}
+                      onChange={e => setNucleoEditForm(f => f && ({ ...f, endereco: e.target.value }))}
                       placeholder="Rua, número, bairro..."
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                      style={inpDark}
                     />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Cidade</label>
+                      <label style={lblDark}>Cidade</label>
                       <input
                         type="text"
                         value={nucleoEditForm.cidade}
-                        onChange={e => setNucleoEditForm(f => ({ ...f, cidade: e.target.value }))}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                        onChange={e => setNucleoEditForm(f => f && ({ ...f, cidade: e.target.value }))}
+                        style={inpDark}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Estado (UF)</label>
+                      <label style={lblDark}>Estado (UF)</label>
                       <input
                         type="text"
                         value={nucleoEditForm.estado}
-                        onChange={e => setNucleoEditForm(f => ({ ...f, estado: e.target.value }))}
+                        onChange={e => setNucleoEditForm(f => f && ({ ...f, estado: e.target.value }))}
                         maxLength={2}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                        style={inpDark}
                       />
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>Telefone</label>
+                      <label style={lblDark}>Telefone</label>
                       <input
                         type="tel"
                         value={nucleoEditForm.telefone}
-                        onChange={e => setNucleoEditForm(f => ({ ...f, telefone: e.target.value }))}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                        onChange={e => setNucleoEditForm(f => f && ({ ...f, telefone: e.target.value }))}
+                        style={inpDark}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: 4, color: '#374151' }}>E-mail</label>
+                      <label style={lblDark}>E-mail</label>
                       <input
                         type="email"
                         value={nucleoEditForm.email}
-                        onChange={e => setNucleoEditForm(f => ({ ...f, email: e.target.value }))}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: '0.88rem' }}
+                        onChange={e => setNucleoEditForm(f => f && ({ ...f, email: e.target.value }))}
+                        style={inpDark}
                       />
                     </div>
                   </div>
                   {/* Coordenadas GPS do polo (para travas de presença do aluno) */}
-                  <div style={{ padding: 12, background: 'rgba(255,146,0,0.07)', border: '1px solid rgba(255,146,0,0.25)', borderRadius: 10 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#FF9200', marginBottom: 4 }}>Coordenadas do polo (GPS da presença)</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginBottom: 8 }}>
-                      Sem coordenadas, o aluno não consegue registrar presença por GPS neste núcleo. Obtenha no Google Maps: toque e segure no local → copie as coordenadas.
+                  <div style={{ padding: 13, background: 'rgba(255,146,0,0.06)', border: '1px solid rgba(255,146,0,0.25)', borderRadius: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: '0.8rem', color: '#FF9200', marginBottom: 4 }}>
+                      <span style={{ display: 'flex' }}>{gpsIcon}</span> Coordenadas do polo (GPS da presença)
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginBottom: 9 }}>
+                      Sem coordenadas, o aluno não consegue registrar presença por GPS neste núcleo.
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10, alignItems: 'end' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: 'var(--text-secondary)' }}>Latitude</label>
+                        <label style={lblDark}>Latitude</label>
                         <input
                           type="text"
                           value={nucleoEditForm.lat || ''}
                           onChange={e => setNucleoEditForm(f => f && ({ ...f, lat: e.target.value }))}
                           placeholder="Ex: -22.7077"
-                          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', color: '#111', fontSize: '0.82rem' }}
+                          style={inpDark}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, marginBottom: 4, color: 'var(--text-secondary)' }}>Longitude</label>
+                        <label style={lblDark}>Longitude</label>
                         <input
                           type="text"
                           value={nucleoEditForm.lng || ''}
                           onChange={e => setNucleoEditForm(f => f && ({ ...f, lng: e.target.value }))}
                           placeholder="Ex: -43.1451"
-                          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', color: '#111', fontSize: '0.82rem' }}
+                          style={inpDark}
                         />
                       </div>
                       <button
@@ -6606,15 +6664,17 @@ _Portal Aluno_`
                             { enableHighAccuracy: true, timeout: 12000 },
                           );
                         }}
-                        style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid rgba(255,146,0,0.5)', background: 'rgba(255,146,0,0.12)', color: '#FF9200', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        style={{ padding: '10px 13px', borderRadius: 9, border: '1px solid rgba(255,146,0,0.5)', background: 'rgba(255,146,0,0.12)', color: '#FF9200', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
                       >
                         Usar GPS atual
                       </button>
                     </div>
                   </div>
                   {/* Dias de treino */}
-                  <div style={{ padding: 12, background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 10 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#7c3aed', marginBottom: 8 }}>Dias de Treino *</div>
+                  <div style={{ padding: 13, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: '0.8rem', color: '#fdba74', marginBottom: 9 }}>
+                      <IconClock size={13} /> Dias de Treino *
+                    </div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {DIAS_TREINO_LABELS.map(d => {
                         const on = (nucleoEditForm.dias_treino as string[]).includes(d.k);
@@ -6622,8 +6682,9 @@ _Portal Aluno_`
                           <button
                             key={d.k}
                             type="button"
+                            aria-pressed={on}
                             onClick={() => setNucleoEditForm(f => f && ({ ...f, dias_treino: on ? (f.dias_treino as string[]).filter(x => x !== d.k) : [...(f.dias_treino as string[]), d.k] }))}
-                            style={{ padding: '7px 12px', borderRadius: 20, cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', border: `1.5px solid ${on ? '#7c3aed' : '#d1d5db'}`, background: on ? '#7c3aed' : '#fff', color: on ? '#fff' : '#6b7280' }}
+                            style={{ padding: '7px 13px', borderRadius: 20, cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', border: on ? '1.5px solid rgba(255,146,0,0.65)' : '1px solid rgba(255,255,255,0.12)', background: on ? 'rgba(255,146,0,0.14)' : 'rgba(255,255,255,0.04)', color: on ? '#FF9200' : '#a3a3a3' }}
                           >
                             {d.l}
                           </button>
@@ -6632,30 +6693,30 @@ _Portal Aluno_`
                     </div>
                   </div>
                   {/* Confirmação de identidade */}
-                  <div style={{ padding: 12, background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.2)', borderRadius: 10 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#0284c7', marginBottom: 6 }}>Confirmar alteração</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: isOwner || activeNucleo === 'geral' ? '1fr' : '1fr', gap: 8 }}>
-                      <input
-                        type="password"
-                        value={nucleoEditAuth.pass}
-                        onChange={e => setNucleoEditAuth(a => ({ ...a, pass: e.target.value }))}
-                        placeholder={isOwner || activeNucleo === 'geral' ? 'Sua senha de Owner/Admin Geral' : 'Sua senha de admin do núcleo'}
-                        style={{ width: '100%', padding: '9px 11px', borderRadius: 7, border: '1px solid #d1d5db', fontSize: '0.85rem' }}
-                      />
+                  <div style={{ padding: 13, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
+                      <IconLock size={13} /> Confirmar alteração
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 5 }}>
+                    <input
+                      type="password"
+                      value={nucleoEditAuth.pass}
+                      onChange={e => setNucleoEditAuth(a => ({ ...a, pass: e.target.value }))}
+                      placeholder={souGestor ? 'Sua senha de Owner/Admin Geral' : 'Sua senha de admin do núcleo'}
+                      style={inpDark}
+                    />
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: 6 }}>
                       Login: <strong style={{ fontFamily: 'monospace' }}>{nucleoEditAuth.user}</strong>
                     </div>
                   </div>
                   {nucleoEditMsg && (
-                    <div style={{ padding: '10px 14px', borderRadius: 8, background: nucleoEditMsg.startsWith('✓') ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${nucleoEditMsg.startsWith('✓') ? 'rgba(34,197,94,0.3)' : 'rgba(220,38,38,0.3)'}`, color: nucleoEditMsg.startsWith('✓') ? '#22c55e' : '#ef4444', fontSize: '0.82rem', fontWeight: 600 }}>
+                    <div style={{ padding: '10px 14px', borderRadius: 10, background: nucleoEditMsg.startsWith('✓') ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${nucleoEditMsg.startsWith('✓') ? 'rgba(34,197,94,0.35)' : 'rgba(220,38,38,0.35)'}`, color: nucleoEditMsg.startsWith('✓') ? '#86efac' : '#fca5a5', fontSize: '0.82rem', fontWeight: 600 }}>
                       {nucleoEditMsg}
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
                     <button
                       onClick={() => setNucleoEditForm(null)}
-                      style={{ flex: 1, padding: '12px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 10, color: '#374151', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
+                      style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
                     >
                       Cancelar
                     </button>
@@ -6665,11 +6726,10 @@ _Portal Aluno_`
                         setNucleoEditSaving(true);
                         setNucleoEditMsg('');
                         try {
-                          const ehGestor = isOwner || activeNucleo === 'geral';
                           const res = await fetch('/api/admin/nucleos', {
                             method: 'PATCH',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(ehGestor
+                            body: JSON.stringify(souGestor
                               ? { id: nucleoEditForm.id, nome: nucleoEditForm.nome, endereco: nucleoEditForm.endereco, cidade: nucleoEditForm.cidade, estado: nucleoEditForm.estado, telefone: nucleoEditForm.telefone, email: nucleoEditForm.email, lat: nucleoEditForm.lat, lng: nucleoEditForm.lng, dias_treino: nucleoEditForm.dias_treino, admin_username: nucleoEditAuth.user, admin_password: nucleoEditAuth.pass }
                               : { id: nucleoEditForm.id, nome: nucleoEditForm.nome, endereco: nucleoEditForm.endereco, cidade: nucleoEditForm.cidade, estado: nucleoEditForm.estado, telefone: nucleoEditForm.telefone, email: nucleoEditForm.email, lat: nucleoEditForm.lat, lng: nucleoEditForm.lng, dias_treino: nucleoEditForm.dias_treino, nucleo_login: nucleoEditAuth.user, nucleo_password: nucleoEditAuth.pass }
                             ),
@@ -6687,7 +6747,7 @@ _Portal Aluno_`
                         }
                         setNucleoEditSaving(false);
                       }}
-                      style={{ flex: 1, padding: '12px', background: nucleoEditSaving || !nucleoEditForm.nome.trim() || !nucleoEditForm.endereco.trim() || (nucleoEditForm.dias_treino as string[]).length === 0 || !nucleoEditAuth.pass ? '#9ca3af' : 'linear-gradient(135deg,#0ea5e9,#0284c7)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
+                      style={{ flex: 1, padding: '12px', background: nucleoEditSaving || !nucleoEditForm.nome.trim() || !nucleoEditForm.endereco.trim() || (nucleoEditForm.dias_treino as string[]).length === 0 || !nucleoEditAuth.pass ? 'rgba(255,146,0,0.35)' : 'linear-gradient(135deg,#FF9200,#d97706)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: nucleoEditSaving ? 'wait' : 'pointer', boxShadow: '0 4px 18px rgba(255,146,0,0.25)' }}
                     >
                       {nucleoEditSaving ? 'Salvando...' : 'Salvar Alterações'}
                     </button>
@@ -6699,19 +6759,19 @@ _Portal Aluno_`
 
           {/* Modal Confirmar Exclusão */}
           {nucleoDeleteConfirm && (
-            <div onClick={e => { if (e.target === e.currentTarget) setNucleoDeleteConfirm(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20 }}>
-              <div style={{ background: '#fff', borderRadius: 16, padding: '24px', width: '100%', maxWidth: 400, boxShadow: '0 8px 40px rgba(0,0,0,0.3)' }}>
-                <h3 style={{ margin: '0 0 12px', color: '#dc2626', fontWeight: 800, fontSize: '1rem' }}>Excluir Nucleo?</h3>
-                <p style={{ margin: '0 0 20px', fontSize: '0.85rem', color: '#4b5563' }}>
-                  Tem certeza que deseja excluir o nucleo <strong>{nucleoDeleteConfirm.nome}</strong>?
+            <div onClick={e => { if (e.target === e.currentTarget) setNucleoDeleteConfirm(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20 }}>
+              <div role="dialog" aria-modal="true" aria-label="Excluir núcleo" style={{ background: 'linear-gradient(165deg, #201313, #120c0c)', border: '1px solid rgba(220,38,38,0.4)', borderRadius: 18, padding: '24px', width: '100%', maxWidth: 420, boxShadow: '0 24px 70px rgba(0,0,0,0.65)' }}>
+                <h3 style={{ margin: '0 0 12px', color: '#fecaca', fontWeight: 800, fontSize: '1rem' }}>Excluir Núcleo?</h3>
+                <p style={{ margin: '0 0 14px', fontSize: '0.85rem', color: '#e7c9c9' }}>
+                  Tem certeza que deseja excluir o núcleo <strong style={{ color: '#fecaca' }}>{nucleoDeleteConfirm.nome}</strong>?
                 </p>
-                <p style={{ margin: '0 0 20px', fontSize: '0.78rem', color: '#9ca3af' }}>
-                  Esta acao nao pode ser desfeita. Se houver alunos vinculados, a exclusao sera impedida.
+                <p style={{ margin: '0 0 20px', fontSize: '0.78rem', color: '#c99' }}>
+                  Esta ação não pode ser desfeita. Se houver alunos vinculados, a exclusão será impedida.
                 </p>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button
                     onClick={() => setNucleoDeleteConfirm(null)}
-                    style={{ flex: 1, padding: '12px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 10, color: '#374151', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
+                    style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
                   >
                     Cancelar
                   </button>
@@ -6737,7 +6797,7 @@ _Portal Aluno_`
                       }
                       setNucleoDeleting(false);
                     }}
-                    style={{ flex: 1, padding: '12px', background: nucleoDeleting ? '#9ca3af' : '#dc2626', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: nucleoDeleting ? 'not-allowed' : 'pointer' }}
+                    style={{ flex: 1, padding: '12px', background: nucleoDeleting ? 'rgba(220,38,38,0.4)' : 'linear-gradient(135deg,#dc2626,#b91c1c)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: nucleoDeleting ? 'wait' : 'pointer' }}
                   >
                     {nucleoDeleting ? 'Excluindo...' : 'Excluir'}
                   </button>
@@ -6746,7 +6806,9 @@ _Portal Aluno_`
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
+
 
       {/* ===== ABA PLAYLIST ===== */}
       {activeTab === 'playlist' && activeNucleo === 'geral' && (() => {
@@ -7375,7 +7437,7 @@ _Portal Aluno_`
                   </div>
                   {totalPend > 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8, padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700, color: '#fbbf24' }}>
-                      ⚠️ {totalPend} com dados pendentes
+                      {totalPend} com dados pendentes
                     </div>
                   )}
                 </div>
@@ -7413,7 +7475,7 @@ _Portal Aluno_`
                               </span>
                             ) : (
                               <span style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 20, padding: '2px 10px', fontSize: '0.68rem', fontWeight: 700 }}>
-                                ⚠️ {pendentes.length} DADO{pendentes.length !== 1 ? 'S' : ''} PENDENTE{pendentes.length !== 1 ? 'S' : ''}
+                                {pendentes.length} DADO{pendentes.length !== 1 ? 'S' : ''} PENDENTE{pendentes.length !== 1 ? 'S' : ''}
                               </span>
                             )}
                           </div>
@@ -7434,14 +7496,14 @@ _Portal Aluno_`
                             <div style={{ marginBottom: 16, padding: '12px 14px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 10 }}>
                               <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#4ade80', marginBottom: 4 }}>✅ Cadastro completo</div>
                               <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                                Todos os dados obrigatórios foram preenchidos. Este rascunho está pronto para ser <strong style={{ color: '#4ade80' }}>finalizado</strong> — clique em "✅ Finalizar Cadastro" abaixo para incluir o aluno no sistema.
+                                Todos os dados obrigatórios foram preenchidos. Este rascunho está pronto para ser <strong style={{ color: '#4ade80' }}>finalizado</strong> — clique em "Finalizar Cadastro" abaixo para incluir o aluno no sistema.
                               </div>
                             </div>
                           ) : (
                             <div style={{ marginBottom: 16 }}>
                               <div style={{ padding: '12px 14px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, marginBottom: 10 }}>
                                 <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#fbbf24', marginBottom: 8 }}>
-                                  ⚠️ Por que está em rascunho? — Dados obrigatórios faltando:
+                                  Por que está em rascunho? — Dados obrigatórios faltando:
                                 </div>
                                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                                   {pendentes.map((p: string) => (
@@ -7532,7 +7594,7 @@ _Portal Aluno_`
                                 borderRadius: 8, padding: '8px 16px', cursor: rascunhoSaving ? 'wait' : 'pointer', fontSize: '0.78rem', fontWeight: 700,
                                 boxShadow: isCompleto ? '0 2px 8px rgba(22,163,74,0.4)' : 'none',
                               }}>
-                              {rascunhoSaving ? '⏳ Finalizando...' : isCompleto ? '✅ Finalizar Cadastro' : '⚠️ Finalizar com pendências'}
+                              {rascunhoSaving ? 'Finalizando...' : isCompleto ? 'Finalizar Cadastro' : 'Finalizar com pendências'}
                             </button>
 
                             {/* WhatsApp notification */}
@@ -7764,7 +7826,7 @@ _Portal Aluno_`
             {/* Header */}
             <div style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', borderRadius: '12px 12px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '-24px -24px 20px -24px' }}>
               <div>
-                <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>📊 Gráfico Individual de Presença</div>
+                <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>Gráfico Individual de Presença</div>
                 <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.75rem', marginTop: 2 }}>Busque um aluno pelo nome ou CPF</div>
               </div>
               <button onClick={() => setIndivChartOpen(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
@@ -8140,7 +8202,7 @@ _Portal Aluno_`
               style={{ width: '100%', marginTop: 16, padding: '11px', background: showHistGrad ? 'rgba(251,191,36,0.18)' : 'rgba(251,191,36,0.08)', border: `2px solid ${showHistGrad ? '#fbbf24' : 'rgba(251,191,36,0.35)'}`, color: '#fbbf24', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
             >
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-              {showHistGrad ? 'Ocultar Histórico de Graduações' : '📚 Histórico de Graduações'}
+              {showHistGrad ? 'Ocultar Histórico de Graduações' : 'Histórico de Graduações'}
             </button>
 
             {/* Painel Histórico de Graduações (inline) */}
@@ -8344,14 +8406,6 @@ _Portal Aluno_`
               )}
             </div>
 
-            {/* Documents bar for this student — single-student context */}
-            <DocumentsBar
-              adminAlwaysUnlocked
-              studentPhone={selected.telefone}
-              studentName={selected.nome_completo.split(' ')[0]}
-              students={[{ id: selected.id, nome_completo: selected.nome_completo, telefone: selected.telefone, nucleo: selected.nucleo, email: selected.email }]}
-            />
-
             {/* Generate ID if missing */}
             {!studentDisplayIds[selected.id] && (
               <button
@@ -8362,14 +8416,14 @@ _Portal Aluno_`
                 }}
                 style={{ width: '100%', marginTop: 10, padding: '9px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.35)', color: '#818cf8', borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
               >
-                🔢 Gerar ID CCLN para este aluno
+                Gerar ID CCLN para este aluno
               </button>
             )}
 
             {/* Alterar matrícula CCLN */}
             <div style={{ marginTop: 10, background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, padding: 12 }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-                🪪 Matrícula CCLN {studentDisplayIds[selected.id] ? `atual: ${studentDisplayIds[selected.id]}` : '(sem matrícula)'}
+                Matrícula CCLN {studentDisplayIds[selected.id] ? `atual: ${studentDisplayIds[selected.id]}` : '(sem matrícula)'}
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
@@ -8954,7 +9008,7 @@ _Portal Aluno_`
           <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
             <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ WebkitTextFillColor: 'var(--text-primary)', fontSize: '1.1rem' }}>
-                📊 Frequência Individual
+                Frequência Individual
               </span>
               <button className="modal-close" onClick={() => setChartStudent(null)}>&times;</button>
             </h2>
@@ -9338,7 +9392,7 @@ _Portal Aluno_`
 
             {/* GENERATE IDs */}
             <div style={{ background: 'var(--bg-card)', border: '2px solid rgba(16,185,129,0.3)', borderRadius: 14, padding: '20px' }}>
-              <div style={{ fontWeight: 700, color: '#34d399', marginBottom: 8 }}>🪪 IDs CCLN</div>
+              <div style={{ fontWeight: 700, color: '#34d399', marginBottom: 8 }}>IDs CCLN</div>
               <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: 14 }}>
                 Gera automaticamente IDs CCLN únicos para todos os alunos que ainda não possuem. O ID é vinculado à conta do aluno no sistema.
               </div>
@@ -9350,7 +9404,7 @@ _Portal Aluno_`
                   fetch('/api/aluno/gerar-id').then(r => r.json()).then(d2 => { if (d2 && typeof d2 === 'object') setStudentDisplayIds(d2 as Record<string, string>); }).catch(() => {});
                 } else alert('Erro: ' + JSON.stringify(d));
               }} style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)', color: '#34d399', borderRadius: 10, padding: '10px 20px', cursor: 'pointer', fontWeight: 700, fontSize: '0.88rem' }}>
-                🪪 Gerar IDs para todos os alunos
+                Gerar IDs para todos os alunos
               </button>
             </div>
           </div>
@@ -9369,7 +9423,7 @@ _Portal Aluno_`
               <button onClick={() => manualFileRef.current?.click()}
                 disabled={uploadingManual}
                 style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', opacity: uploadingManual ? 0.7 : 1 }}>
-                {uploadingManual ? '⏳ Enviando...' : '⬆ Subir PDF'}
+                {uploadingManual ? 'Enviando...' : '⬆ Subir PDF'}
               </button>
             )}
             <input ref={manualFileRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={async e => {
@@ -9720,7 +9774,7 @@ _Portal Aluno_`
                           setSavingManualVideo(false);
                         }}
                         style={{ background: savingManualVideo ? '#6b7280' : 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: (!manualVideoForm.title.trim() || !manualVideoForm.url.trim() || !urlValid) ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.82rem', opacity: (!manualVideoForm.title.trim() || !manualVideoForm.url.trim() || !urlValid) ? 0.5 : 1 }}>
-                        {savingManualVideo ? '⏳ Salvando...' : '✓ Adicionar Vídeo'}
+                        {savingManualVideo ? 'Salvando...' : '✓ Adicionar Vídeo'}
                       </button>
                     </div>
                   </div>
@@ -9809,7 +9863,7 @@ _Portal Aluno_`
               <button onClick={() => manualFileRef.current?.click()}
                 disabled={uploadingManual}
                 style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', opacity: uploadingManual ? 0.7 : 1 }}>
-                {uploadingManual ? '⏳ Enviando...' : '⬆ Subir PDF'}
+                {uploadingManual ? 'Enviando...' : '⬆ Subir PDF'}
               </button>
             )}
           </div>
@@ -10184,7 +10238,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                   setEventoParticipantSearch('');
                   setEventoParticipantStaging(null);
                 }}
-                style={{ background: 'linear-gradient(135deg,#0ea5e9,#0284c7)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
+                style={{ background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
                 {t('admin_new_event')}
               </button>
             </div>
@@ -10206,7 +10260,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {eventosFiltrados.sort((a, b) => (b.data || '').localeCompare(a.data || '')).map((ev: any) => (
-                  <div key={ev.id} style={{ background: 'var(--bg-card)', border: `1px solid ${ev.finalizado ? 'rgba(22,163,74,0.4)' : 'rgba(14,165,233,0.3)'}`, borderRadius: 14, overflow: 'hidden' }}>
+                  <div key={ev.id} style={{ background: 'var(--bg-card)', border: `1px solid ${ev.finalizado ? 'rgba(22,163,74,0.4)' : 'rgba(255,146,0,0.28)'}`, borderRadius: 14, overflow: 'hidden' }}>
                     {/* Event header */}
                     <div style={{ background: ev.finalizado ? 'linear-gradient(135deg,#166534,#15803d)' : 'linear-gradient(135deg,#0c4a6e,#0ea5e9)', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                       <div>
@@ -10262,7 +10316,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                         setEventoMsg('');
                         setEventoParticipantSearch('');
                         setEventoParticipantStaging(null);
-                      }} style={{ background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.3)', color: '#38bdf8', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
+                      }} style={{ background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(255,146,0,0.28)', color: '#38bdf8', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
                         ✏ {t('admin_edit')}
                       </button>
 
@@ -10510,7 +10564,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                     <div>
                       <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 8 }}>
                         📋 Lista Geral de Participantes
-                        <span style={{ background: 'rgba(14,165,233,0.15)', color: '#38bdf8', border: '1px solid rgba(14,165,233,0.3)', borderRadius: 20, padding: '2px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+                        <span style={{ background: 'rgba(14,165,233,0.15)', color: '#38bdf8', border: '1px solid rgba(255,146,0,0.28)', borderRadius: 20, padding: '2px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
                           {totalParticipantes} participante{totalParticipantes !== 1 ? 's' : ''}
                         </span>
                       </div>
@@ -10645,7 +10699,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
               <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 10, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 �� {t('admin_event_participants')}
                 {(eventoForm.participantes || []).length > 0 && (
-                  <span style={{ background: 'rgba(14,165,233,0.15)', color: '#38bdf8', border: '1px solid rgba(14,165,233,0.3)', borderRadius: 20, padding: '2px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+                  <span style={{ background: 'rgba(14,165,233,0.15)', color: '#38bdf8', border: '1px solid rgba(255,146,0,0.28)', borderRadius: 20, padding: '2px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
                     {(eventoForm.participantes || []).length} inserido{(eventoForm.participantes || []).length !== 1 ? 's' : ''}
                   </span>
                 )}
@@ -10677,7 +10731,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                       </div>
                     );
                     return (
-                      <div style={{ background: 'var(--bg-card)', border: '1px solid rgba(14,165,233,0.3)', borderRadius: 10, marginTop: 4, overflow: 'hidden', maxHeight: 260, overflowY: 'auto' }}>
+                      <div style={{ background: 'var(--bg-card)', border: '1px solid rgba(255,146,0,0.28)', borderRadius: 10, marginTop: 4, overflow: 'hidden', maxHeight: 260, overflowY: 'auto' }}>
                         {results.map(s => (
                           <button key={s.id}
                             onClick={() => {
@@ -10765,7 +10819,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                         setEventoParticipantStaging(null);
                         setEventoParticipantSearch('');
                       }}
-                      style={{ flex: 1, padding: '10px 0', background: 'linear-gradient(135deg,#0ea5e9,#0284c7)', border: 'none', color: '#fff', borderRadius: 9, cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', boxShadow: '0 2px 10px rgba(14,165,233,0.4)' }}>
+                      style={{ flex: 1, padding: '10px 0', background: 'linear-gradient(135deg,#FF9200,#d97706)', border: 'none', color: '#fff', borderRadius: 9, cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', boxShadow: '0 2px 10px rgba(14,165,233,0.4)' }}>
                       �� Inserir na Lista
                     </button>
                     <button
@@ -10921,7 +10975,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                     setEventoMsg('Erro ao salvar evento. Tente novamente.');
                   }
                 }}
-                style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#0ea5e9,#0284c7)', border: 'none', color: '#fff', borderRadius: 10, cursor: 'pointer', fontWeight: 700, opacity: eventoSaving ? 0.7 : 1 }}>
+                style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#FF9200,#d97706)', border: 'none', color: '#fff', borderRadius: 10, cursor: 'pointer', fontWeight: 700, opacity: eventoSaving ? 0.7 : 1 }}>
                 {eventoSaving ? t('admin_saving') : t('admin_save')}
               </button>
             </div>
@@ -11041,7 +11095,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
                 setRascunhoSaving(false);
               }}
                 style={{ flex: 2, padding: 10, background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: 'none', color: '#fff', borderRadius: 10, cursor: rascunhoSaving ? 'wait' : 'pointer', fontWeight: 700, fontSize: '0.95rem', opacity: rascunhoSaving ? 0.7 : 1 }}>
-                {rascunhoSaving ? '⏳ Salvando...' : '💾 Salvar Rascunho'}
+                {rascunhoSaving ? 'Salvando...' : '💾 Salvar Rascunho'}
               </button>
             </div>
           </div>
@@ -11096,7 +11150,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
               }}
                 disabled={rascunhoSaving}
                 style={{ flex: 2, padding: 10, background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: 'none', color: '#fff', borderRadius: 10, cursor: 'pointer', fontWeight: 700 }}>
-                {rascunhoSaving ? '⏳ Salvando...' : '💾 Criar Rascunho'}
+                {rascunhoSaving ? 'Salvando...' : '💾 Criar Rascunho'}
               </button>
             </div>
           </div>
@@ -11285,7 +11339,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
       {activeTab === 'contas' && (
         <div style={{ paddingTop: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
-            <h2 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-primary)' }}>👤 Contas de Alunos</h2>
+            <h2 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-primary)' }}>Contas de Alunos</h2>
             <button
               onClick={async () => {
                 setContasMsg('');
@@ -11298,7 +11352,7 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
               }}
               style={{ padding: '8px 16px', borderRadius: 8, background: '#7c3aed', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}
             >
-              🔢 Gerar IDs p/ Alunos Existentes
+              Gerar IDs p/ Alunos Existentes
             </button>
           </div>
 
@@ -12597,7 +12651,7 @@ Suporte Ginga Gestão.`
                           </div>
                           <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
                             {(u as any).email ? <>✉️ {(u as any).email}</> : <span style={{ color: '#b45309' }}>⚠ sem e-mail de recuperação</span>}
-                            {(u as any).cpf ? <> · 🪪 CPF {(u as any).cpf}</> : null}
+                            {(u as any).cpf ? <> · CPF {(u as any).cpf}</> : null}
                           </div>
                           {Array.isArray((u as any).nucleos) && (u as any).nucleos.length > 1 && (
                             <div style={{ fontSize: '0.7rem', color: '#0ea5e9', marginTop: 2 }}>
@@ -12928,11 +12982,16 @@ Suporte Ginga Gestão.`
       {/* ===== ABA MINHA CONTA (qualquer admin) ===== */}
       {activeTab === 'minha-conta' && (
         <div style={{ paddingTop: 24, maxWidth: 760, margin: '0 auto' }}>
-          <div style={{ marginBottom: 20 }}>
-            <h2 style={{ margin: '0 0 4px', fontSize: '1.15rem', color: 'var(--text-primary)' }}>👤 Minha Conta</h2>
-            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              Gerencie seu próprio acesso: nome, e-mail de recuperação, CPF (login alternativo) e senha. Acompanhe abaixo a versão do sistema e o histórico de atualizações.
-            </p>
+          <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: 12, background: 'radial-gradient(circle at 32% 26%, rgba(255,146,0,0.28), rgba(255,146,0,0.08))', border: '1px solid rgba(255,146,0,0.3)', color: '#FF9200', boxShadow: '0 0 16px rgba(255,146,0,0.16)', flexShrink: 0 }}>
+              <IconUser size={19} />
+            </span>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>Minha Conta</h2>
+              <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                Seus dados de acesso, segurança e preferências — o e-mail de recuperação garante o resgate da senha sozinho.
+              </p>
+            </div>
           </div>
           <MyAccountCard
             username={sessionUser()}
@@ -12979,11 +13038,16 @@ Suporte Ginga Gestão.`
       {/* ===== ABA CONFIG DE E-MAIL (owner/admin geral) ===== */}
       {activeTab === 'email-config' && activeNucleo === 'geral' && (
         <div style={{ paddingTop: 24, maxWidth: 760 }}>
-          <div style={{ marginBottom: 20 }}>
-            <h2 style={{ margin: '0 0 4px', fontSize: '1.15rem', color: 'var(--text-primary)' }}>📧 Configuração de E-mail</h2>
-            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              Usada para recuperação de senha e avisos. Se uma chave também estiver nas variáveis de ambiente do projeto, ela tem prioridade.
-            </p>
+          <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: 12, background: 'radial-gradient(circle at 32% 26%, rgba(255,146,0,0.28), rgba(255,146,0,0.08))', border: '1px solid rgba(255,146,0,0.3)', color: '#FF9200', boxShadow: '0 0 16px rgba(255,146,0,0.16)', flexShrink: 0 }}>
+              <IconMail size={19} />
+            </span>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>Configuração de E-mail</h2>
+              <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                Usada para recuperação de senha e avisos. Se uma chave também estiver nas variáveis de ambiente do projeto, ela tem prioridade.
+              </p>
+            </div>
           </div>
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: '22px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

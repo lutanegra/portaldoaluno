@@ -483,16 +483,20 @@ export async function POST(req: NextRequest) {
     if (email && Object.entries(creds0).some(([k, c]) => k !== sess.key && normalizeEmail(c.email || '') === email)) {
       return NextResponse.json({ error: 'Este e-mail já está vinculado a outra conta.' }, { status: 409 });
     }
-    const cpf = body.cpf !== undefined ? normalizeCpfDigits(String(body.cpf)) : (sess.acc.cpf || '');
+    // O campo exibido vem mascarado (***.***.***-**). Só altera o CPF quando o
+    // cliente digitou um valor novo de verdade (11 dígitos ou vazio intencional).
+    const cpfEnviado = body.cpf !== undefined ? normalizeCpfDigits(String(body.cpf)) : null;
+    const cpfAtual = normalizeCpfDigits(sess.acc.cpf || '');
+    const cpf = cpfEnviado && cpfEnviado.length === 11 ? cpfEnviado : (cpfEnviado === '' ? '' : cpfAtual);
     if (cpf && cpf.length !== 11) return NextResponse.json({ error: 'CPF deve ter 11 dígitos.' }, { status: 400 });
-    if (cpf && Object.entries(creds0).some(([k, c]) => k !== sess.key && normalizeCpfDigits(c.cpf || '') === cpf)) {
+    if (cpf && cpf !== cpfAtual && Object.entries(creds0).some(([k, c]) => k !== sess.key && normalizeCpfDigits(c.cpf || '') === cpf)) {
       return NextResponse.json({ error: 'Este CPF já está vinculado a outra conta.' }, { status: 409 });
     }
     creds0[sess.key] = { ...sess.acc, email: email || undefined, cpf: cpf || undefined, nome: body.nome !== undefined ? String(body.nome).trim() : sess.acc.nome };
     await saveCreds(creds0);
-    if (email) await ensureSupabaseAuthUser(email, sess.key, sess.acc.nome);
+    if (email) await ensureSupabaseAuthUser(email, sess.key, creds0[sess.key].nome);
     await appendAudit({ actor: sess.key, actor_type: 'admin', action: 'conta_proprio_atualizada', details: { com_email: !!email, com_cpf: !!cpf } });
-    return NextResponse.json({ ok: true, email: email || '', cpf: maskCpf(cpf) });
+    return NextResponse.json({ ok: true, email: email || '', cpf: maskCpf(cpf), nome: creds0[sess.key].nome || '' });
   }
 
   // ── VINCULAR NOVO NÚCLEO à própria conta de admin de núcleo (senha da conta exigida) ──

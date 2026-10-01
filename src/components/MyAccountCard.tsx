@@ -109,6 +109,8 @@ export default function MyAccountCard({
     setSavingContact(true);
     setMsgContact('');
     try {
+      // Envia sempre o valor exibido: o servidor ignora a máscara (***)
+      // e mantém o CPF salvo quando o campo não foi alterado de verdade.
       const res = await fetch('/api/admin/panel-auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,6 +119,7 @@ export default function MyAccountCard({
       const d = await res.json();
       if (res.ok) {
         setMsgContact('✓ Dados atualizados!');
+        if (typeof d.cpf === 'string') setCpf(d.cpf); // re-exibe mascarado
         onSaved('Minha conta atualizada.');
       } else {
         setMsgContact(d.error || 'Erro ao salvar.');
