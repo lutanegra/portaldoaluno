@@ -16,6 +16,7 @@ import MuralAdmin from '@/components/MuralAdmin';
 import { invalidateConfigCache } from '@/hooks/useSystemConfig';
 import EditAccountModal from '@/components/EditAccountModal';
 import MyAccountCard from '@/components/MyAccountCard';
+import BackupPanel from '@/components/BackupPanel';
 import { IconHome, IconUser, IconLogout, IconMenu, IconX, IconFolder, IconMapPin, IconWallet, IconChart, IconChevron, IconMedal, IconDoc, IconGear, IconTrash, IconEye, IconLock, IconBell, IconNote, IconMusic, IconBerimbau, IconBag, IconStar, IconWarn, IconMail as IconMailOk, IconRefresh } from '@/components/icons';
 
 
@@ -1853,69 +1854,73 @@ export default function AdminPage() {
 
   if (!authed) {
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#0f172a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Inter, sans-serif' }}>
-        {/* Logo + title */}
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-portal-aluno.png" alt="Portal Aluno" style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 10, borderRadius: '50%' }} />
-          <div style={{ background: 'linear-gradient(90deg,#FF9200,#fbbf24)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontSize: '1.15rem', fontWeight: 900, letterSpacing: '0.03em' }}>Portal Aluno — Gestao de Treinos</div>
-          <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.78rem', marginTop: 4 }}>Owner · Admin Geral · Admin de Núcleo</div>
-        </div>
-
-        {/* Aviso de acesso */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <div style={{ background: 'rgba(255,146,0,0.12)', border: '1px solid rgba(255,146,0,0.35)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
-            <div style={{ color: '#FF9200', fontWeight: 700, fontSize: '0.8rem' }}>Acesso único</div>
-            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', marginTop: 2 }}>Owner, Admin Geral e Núcleo entram aqui</div>
+      <div className="pa-auth">
+        <div className="pa-auth-inner" style={{ maxWidth: 400 }}>
+          {/* Logo + título */}
+          <div className="pa-auth-logo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-portal-aluno.png" alt="Portal Aluno" />
+            <h1>Portal <span>Aluno</span></h1>
+            <p>Gestão de Treinos · Painel Administrativo</p>
           </div>
-        </div>
 
-        {/* Login form */}
-        <div style={{ width: '100%', maxWidth: 360, background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(12px)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.12)', padding: '28px 24px' }}>
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', fontWeight: 600, marginBottom: 5 }}>Login, CPF ou e-mail</label>
-              <input value={loginUser} onChange={e => setLoginUser(e.target.value)} placeholder="Login, CPF ou e-mail da conta" autoFocus
-                style={{ width: '100%', padding: '11px 14px', border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: 10, fontSize: '0.95rem', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box' }} />
-            </div>
-            <div>
-              <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', fontWeight: 600, marginBottom: 5 }}>Senha</label>
-              <div style={{ position: 'relative' }}>
-                <input type={showPass ? 'text' : 'password'} value={loginPass} onChange={e => setLoginPass(e.target.value)} placeholder="••••••••"
-                  style={{ width: '100%', padding: '11px 40px 11px 14px', border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: 10, fontSize: '0.95rem', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box' }} />
-                <button type="button" onClick={() => setShowPass(p => !p)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 0 }}>
+          {/* Chips de acesso */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', color: '#ffc266', borderRadius: 999, padding: '5px 12px', fontSize: '0.72rem', fontWeight: 700 }}>
+              Acesso único
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 999, padding: '5px 12px', fontSize: '0.72rem', fontWeight: 600 }}>
+              Owner · Admin Geral · Admin de Núcleo
+            </span>
+          </div>
+
+          {/* Login form */}
+          <div className="pa-card" style={{ padding: '26px 24px' }}>
+            <form onSubmit={handleLogin}>
+              <div className="pa-field">
+                <label htmlFor="pa-admin-login">Login, CPF ou e-mail</label>
+                <input id="pa-admin-login" value={loginUser} onChange={e => setLoginUser(e.target.value)} placeholder="Login, CPF ou e-mail da conta" autoFocus autoComplete="username" />
+              </div>
+              <div className="pa-field">
+                <label htmlFor="pa-admin-pass">Senha</label>
+                <div style={{ position: 'relative' }}>
+                  <input id="pa-admin-pass" type={showPass ? 'text' : 'password'} value={loginPass} onChange={e => setLoginPass(e.target.value)} placeholder="••••••••" autoComplete="current-password" style={{ paddingRight: 44 }} />
+                <button type="button" onClick={() => setShowPass(p => !p)} aria-label={showPass ? 'Ocultar senha' : 'Mostrar senha'} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 0 }}>
                   {showPass ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
                 </button>
               </div>
             </div>
-            {loginError && <div style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.4)', borderRadius: 8, padding: '8px 12px', color: '#fca5a5', fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><IconWarn size={13} /> {loginError}</div>}
-            <button type="submit" style={{ background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', marginTop: 4 }}>Entrar</button>
+            {loginError && <div className="pa-alert pa-alert-error" style={{ marginBottom: 0 }}><span style={{ display: 'inline-flex', verticalAlign: '-3px', marginRight: 6 }}><IconWarn size={13} /></span>{loginError}</div>}
+            <button type="submit" className="pa-btn" style={{ marginTop: 4 }}>Entrar</button>
           </form>
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+          <div className="pa-row" style={{ justifyContent: 'center', marginTop: 16 }}>
             <button type="button" onClick={() => { setShowAdminForgot(v => !v); setAdminForgotMsg(''); setAdminForgotDone(false); setAdminForgotCpf(''); setAdminForgotStep('login'); setAdminForgotCode(''); setAdminForgotPass(''); setAdminForgotPass2(''); }}
-              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}>
+              className="pa-btn-ghost">
               Esqueci minha senha
             </button>
           </div>
 
-{/* Admin forgot-password inline panel (código por e-mail via Resend/SMTP) */}
+          {/* Admin forgot-password inline panel (código por e-mail via Resend/SMTP) */}
           {showAdminForgot && (
-            <div style={{ marginTop: 14, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: '16px 18px' }}>
-              <div style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 700, fontSize: '0.88rem', marginBottom: 10 }}>Recuperar Acesso</div>
+            <div style={{ marginTop: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+              <div style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 700, fontSize: '0.88rem', marginBottom: 10 }}>Recuperar Acesso</div>
 
               {!adminForgotDone ? (
                 adminForgotStep === 'login' ? (
                   <>
-                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', lineHeight: 1.5, marginBottom: 12 }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', lineHeight: 1.5, marginBottom: 12 }}>
                       Informe seu login de acesso. Enviaremos um código de 6 dígitos para o e-mail cadastrado na sua conta, válido por 15 minutos.
                     </div>
-                    <input
-                      type="text"
-                      value={adminForgotCpf}
-                      onChange={e => { setAdminForgotCpf(e.target.value); setAdminForgotMsg(''); }}
-                      placeholder="Seu login de acesso"
-                      style={{ width: '100%', padding: '10px 12px', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 8, fontSize: '0.9rem', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box', marginBottom: 8 }}
-                    />
+                    <div className="pa-field">
+                      <label htmlFor="pa-forgot-login">Seu login de acesso</label>
+                      <input
+                        id="pa-forgot-login"
+                        type="text"
+                        value={adminForgotCpf}
+                        onChange={e => { setAdminForgotCpf(e.target.value); setAdminForgotMsg(''); }}
+                        placeholder="Seu login de acesso"
+                      />
+                    </div>
                     {adminForgotMsg && (
                       <div style={{ fontSize: '0.78rem', color: adminForgotMsg.includes('✓') ? '#86efac' : '#fca5a5', marginBottom: 8, lineHeight: 1.5 }}>{adminForgotMsg}</div>
                     )}
@@ -1945,22 +1950,26 @@ export default function AdminPage() {
                         } catch { setAdminForgotMsg('Erro de conexao.'); }
                         setAdminForgotLoading(false);
                       }}
-                      style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', opacity: adminForgotLoading ? 0.6 : 1 }}>
+                      className="pa-btn" style={{ padding: '11px', fontSize: '0.85rem', opacity: adminForgotLoading ? 0.6 : 1 }}>
                       {adminForgotLoading ? 'Enviando...' : 'Enviar código de recuperação'}
                     </button>
                   </>
                 ) : adminForgotStep === 'code' ? (
                   <>
-                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', lineHeight: 1.5, marginBottom: 12 }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', lineHeight: 1.5, marginBottom: 12 }}>
                       {adminForgotMsg || 'Digite o código de 6 dígitos enviado para o seu e-mail.'}
                     </div>
-                    <input
-                      type="text" inputMode="numeric" maxLength={6}
-                      value={adminForgotCode}
-                      onChange={e => { setAdminForgotCode(e.target.value.replace(/\D/g, '')); setAdminForgotMsg(''); }}
-                      placeholder="Código de 6 dígitos"
-                      style={{ width: '100%', padding: '10px 12px', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 8, fontSize: '1.1rem', letterSpacing: '0.35em', textAlign: 'center', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box', marginBottom: 8 }}
-                    />
+                    <div className="pa-field">
+                      <label htmlFor="pa-forgot-code">Código de 6 dígitos</label>
+                      <input
+                        id="pa-forgot-code"
+                        type="text" inputMode="numeric" maxLength={6}
+                        value={adminForgotCode}
+                        onChange={e => { setAdminForgotCode(e.target.value.replace(/\D/g, '')); setAdminForgotMsg(''); }}
+                        placeholder="Código de 6 dígitos"
+                        style={{ fontSize: '1.1rem', letterSpacing: '0.35em', textAlign: 'center' }}
+                      />
+                    </div>
                     {adminForgotMsg.includes('✓') && (
                       <div style={{ fontSize: '0.78rem', color: '#86efac', marginBottom: 8 }}>{adminForgotMsg.replace('✓ ', '')}</div>
                     )}
@@ -1984,33 +1993,41 @@ export default function AdminPage() {
                         } catch { setAdminForgotMsg('Erro de conexao.'); }
                         setAdminForgotLoading(false);
                       }}
-                      style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', opacity: adminForgotLoading || adminForgotCode.length !== 6 ? 0.6 : 1 }}>
+                      className="pa-btn" style={{ padding: '11px', fontSize: '0.85rem', opacity: adminForgotLoading || adminForgotCode.length !== 6 ? 0.6 : 1 }}>
                       {adminForgotLoading ? 'Validando...' : 'Validar código'}
                     </button>
                     <button type="button" onClick={() => { setAdminForgotStep('login'); setAdminForgotCode(''); setAdminForgotMsg(''); }}
-                      style={{ width: '100%', marginTop: 6, padding: '8px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}>
+                      style={{ width: '100%', marginTop: 6, padding: '8px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}>
                       Usar outro login
                     </button>
                   </>
                 ) : (
                   <>
-                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', lineHeight: 1.5, marginBottom: 12 }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', lineHeight: 1.5, marginBottom: 12 }}>
                       Código validado. Defina a nova senha da sua conta.
                     </div>
-                    <input
-                      type="password"
-                      value={adminForgotPass}
-                      onChange={e => { setAdminForgotPass(e.target.value); setAdminForgotMsg(''); }}
-                      placeholder="Nova senha"
-                      style={{ width: '100%', padding: '10px 12px', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 8, fontSize: '0.9rem', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box', marginBottom: 8 }}
-                    />
-                    <input
-                      type="password"
-                      value={adminForgotPass2}
-                      onChange={e => { setAdminForgotPass2(e.target.value); setAdminForgotMsg(''); }}
-                      placeholder="Confirmar nova senha"
-                      style={{ width: '100%', padding: '10px 12px', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 8, fontSize: '0.9rem', outline: 'none', color: '#fff', background: 'rgba(255,255,255,0.1)', boxSizing: 'border-box', marginBottom: 8 }}
-                    />
+                    <div className="pa-field">
+                      <label htmlFor="pa-forgot-pass">Nova senha</label>
+                      <input
+                        id="pa-forgot-pass"
+                        type="password"
+                        value={adminForgotPass}
+                        onChange={e => { setAdminForgotPass(e.target.value); setAdminForgotMsg(''); }}
+                        placeholder="Nova senha"
+                        autoComplete="new-password"
+                      />
+                    </div>
+                    <div className="pa-field">
+                      <label htmlFor="pa-forgot-pass2">Confirmar nova senha</label>
+                      <input
+                        id="pa-forgot-pass2"
+                        type="password"
+                        value={adminForgotPass2}
+                        onChange={e => { setAdminForgotPass2(e.target.value); setAdminForgotMsg(''); }}
+                        placeholder="Confirmar nova senha"
+                        autoComplete="new-password"
+                      />
+                    </div>
                     {adminForgotMsg && (
                       <div style={{ fontSize: '0.78rem', color: '#fca5a5', marginBottom: 8 }}>{adminForgotMsg}</div>
                     )}
@@ -2036,7 +2053,7 @@ export default function AdminPage() {
                         } catch { setAdminForgotMsg('Erro de conexao.'); }
                         setAdminForgotLoading(false);
                       }}
-                      style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#FF9200,#d97706)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', opacity: adminForgotLoading ? 0.6 : 1 }}>
+                      className="pa-btn" style={{ padding: '11px', fontSize: '0.85rem', opacity: adminForgotLoading ? 0.6 : 1 }}>
                       {adminForgotLoading ? 'Salvando...' : 'Definir nova senha'}
                     </button>
                   </>
@@ -2046,13 +2063,13 @@ export default function AdminPage() {
                   <span style={{ display: 'inline-flex', verticalAlign: '-3px', marginRight: 6, color: '#86efac' }}><IconMailOk size={15} /></span>
                   {adminForgotMsg}
                   <br />
-                  <button type="button" onClick={() => { setShowAdminForgot(false); setAdminForgotDone(false); setAdminForgotMsg(''); setAdminForgotCpf(''); setAdminForgotStep('login'); setAdminForgotCode(''); setAdminForgotPass(''); setAdminForgotPass2(''); }} style={{ marginTop: 10, padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '0.78rem', cursor: 'pointer' }}>Fechar</button>
+                  <button type="button" onClick={() => { setShowAdminForgot(false); setAdminForgotDone(false); setAdminForgotMsg(''); setAdminForgotCpf(''); setAdminForgotStep('login'); setAdminForgotCode(''); setAdminForgotPass(''); setAdminForgotPass2(''); }} style={{ marginTop: 10, padding: '8px 16px', background: 'rgba(255,255,255,0.08)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: '0.78rem', cursor: 'pointer' }}>Fechar</button>
                 </div>
               )}
             </div>
           )}
+          </div>
         </div>
-
       </div>
     );
   }
@@ -2827,7 +2844,7 @@ export default function AdminPage() {
           {activeNucleo === 'geral' && (
             <>
               <a
-                href="/api/admin/export-alunos?auth=geral"
+                href="/api/admin/export-alunos"
                 download
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.35)', color: '#60a5fa', borderRadius: 8, padding: '7px 14px', fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}>
                 ⬇️ Exportar CSV Completo ({students.length} alunos)
@@ -2857,7 +2874,7 @@ export default function AdminPage() {
                   if (!rows.length) { alert('Nenhum aluno encontrado no CSV.'); return; }
                   if (!confirm(`Importar ${rows.length} registros do CSV?\n\nSomente campos preenchidos no CSV serão atualizados (não apaga dados existentes).`)) return;
                   try {
-                    const res = await fetch('/api/admin/import-alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ auth: 'geral', rows }) });
+                    const res = await fetch('/api/admin/import-alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }) });
                     const d = await res.json();
                     if (d.success) {
                       alert(`✅ Importação concluída!\n\n• Atualizados: ${d.updated}\n• Não encontrados: ${d.notFound}\n• Com erro: ${d.skipped}\n• Total no CSV: ${d.total}${d.errors?.length ? '\n\nErros:\n' + d.errors.join('\n') : ''}`);
@@ -9194,7 +9211,7 @@ _Portal Aluno_`
                   if (!rows.length) { alert('Nenhum aluno encontrado no CSV.'); return; }
                   if (!confirm(`Importar ${rows.length} registros do CSV?\n\nSomente campos preenchidos no CSV serão atualizados.`)) return;
                   try {
-                    const res = await fetch('/api/admin/import-alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ auth: 'geral', rows }) });
+                    const res = await fetch('/api/admin/import-alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }) });
                     const d = await res.json();
                     if (d.success) {
                       alert(`✅ Importação concluída!\n\n• Atualizados: ${d.updated}\n• Não encontrados: ${d.notFound}\n• Com erro: ${d.skipped}\n• Total no CSV: ${d.total}${d.errors?.length ? '\n\nErros:\n' + d.errors.join('\n') : ''}`);
@@ -9231,7 +9248,7 @@ _Portal Aluno_`
                           const s = students.find(x => x.id === id);
                           return { nome_completo: s?.nome_completo || '', nucleo: restSelNucleo };
                         });
-                        const res = await fetch('/api/admin/import-alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ auth: 'geral', rows }) });
+                        const res = await fetch('/api/admin/import-alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }) });
                         const d = await res.json();
                         if (d.success) { alert(`✅ ${d.updated} alunos atualizados com núcleo "${restSelNucleo}"`); fetchStudents(activeNucleo); setRestSelIds(new Set()); }
                         else alert('Erro: ' + d.error);
@@ -9285,7 +9302,7 @@ _Portal Aluno_`
                           const s = students.find(x => x.id === id);
                           return { nome_completo: s?.nome_completo || '', graduacao: restSelGrad, ...(restSelTipo ? { tipo_graduacao: restSelTipo } : {}) };
                         });
-                        const res = await fetch('/api/admin/import-alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ auth: 'geral', rows }) });
+                        const res = await fetch('/api/admin/import-alunos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }) });
                         const d = await res.json();
                         if (d.success) { alert(`✅ ${d.updated} alunos atualizados com graduação "${restSelGrad}"`); fetchStudents(activeNucleo); setRestSelGradIds(new Set()); }
                         else alert('Erro: ' + d.error);
@@ -12528,6 +12545,9 @@ Suporte Ginga Gestão.`
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+
+              {/* ───── BACKUP AUTOMÁTICO DOS ALUNOS (Owner/Admin Geral) ───── */}
+              <BackupPanel onImported={() => fetchStudents(activeNucleo)} />
 
               {/* ───── CONTAS DOS NÚCLEOS ───── */}
               <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: '22px 22px' }}>

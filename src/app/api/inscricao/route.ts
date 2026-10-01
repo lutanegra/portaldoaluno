@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getTenantId } from '@/lib/tenants';
+import { autoBackupAfterChange } from '@/lib/backupAlunos';
 
 export const dynamic = 'force-dynamic';
 
@@ -398,7 +399,11 @@ export async function POST(req: NextRequest) {
       } catch { /* não bloqueia o cadastro */ }
     }
 
+    // Backup automático pós-inscrição (melhor esforço, não bloqueia o cadastro)
+    try { await autoBackupAfterChange('sistema', 'nova_inscricao'); } catch {}
+
     return NextResponse.json({ success: true, student_id: studentId, inscricao_numero });
+
   } catch (err) {
     const msg = err instanceof Error ? err.message : JSON.stringify(err);
     console.error('Erro rota inscricao:', msg);

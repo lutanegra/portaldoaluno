@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requirePanelAdmin } from '@/lib/adminGuard';
+import { autoBackupAfterChange } from '@/lib/backupAlunos';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -140,6 +141,9 @@ export async function POST(req: NextRequest) {
       target_name: String(student.nome_completo || ''),
       details: { matricula_liberada: student.ordem_inscricao ?? null },
     });
+
+    // Backup automático pós-exclusão definitiva (melhor esforço)
+    try { await autoBackupAfterChange(key, 'exclusao_definitiva_aluno'); } catch {}
 
     return NextResponse.json({ ok: true, matricula_liberada: student.ordem_inscricao ?? null });
   } catch (err) {
