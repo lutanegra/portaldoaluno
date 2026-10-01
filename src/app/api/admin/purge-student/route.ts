@@ -77,7 +77,8 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
     if (!student) return NextResponse.json({ error: 'Aluno não encontrado.' }, { status: 404 });
 
-    // 2) Excluir do banco (presenças caem por CASCADE)
+    // 2) Excluir do banco (presenças caem por CASCADE; notificações, preferências,
+    // dispositivos e vínculos também caem pelas FKs ON DELETE CASCADE)
     const { error: delErr } = await supabaseAdmin
       .from('students')
       .delete()

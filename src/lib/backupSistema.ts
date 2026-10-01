@@ -74,6 +74,9 @@ type Snapshot = {
     guardians?: Record<string, unknown>[];
     guardian_links?: Record<string, unknown>[];
     adolescent_authorizations?: Record<string, unknown>[];
+    notifications?: Record<string, unknown>[];
+    notification_preferences?: Record<string, unknown>[];
+    push_subscriptions?: Record<string, unknown>[];
   };
   arquivos: Record<string, unknown>; // chave no bucket → conteúdo JSON
 };
@@ -231,7 +234,7 @@ function nextRunAt(settings: BackupSettings, lastSuccessfulIso: string | null): 
 /* ── Geração do snapshot ───────────────────────────────────────────────── */
 
 async function buildSnapshot(): Promise<{ snapshot: Snapshot; contagens: Record<string, number> }> {
-  const [students, presencas, checkins, tenants, systemConfig, guardians, guardianLinks, adolescentAuths] = await Promise.all([
+  const [students, presencas, checkins, tenants, systemConfig, guardians, guardianLinks, adolescentAuths, notifications, notifPrefs, pushSubs] = await Promise.all([
     fetchAll('students', 'ordem_inscricao'),
     fetchAll('presencas', 'data_treino'),
     fetchAll('checkins', 'data'),
@@ -240,6 +243,9 @@ async function buildSnapshot(): Promise<{ snapshot: Snapshot; contagens: Record<
     fetchAll('guardians', 'student_id'),
     fetchAll('guardian_links', 'created_at'),
     fetchAll('adolescent_authorizations', 'created_at'),
+    fetchAll('notifications', 'created_at'),
+    fetchAll('notification_preferences', 'user_id'),
+    fetchAll('push_subscriptions', 'created_at'),
   ]);
   const keys = await listJsonKeys();
   const arquivos: Record<string, unknown> = {};
@@ -256,6 +262,9 @@ async function buildSnapshot(): Promise<{ snapshot: Snapshot; contagens: Record<
     responsaveis: guardians.length,
     vinculos: guardianLinks.length,
     autorizacoes: adolescentAuths.length,
+    notificacoes: notifications.length,
+    preferencias_notificacao: notifPrefs.length,
+    dispositivos_push: pushSubs.length,
     arquivos: keys.length,
   };
   return {
@@ -265,6 +274,7 @@ async function buildSnapshot(): Promise<{ snapshot: Snapshot; contagens: Record<
       banco: {
         students, presencas, checkins, tenants, system_config: systemConfig,
         guardians, guardian_links: guardianLinks, adolescent_authorizations: adolescentAuths,
+        notifications, notification_preferences: notifPrefs, push_subscriptions: pushSubs,
       },
       arquivos,
     },
@@ -508,6 +518,16 @@ export async function restoreBackupSistema(filename: string, actor: string): Pro
   if (Array.isArray(snapshot.banco.adolescent_authorizations)) {
     restaurados.autorizacoes = await upsertTable('adolescent_authorizations', snapshot.banco.adolescent_authorizations);
   }
+  // Notificações (backups antigos simplesmente não trazem)
+  if (Array.isArray(snapshot.banco.notifications)) {
+    restaurados.notificacoes = await upsertTable('notifications', snapshot.banco.notifications);
+  }
+  if (Array.isArray(snapshot.banco.notification_preferences)) {
+    restaurados.preferencias = await upsertTable('notification_preferences', snapshot.banco.notification_preferences);
+  }
+  if (Array.isArray(snapshot.banco.push_subscriptions)) {
+    restaurados.dispositivos = await upsertTable('push_subscriptions', snapshot.banco.push_subscriptions);
+  }
 
   const idsStudents = new Set(snapshot.banco.students.map(r => String(r.id)));
   const idsPresencas = new Set(snapshot.banco.presencas.map(r => String(r.id)));
@@ -515,6 +535,15 @@ export async function restoreBackupSistema(filename: string, actor: string): Pro
   // Derivadas primeiro (FK para students), depois students
   if (Array.isArray(snapshot.banco.adolescent_authorizations)) {
     removidos.autorizacoes = await deleteNotIn('adolescent_authorizations', new Set(snapshot.banco.adolescent_authorizations.map(r => String(r.id))));
+  }
+  if (Array.isArray(snapshot.banco.notifications)) {
+    removidos.notificacoes = await deleteNotIn('notifications', new Set(snapshot.banco.notifications.map(r => String(r.id))));
+  }
+  if (Array.isArray(snapshot.banco.notification_preferences)) {
+    removidos.preferencias = await deleteNotIn('notification_preferences', new Set(snapshot.banco.notification_preferences.map(r => String(r.user_id))));
+  }
+  if (Array.isArray(snapshot.banco.push_subscriptions)) {
+    removidos.dispositivos = await deleteNotIn('push_subscriptions', new Set(snapshot.banco.push_subscriptions.map(r => String(r.id))));
   }
   if (Array.isArray(snapshot.banco.guardian_links)) {
     removidos.vinculos = await deleteNotIn('guardian_links', new Set(snapshot.banco.guardian_links.map(r => String(r.id))));

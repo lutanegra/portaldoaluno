@@ -200,16 +200,29 @@ export async function POST(req: NextRequest) {
     items.unshift(novo);
     await saveMural(items.slice(0, 300));
 
+    // Notificação push (opcional, padrão: ligada). O servidor calcula os
+    // destinatários — o frontend nunca escolhe quem recebe.
+    const notificar = body.notificar !== false;
+    let notificacoes: { criadas: number; pushesOk: number; pushesFalha: number } | null = null;
+    if (notificar) {
+      try {
+        const { notificarMural } = await import('@/lib/push/integracoes');
+        notificacoes = await notificarMural(novo);
+      } catch (e) {
+        console.error('[mural] falha ao notificar:', e);
+      }
+    }
+
     await appendAudit({
       actor: admin.login,
       actor_type: 'admin',
       action: 'mural_criar',
       target_id: novo.id,
       target_name: titulo,
-      details: { tipo, nucleos: slugsPedidos, com_imagem: !!imagemPath },
+      details: { tipo, nucleos: slugsPedidos, com_imagem: !!imagemPath, notificacoes },
     });
 
-    return NextResponse.json({ ok: true, item: novo });
+    return NextResponse.json({ ok: true, item: novo, notificacoes });
   } catch (e) {
     console.error('mural POST error:', e);
     return NextResponse.json({ error: 'Erro ao salvar o aviso.' }, { status: 500 });

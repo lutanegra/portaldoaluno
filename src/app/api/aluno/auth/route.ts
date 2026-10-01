@@ -174,6 +174,12 @@ export async function POST(req: NextRequest) {
       const sess = createAlunoSession(account.student_id, account.username);
       store.set(SESSION_COOKIE, serializeAlunoSession(sess), sessionCookieOptions());
 
+      // Notificação de segurança (obrigatória): novo login na conta
+      try {
+        const { notificarSeguranca } = await import('@/lib/push/integracoes');
+        await notificarSeguranca(account.student_id, 'Novo login', 'Alguém entrou na sua conta. Se não foi você, troque a senha e procure o admin do seu núcleo.', 'novo_login');
+      } catch { /* best-effort */ }
+
       return NextResponse.json({
         success: true,
         student_id: account.student_id,
@@ -513,6 +519,12 @@ export async function POST(req: NextRequest) {
       account.student_id = novaLinha.id;
       authMap0[novaLinha.id] = account;
       await saveAuthMap(authMap0);
+
+      // Notificação de segurança: conta criada (categoria obrigatória)
+      try {
+        const { notificarSeguranca } = await import('@/lib/push/integracoes');
+        await notificarSeguranca(novaLinha.id, 'Conta criada', 'Sua conta de responsável foi criada. Se não foi você, procure o admin do seu núcleo.', 'conta_criada');
+      } catch { /* best-effort */ }
 
       // Backup de alunos + auditoria
       try {
@@ -860,6 +872,11 @@ export async function POST(req: NextRequest) {
         active: true,
       };
       await saveAuthMap(authMap);
+      // Notificação de segurança (obrigatória): senha redefinida via código
+      try {
+        const { notificarSeguranca } = await import('@/lib/push/integracoes');
+        await notificarSeguranca(student_id, 'Senha alterada', 'Sua senha foi redefinida usando o código de recuperação. Se não foi você, procure o admin do seu núcleo imediatamente.', 'senha_alterada');
+      } catch { /* best-effort */ }
       return NextResponse.json({ success: true });
     }
 
@@ -1127,6 +1144,11 @@ export async function POST(req: NextRequest) {
         salt,
       };
       await saveAuthMap(authMap);
+      // Notificação de segurança (obrigatória): troca de senha no app
+      try {
+        const { notificarSeguranca } = await import('@/lib/push/integracoes');
+        await notificarSeguranca(student_id, 'Senha alterada', 'Sua senha foi alterada dentro do app. Se não foi você, procure o admin do seu núcleo imediatamente.', 'senha_alterada');
+      } catch { /* best-effort */ }
       return NextResponse.json({ success: true });
     }
 

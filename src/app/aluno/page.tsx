@@ -16,6 +16,7 @@ import { pendenciasAluno, resumoPendencias, isValidCPF, isValidRG, cpfDigits, ty
 import { idadeEm } from '@/lib/idade';
 import AppFooter from '@/components/AppFooter';
 import PerfilGuardiaoCard from '@/components/PerfilGuardiaoCard';
+import NotificationsCenter from '@/components/NotificationsCenter';
 import FrequenciaCard from './FrequenciaCard';
 
 /** Título de seção com ícone SVG à esquerda (substitui os h2 com emoji). */
@@ -336,6 +337,13 @@ export default function AlunoPage() {
         setLoading(false);
         return;
       }
+
+      // Deep link de notificação: /?aba=justificativas abre a aba correspondente
+      // (clique na notificação push navega para o conteúdo).
+      try {
+        const abaUrl = new URLSearchParams(window.location.search).get('aba');
+        if (abaUrl) setActiveTab(abaUrl as Tab);
+      } catch { /* ignore */ }
 
       // Sessão persistente: cookie HttpOnly assinado (server valida e devolve o aluno)
       fetch('/api/aluno/auth', { cache: 'no-store' })
@@ -1502,7 +1510,12 @@ export default function AlunoPage() {
               <IconEye size={14} /> Visualização
             </span>
           ) : (
-            <button onClick={() => setSidebarOpen(true)} aria-label="Abrir perfil" className="press"
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <NotificationsCenter
+                authenticated={!!session}
+                onNavigate={destino => setActiveTab(destino as Tab)}
+              />
+              <button onClick={() => setSidebarOpen(true)} aria-label="Abrir perfil" className="press"
               style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 42, height: 42, borderRadius: '50%', border: '2px solid rgba(255,146,0,0.6)', background: 'rgba(255,146,0,0.12)', color: '#FF9200', cursor: 'pointer', overflow: 'hidden', padding: 0, boxShadow: '0 0 14px rgba(255,146,0,0.25)' }}>
               {student?.foto_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -1510,7 +1523,8 @@ export default function AlunoPage() {
               ) : (
                 <IconUser size={19} />
               )}
-            </button>
+              </button>
+            </div>
           )}
         </div>
       </header>

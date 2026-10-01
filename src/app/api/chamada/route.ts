@@ -186,5 +186,15 @@ export async function POST(req: Request) {
     details: { data, nucleo: nucleoSlug, presentes: P, faltas: F, justificadas: JU, total: doc.entries.length, updated_at: doc.updated_at },
   });
 
+  // Notifica FALTAS novas (aluno + responsáveis vinculados) — fora do caminho
+  // crítico, sem bloquear a resposta da chamada.
+  try {
+    const faltasIds = doc.entries.filter(e => e.st === 'F').map(e => e.id);
+    const { notificarFaltasChamada } = await import('@/lib/push/integracoes');
+    await notificarFaltasChamada(nucleoSlug, data, faltasIds);
+  } catch (e) {
+    console.error('[chamada] falha ao notificar faltas:', e);
+  }
+
   return NextResponse.json({ success: true, salvoEm: doc.updated_at, salvoPor: doc.updated_by, resumo: { presentes: P, faltas: F, justificadas: JU, total: doc.entries.length } });
 }

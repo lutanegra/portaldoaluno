@@ -24,6 +24,7 @@ export const metadata: Metadata = {
   title: "Portal Aluno",
   description: "Portal do Aluno — gestao de alunos, carteirinha, presencas e graduacoes",
   icons: { icon: "/logo-portal-aluno.png", apple: "/logo-portal-aluno.png" },
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

@@ -153,6 +153,11 @@ export async function POST(req: NextRequest) {
 
     all.push(justificativa);
     await saveJustificativas(all);
+    // Notificação (não bloqueia a resposta)
+    try {
+      const { notificarJustificativaEnviada } = await import('@/lib/push/integracoes');
+      await notificarJustificativaEnviada(justificativa);
+    } catch {}
     return NextResponse.json({ success: true, justificativa });
   }
 
@@ -187,6 +192,17 @@ export async function POST(req: NextRequest) {
         console.error('[justificativas] falha ao aplicar falta justificada:', e);
       }
     }
+    // Notifica aluno + responsáveis vinculados (não bloqueia a resposta)
+    try {
+      const { notificarDecisaoJustificativa } = await import('@/lib/push/integracoes');
+      await notificarDecisaoJustificativa({
+        id: all[idx].id,
+        student_id: all[idx].student_id,
+        data_falta: all[idx].data_falta,
+        status: status as 'aprovado' | 'recusado',
+        resposta_mestre: resposta_mestre || '',
+      });
+    } catch {}
     return NextResponse.json({ success: true });
   }
 

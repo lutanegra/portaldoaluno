@@ -294,6 +294,12 @@ export async function criarVinculo(
     aprovado_em: opts.viaPainel ? new Date().toISOString() : null,
   });
   if (error) return { ok: false, error: 'Não foi possível criar o vínculo.' };
+  // Notificações (não bloqueiam): solicitado → aluno; criado (painel) → responsável
+  try {
+    const { notificarVinculo } = await import('@/lib/push/integracoes');
+    if (status === 'pending') await notificarVinculo('solicitado', studentId, guardianId);
+    else await notificarVinculo('criado', studentId, guardianId);
+  } catch { /* auditoria de notificação é best-effort */ }
   return { ok: true, status };
 }
 
@@ -317,6 +323,10 @@ export async function alunoDecideVinculoPendente(
     .update({ status: novoStatus, aprovado_em: aprovar ? new Date().toISOString() : null, updated_at: new Date().toISOString() })
     .eq('id', link.id);
   if (error) return { ok: false, error: 'Não foi possível concluir a operação.' };
+  try {
+    const { notificarVinculo } = await import('@/lib/push/integracoes');
+    await notificarVinculo(aprovar ? 'aprovado' : 'recusado', studentId, guardianId);
+  } catch { /* best-effort */ }
   return { ok: true };
 }
 
@@ -346,6 +356,10 @@ export async function revogarVinculo(
     })
     .eq('id', link.id);
   if (error) return { ok: false, error: 'Não foi possível revogar o vínculo.' };
+  try {
+    const { notificarVinculo } = await import('@/lib/push/integracoes');
+    await notificarVinculo('revogado', studentId, guardianId);
+  } catch { /* best-effort */ }
   return { ok: true };
 }
 

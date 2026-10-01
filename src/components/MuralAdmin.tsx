@@ -44,6 +44,7 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
   const [err, setErr] = useState('');
   const [filtro, setFiltro] = useState<'todos' | 'cartaz' | 'aviso'>('todos');
   const [me, setMe] = useState<MeInfo | null>(null);
+  const [notificar, setNotificar] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Estado de edição (somente título/texto/etiquetas; a imagem do cartaz não muda)
@@ -114,11 +115,15 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
       const res = await fetch('/api/mural', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo, titulo: titulo.trim(), texto: texto.trim(), imagem_path: imagemPath, nucleos: alvos }),
+        body: JSON.stringify({ tipo, titulo: titulo.trim(), texto: texto.trim(), imagem_path: imagemPath, nucleos: alvos, notificar }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'Erro ao publicar.');
-      setMsg(tipo === 'cartaz' ? 'Cartaz publicado no mural!' : 'Aviso publicado no mural!');
+      const n = json.notificacoes;
+      setMsg(
+        (tipo === 'cartaz' ? 'Cartaz publicado no mural!' : 'Aviso publicado no mural!') +
+        (n ? ` Notificações: ${n.criadas} criada(s), ${n.pushesOk} push enviado(s).` : ''),
+      );
       setTitulo(''); setTexto(''); setAlvos([]); onFile(null);
       if (fileRef.current) fileRef.current.value = '';
       await load();
@@ -235,6 +240,15 @@ export default function MuralAdmin({ nucleos }: { nucleos: { nome: string; slug?
           ? 'Sem núcleo selecionado, o aviso aparece para todos os alunos do app. Etiquete um ou mais núcleos para restringir.'
           : 'Escolha um ou mais dos núcleos que você gerencia — só os alunos deles verão o aviso.'}
       </p>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 10, cursor: 'pointer', fontSize: '0.82rem', color: '#f5f5f4' }}>
+        <input
+          type="checkbox"
+          checked={notificar}
+          onChange={e => setNotificar(e.target.checked)}
+          style={{ width: 16, height: 16, accentColor: '#FF9200' }}
+        />
+        Notificar alunos e responsáveis (push)
+      </label>
     </div>
   );
 

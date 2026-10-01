@@ -154,6 +154,12 @@ export async function POST(req: NextRequest) {
         const blob = new Blob([JSON.stringify([...existing, novoReg])], { type: 'application/json' });
         await supabaseWrite.storage.from(BUCKET).upload(histKey, blob, { upsert: true, contentType: 'application/json' });
       } catch { /* non-blocking */ }
+
+      // 3. Notificação de graduação (aluno + responsáveis)
+      try {
+        const { notificarGraduacao } = await import('@/lib/push/integracoes');
+        await notificarGraduacao(p.student_id, p.nova_graduacao, 'evento');
+      } catch { /* non-blocking */ }
     }
 
     await saveAll(
@@ -199,5 +205,12 @@ export async function POST(req: NextRequest) {
 
   await saveAll([...list, novo]);
   await appendAudit({ actor: 'admin', actor_type: 'admin', action: 'evento_criado', target_id: novo.id, target_name: novo.nome, details: { tipo: novo.tipo, participantes: novo.participantes.length } });
+
+  // Notificação push (não bloqueia a resposta)
+  try {
+    const { notificarEvento } = await import('@/lib/push/integracoes');
+    await notificarEvento(novo);
+  } catch {}
+
   return NextResponse.json({ ok: true, id: novo.id });
 }

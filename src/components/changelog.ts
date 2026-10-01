@@ -43,6 +43,26 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.3.0',
+    data: '2026-10-01',
+    titulo: 'Notificações Push reais, central de notificações e preferências',
+    descricao:
+      'O Ginga Gestão agora envia push de verdade para o celular — mesmo com o app fechado — além de manter um histórico completo dentro do app, com sino, preferências por categoria e gerenciamento de dispositivos.',
+    itens: [
+      { categoria: 'novo', texto: 'Notificações push reais: avisos chegam na tela do celular com o Ginga Gestão fechado, e tocar na notificação abre o app direto no conteúdo.' },
+      { categoria: 'novo', texto: 'Sino de notificações no app do aluno e no painel, com contador de não lidas, histórico, marcar como lida e abrir a origem.' },
+      { categoria: 'novo', texto: 'Central de configuração com preferências por categoria: mural, eventos, presença, justificativas, graduação, responsáveis e sistema.' },
+      { categoria: 'novo', texto: 'Notificações de conta e segurança são sempre ativas (novo login, troca de senha, recuperação de conta) — não podem ser desligadas.' },
+      { categoria: 'novo', texto: 'Gerenciamento de dispositivos: veja onde o push está ativo, envie notificação de teste e desative dispositivos individualmente.' },
+      { categoria: 'melhorias', texto: 'Mural: nova publicação pode notificar alunos e responsáveis (checkbox no formulário), respeitando os núcleos etiquetados.' },
+      { categoria: 'melhorias', texto: 'Eventos, faltas da chamada, justificativas (envio e decisão) e graduações agora geram notificações para quem tem direito.' },
+      { categoria: 'melhorias', texto: 'Responsáveis recebem novidades dos dependentes com vínculo ativo — solicitação, aprovação, recusa e revogação.' },
+      { categoria: 'seguranca', texto: 'Chaves de envio ficam só no servidor; dispositivos são revogados no logout e troca de conta no mesmo navegador.' },
+      { categoria: 'seguranca', texto: 'Preferências e obrigatoriedade validadas no servidor; nenhuma notificação sai sem permissão da categoria ou vínculo ativo.' },
+      { categoria: 'desempenho', texto: 'Envios em lote isolados por dispositivo: falha de um não interrompe os demais, e dispositivos expirados são desativados sozinhos.' },
+    ],
+  },
+  {
     versao: '1.2.2',
     data: '2026-10-01',
     titulo: 'Correção do cálculo de idade e do salvamento de dados',

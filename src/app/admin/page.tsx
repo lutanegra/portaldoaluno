@@ -16,6 +16,7 @@ import MuralAdmin from '@/components/MuralAdmin';
 import { invalidateConfigCache } from '@/hooks/useSystemConfig';
 import EditAccountModal from '@/components/EditAccountModal';
 import MyAccountCard from '@/components/MyAccountCard';
+import NotificationsCenter from '@/components/NotificationsCenter';
 import BackupPanel from '@/components/BackupPanel';
 import BackupSistemaPanel from '@/components/BackupSistemaPanel';
 import VersionsCard from '@/components/VersionsCard';
@@ -2296,6 +2297,11 @@ export default function AdminPage() {
             >
               <IconUser size={13} /> Minha Conta
             </button>
+            <NotificationsCenter
+              authenticated={authed}
+              modo="painel"
+              onNavigate={destino => { if (destino) setActiveTab(destino as typeof activeTab); }}
+            />
             <button
               onClick={() => {
                 fetch('/api/admin/panel-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) }).catch(() => {});
