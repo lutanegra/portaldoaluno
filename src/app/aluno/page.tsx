@@ -13,7 +13,7 @@ import {
   IconUsers,
 } from '@/components/icons';
 import { pendenciasAluno, resumoPendencias, isValidCPF, isValidRG, cpfDigits, type StudentDocsLike } from '@/lib/studentCompliance';
-import { idadeEm } from '@/lib/idade';
+import { idadeEm, menorDeIdade } from '@/lib/idade';
 import AppFooter from '@/components/AppFooter';
 import PerfilGuardiaoCard from '@/components/PerfilGuardiaoCard';
 import NotificationsCenter from '@/components/NotificationsCenter';
@@ -3485,7 +3485,7 @@ export default function AlunoPage() {
         {/* ── TERMO DE RESPONSABILIDADE ── */}
         {activeTab === 'termo' && session && student && (() => {
           const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-          const isMenor = (student.menor_de_idade as boolean) === true;
+          const isMenor = menorDeIdade(student.data_nascimento as string, student.menor_de_idade as boolean | null);
           const maskCPFt = (v: string) => {
             const d = v.replace(/\D/g, '').slice(0, 11);
             if (d.length <= 3) return d;

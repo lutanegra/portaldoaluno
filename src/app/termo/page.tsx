@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { menorDeIdade } from '@/lib/idade';
 
 interface Student {
   id: string;
@@ -122,7 +123,7 @@ function TermoContent() {
     </div>
   );
 
-  if (!student.menor_de_idade) return (
+  if (!menorDeIdade(student.data_nascimento, student.menor_de_idade)) return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
       <div style={{ fontSize: '2rem' }}>ℹ️</div>
       <div style={{ fontWeight: 700 }}>Termo não aplicável</div>

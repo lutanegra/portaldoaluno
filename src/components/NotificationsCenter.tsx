@@ -6,6 +6,7 @@
  * aluno; no painel o acesso é pela conta autenticada equivalente).
  */
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { IconBell, IconX, IconCheck, IconGear, IconWarn, IconTrash } from '@/components/icons';
 import { usePush, type PushState } from '@/hooks/usePush';
 
@@ -101,7 +102,20 @@ export default function NotificationsCenter({
   const [naoLidas, setNaoLidas] = useState(0);
   const [carregando, setCarregando] = useState(false);
   const [msg, setMsg] = useState('');
+  const [montado, setMontado] = useState(false);
   const push = usePush(authenticated);
+
+  // O painel precisa de portal: dentro do header com backdrop-filter ele fica
+  // preso no contexto de empilhamento do cabeçalho (altura do header apenas).
+  useEffect(() => setMontado(true), []);
+
+  // Esc fecha o painel.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
 
   const carregar = useCallback(async () => {
     if (!authenticated) return;
@@ -208,8 +222,8 @@ export default function NotificationsCenter({
         )}
       </button>
 
-      {/* Painel lateral */}
-      {open && (
+      {/* Painel lateral — portal no document.body para não herdar o contexto do header */}
+      {open && montado && createPortal(
         <div
           onClick={e => { if (e.target === e.currentTarget) setOpen(false); }}
           role="dialog" aria-modal="true" aria-label="Notificações"
@@ -388,7 +402,8 @@ export default function NotificationsCenter({
               )}
             </div>
           </aside>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

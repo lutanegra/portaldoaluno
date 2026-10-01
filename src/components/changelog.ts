@@ -43,6 +43,18 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.3.1',
+    data: '2026-10-01',
+    titulo: 'Correção do Termo para menores e do painel de notificações',
+    descricao:
+      'O Termo de Responsabilidade dizia "não aplicável" para alunos menores de idade porque a tela usava uma marcação antiga do cadastro em vez da data de nascimento. O painel de notificações também abria espremido na altura do cabeçalho.',
+    itens: [
+      { categoria: 'correcoes', texto: 'Termo de Responsabilidade volta a aparecer para menores: a verificação agora parte sempre da data de nascimento, tanto na aba do app quanto na página do termo.' },
+      { categoria: 'correcoes', texto: 'Painel de notificações abre em tela cheia, sobre todo o app, em vez de ficar preso dentro do cabeçalho — a lista volta a ser navegável.' },
+      { categoria: 'interface', texto: 'Notificações: fechar com a tecla Esc e o painel acompanha a largura do celular.' },
+    ],
+  },
+  {
     versao: '1.3.0',
     data: '2026-10-01',
     titulo: 'Notificações Push reais, central de notificações e preferências',

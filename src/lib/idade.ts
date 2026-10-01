@@ -19,6 +19,17 @@ export function idadeEm(dataNascimento: string | null | undefined, hoje: Date = 
   return age;
 }
 
+/**
+ * Menor de 18 anos? Fonte única para o gate do Termo de Responsabilidade.
+ * A data de nascimento (fresca, do formulário/banco) prevalece sobre a flag
+ * menor_de_idade legada do banco, que pode estar defasada.
+ */
+export function menorDeIdade(dataNascimento: string | null | undefined, flagLegada?: boolean | null): boolean {
+  const idade = idadeEm(dataNascimento);
+  if (idade >= 0) return idade < MAIORIDADE;
+  return flagLegada === true;
+}
+
 /** Classifica a faixa de idade para cadastro de conta individual. */
 export function faixaCadastro(idade: number): FaixaIdade {
   if (idade >= 0 && idade < MINIMUM_INDEPENDENT_ACCOUNT_AGE) return 'bloqueado';
