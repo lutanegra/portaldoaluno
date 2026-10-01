@@ -43,6 +43,16 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.3.2',
+    data: '2026-10-01',
+    titulo: 'Correção do erro de instalação no deploy',
+    descricao:
+      'O deploy falhava na etapa de instalação das dependências por um conflito entre as definições de tipos do React: uma estava travada numa versão anterior à que a outra exige. As versões foram alinhadas para instalar de forma compatível em qualquer gerenciador de pacotes.',
+    itens: [
+      { categoria: 'correcoes', texto: 'Deploy volta a concluir a instalação das dependências: versões das definições de tipos do React alinhadas, eliminando o conflito que derrubava a publicação.' },
+    ],
+  },
+  {
     versao: '1.3.1',
     data: '2026-10-01',
     titulo: 'Correção do Termo para menores e do painel de notificações',
