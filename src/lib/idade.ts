@@ -14,7 +14,7 @@ export function idadeEm(dataNascimento: string | null | undefined, hoje: Date = 
   const dob = new Date(`${String(dataNascimento).slice(0, 10)}T12:00:00`);
   if (isNaN(dob.getTime())) return -1;
   let age = hoje.getFullYear() - dob.getFullYear();
-  const m = hoje.getDate() >= 1 ? hoje.getMonth() - dob.getMonth() : 0;
+  const m = hoje.getMonth() - dob.getMonth();
   if (m < 0 || (m === 0 && hoje.getDate() < dob.getDate())) age--;
   return age;
 }

@@ -282,8 +282,10 @@ export async function POST(req: NextRequest) {
         dataNascFinal = String(stNasc?.data_nascimento || '').slice(0, 10);
       }
       if (dataNascLimpa && student_id) {
+        // Recalcula a menoridade SEMPRE pela data real — nunca confia na flag antiga
+        const idadeDoc = idadeEm(dataNascLimpa);
         await supabaseAdmin.from('students')
-          .update({ data_nascimento: dataNascLimpa, menor_de_idade: idadeEm(dataNascLimpa) >= 0 ? idadeEm(dataNascLimpa) < 18 : false })
+          .update({ data_nascimento: dataNascLimpa, menor_de_idade: idadeDoc >= 0 ? idadeDoc < 18 : false })
           .eq('id', (student_id as string));
       }
       const idadeCadastro = idadeEm(dataNascFinal);

@@ -6,6 +6,7 @@
  *  — Aluno menor de idade precisa de: termo assinado + nome do responsável + CPF do responsável.
  *  — Aluno em descumprimento não executa ações no app (presença, justificativa, financeiro).
  */
+import { idadeEm as idadeEmCentral } from '@/lib/idade';
 
 /** Dígitos verificadores do CPF (padrão da Receita). */
 export function isValidCPF(input: string): boolean {
@@ -33,15 +34,9 @@ export function cpfDigits(input: string): string {
   return String(input || '').replace(/\D/g, '');
 }
 
-/** Idade a partir da data de nascimento AAAA-MM-DD. */
+/** Idade a partir da data de nascimento AAAA-MM-DD (delega à fonte única: lib/idade). */
 export function idadeEm(dataNascimento: string, hoje: Date = new Date()): number {
-  if (!dataNascimento) return -1;
-  const dob = new Date(`${dataNascimento}T12:00:00`);
-  if (isNaN(dob.getTime())) return -1;
-  let age = hoje.getFullYear() - dob.getFullYear();
-  const m = hoje.getMonth() - dob.getMonth();
-  if (m < 0 || (m === 0 && hoje.getDate() < dob.getDate())) age--;
-  return age;
+  return idadeEmCentral(dataNascimento, hoje);
 }
 
 export interface StudentDocsLike {

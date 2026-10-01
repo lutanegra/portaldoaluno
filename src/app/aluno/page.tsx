@@ -13,6 +13,7 @@ import {
   IconUsers,
 } from '@/components/icons';
 import { pendenciasAluno, resumoPendencias, isValidCPF, isValidRG, cpfDigits, type StudentDocsLike } from '@/lib/studentCompliance';
+import { idadeEm } from '@/lib/idade';
 import AppFooter from '@/components/AppFooter';
 import PerfilGuardiaoCard from '@/components/PerfilGuardiaoCard';
 import FrequenciaCard from './FrequenciaCard';
@@ -819,7 +820,9 @@ export default function AlunoPage() {
         cpf:              student.cpf               as string || '',
         identidade:       student.identidade        as string || '',
         numeracao_unica:  (student.numeracao_unica  as string) || '',
-        data_nascimento:  student.data_nascimento   as string || '',
+        // slice(0,10): o banco pode guardar timestamp (…T00:00:00.000Z) e o
+        // <input type="date"> só aceita AAAA-MM-DD — sem isso o campo aparece vazio
+        data_nascimento:  (student.data_nascimento  as string || '').slice(0, 10),
         telefone:         student.telefone          as string || '',
         email:            student.email             as string || '',
         cep:              (student.cep              as string) || '',
@@ -2955,16 +2958,12 @@ export default function AlunoPage() {
           const GRADS_INFANTIL = GRADUACOES_ALL.filter(g => INFANTIL_KEYS.includes(g));
           const GRADS_ADULTO   = GRADUACOES_ALL.filter(g => !INFANTIL_KEYS.includes(g));
 
-          // Auto-detect tipo from birth date
+          // Auto-detect tipo from birth date (fonte única: src/lib/idade.ts)
           let autoTipo: 'Infantil' | 'Adulto' | '' = '';
           const dob = dadosForm.data_nascimento || (student.data_nascimento as string) || '';
           if (dob) {
-            const birthDate = new Date(dob + 'T12:00:00');
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const m = today.getMonth() - birthDate.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-            autoTipo = age < 14 ? 'Infantil' : 'Adulto';
+            const idadeDob = idadeEm(dob);
+            autoTipo = idadeDob >= 0 && idadeDob < 14 ? 'Infantil' : 'Adulto';
           }
           const tipoEfetivo = (dadosForm.tipo_graduacao || autoTipo) as 'Infantil' | 'Adulto' | '';
           const gradOpts = tipoEfetivo === 'Infantil' ? GRADS_INFANTIL : tipoEfetivo === 'Adulto' ? GRADS_ADULTO : [...GRADS_INFANTIL, ...GRADS_ADULTO];
@@ -3028,6 +3027,10 @@ export default function AlunoPage() {
               }
               const payload = {
                 ...dadosForm,
+                // data_nascimento em formato ISO (AAAA-MM-DD) — o input date já
+                // entrega assim; enviado explicitamente para o servidor recalcular
+                // a menoridade e preservar a data real (bug visual de "não salva").
+                data_nascimento: (dadosForm.data_nascimento || '').trim(),
                 tipo_graduacao: dadosForm.tipo_graduacao || autoTipo || dadosForm.tipo_graduacao,
               };
               const res = await fetch('/api/aluno/dados', {
@@ -3263,11 +3266,10 @@ export default function AlunoPage() {
                     <input type="date" value={dadosForm.data_nascimento} onChange={e => {
                       const dob = e.target.value;
                       setDadosForm(p => ({ ...p, data_nascimento: dob }));
-                      // Auto-detect minor → show Termo alert
+                      // Auto-detect minor → show Termo alert (cálculo central idadeEm)
                       if (dob) {
-                        const age = (new Date().getFullYear()) - parseInt(dob.slice(0,4));
-                        const isMinor = age < 18;
-                        if (isMinor) {
+                        const age = idadeEm(dob);
+                        if (age >= 0 && age < 18) {
                           setDadosMsg('Aluno menor de idade detectado. O Termo de Responsabilidade é obrigatório — acesse a aba Termo.');
                           setDadosMsgType('error');
                         }
@@ -3275,8 +3277,8 @@ export default function AlunoPage() {
                     }} style={fs} />
                     {(() => {
                       if (!dadosForm.data_nascimento) return null;
-                      const age = (new Date().getFullYear()) - parseInt(dadosForm.data_nascimento.slice(0,4));
-                      if (age >= 18) return null;
+                      const age = idadeEm(dadosForm.data_nascimento);
+                      if (age < 0 || age >= 18) return null;
                       return (
                         <div style={{ marginTop: 6, background: 'rgba(250,204,21,0.10)', border: '1px solid rgba(250,204,21,0.4)', borderRadius: 8, padding: '7px 10px', fontSize: '0.75rem', color: '#854d0e' }}>
                           Menor de idade — Termo de Responsabilidade obrigatório.{' '}
