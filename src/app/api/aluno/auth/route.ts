@@ -406,6 +406,133 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // ── REGISTER: CONTA DE RESPONSÁVEL (sem perfil de aluno) ─────────────────
+    // Cria a linha em students marcada com conta_tipo='responsavel' — não é
+    // aluno: some das listas de alunos via filtro no cliente e nas rotas
+    // administrativas; guarda presença/graduação bloqueadas no servidor.
+    if (action === 'register-responsavel') {
+      const nomeTrim = String(body.nome_completo || '').trim().replace(/\s+/g, ' ');
+      const emailNorm = String(body.email || '').trim().toLowerCase();
+      const senha = String(body.password || '');
+      const cpfDigitsIn = String(body.cpf || '').replace(/\D/g, '');
+      const dataNasc = String(body.data_nascimento || '').slice(0, 10);
+      const phoneIn = String(body.phone || '').replace(/\D/g, '');
+
+      if (nomeTrim.split(' ').filter(Boolean).length < 2) {
+        return NextResponse.json({ error: 'Informe seu nome completo.' }, { status: 400 });
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+        return NextResponse.json({ error: 'Informe um e-mail válido.' }, { status: 400 });
+      }
+      if (senha.length < 6) {
+        return NextResponse.json({ error: 'Senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
+      }
+      if (cpfDigitsIn.length !== 11) {
+        return NextResponse.json({ error: 'O CPF é obrigatório para a conta de responsável.' }, { status: 400 });
+      }
+      if (!dataNasc) {
+        return NextResponse.json({ error: 'Informe a data de nascimento.' }, { status: 400 });
+      }
+      const { isValidCPF } = await import('@/lib/studentCompliance');
+      if (!isValidCPF(cpfDigitsIn)) {
+        return NextResponse.json({ error: 'CPF inválido — verifique os dígitos informados.' }, { status: 400 });
+      }
+      if (idadeEm(dataNasc) < 18) {
+        return NextResponse.json({ error: 'Função de responsável indisponível: é necessário ter 18 anos ou mais.' }, { status: 422 });
+      }
+
+      const authMap0 = await loadAuthMap();
+      // CPF e e-mail únicos entre todas as contas do app
+      const { data: todosStudents } = await supabaseAdmin.from('students').select('id, cpf, email');
+      const sameCpf = (todosStudents || []).some(s => String((s as { cpf?: string }).cpf || '').replace(/\D/g, '') === cpfDigitsIn);
+      if (sameCpf) return NextResponse.json({ error: 'Este CPF já está cadastrado. Use "Esqueci minha senha" para recuperar o acesso.' }, { status: 409 });
+      if (Object.values(authMap0).some(a => a.email?.toLowerCase() === emailNorm)) {
+        return NextResponse.json({ error: 'Este e-mail já está vinculado a outra conta.' }, { status: 409 });
+      }
+
+      // Próxima ordem de inscrição (fonte da verdade da matrícula CCLN-XXX)
+      const { data: maxRow } = await supabaseAdmin
+        .from('students').select('ordem_inscricao')
+        .not('ordem_inscricao', 'is', null)
+        .order('ordem_inscricao', { ascending: false }).limit(1).maybeSingle();
+      const ordem = (maxRow?.ordem_inscricao ?? 0) + 1;
+
+      const salt = generateSalt();
+      const account: AlunoAccount = {
+        student_id: '', // preenchido após criar a linha
+        username: emailNorm,
+        email: emailNorm,
+        password_hash: hashPassword(senha, salt),
+        salt,
+        active: true,
+        phone: phoneIn ? (phoneIn.startsWith('55') ? phoneIn : `55${phoneIn}`) : '',
+        created_at: new Date().toISOString(),
+      };
+
+      const linha: Record<string, unknown> = {
+        nome_completo: nomeTrim,
+        cpf: cpfDigitsIn,
+        identidade: '',
+        email: emailNorm,
+        telefone: account.phone || '',
+        data_nascimento: dataNasc,
+        conta_tipo: body.tambem_aluno === true ? 'responsavel_aluno' : 'responsavel',
+        ordem_inscricao: ordem,
+        graduacao: '',
+        tipo_graduacao: 'corda',
+        menor_de_idade: false,
+      };
+      const placeholdersR: Record<string, unknown> = {
+        cep: '', endereco: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
+        nome_pai: '', nome_mae: '', nome_responsavel: '', cpf_responsavel: '',
+        apelido: '', nome_social: '', sexo: '', nucleo: '',
+      };
+      let novaLinha: { id: string } | null = null;
+      let payloadR: Record<string, unknown> = linha;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const { data, error } = await supabaseAdmin.from('students').insert(payloadR).select('id').single();
+        if (!error && data) { novaLinha = data as { id: string }; break; }
+        if (error && /null value|not-null|NOT NULL/i.test(error.message || '')) {
+          payloadR = { ...placeholdersR, ...linha };
+          continue;
+        }
+        return NextResponse.json({ error: error?.message || 'Erro ao criar a conta.' }, { status: 500 });
+      }
+      if (!novaLinha) return NextResponse.json({ error: 'Erro ao criar a conta.' }, { status: 500 });
+
+      // Ativa o perfil de responsável (tabela guardians) para esta linha
+      const { error: gErr } = await supabaseAdmin
+        .from('guardians').upsert({ student_id: novaLinha.id, cpf_digits: cpfDigitsIn }, { onConflict: 'student_id' });
+      if (gErr) {
+        return NextResponse.json({ error: 'Conta criada, mas o perfil de responsável falhou. Procure o admin do seu núcleo.' }, { status: 500 });
+      }
+
+      // Conta de login (mesmo mapa de auth; student_id = linha responsável)
+      account.student_id = novaLinha.id;
+      authMap0[novaLinha.id] = account;
+      await saveAuthMap(authMap0);
+
+      // Backup de alunos + auditoria
+      try {
+        const { autoBackupAfterChange } = await import('@/lib/backupAlunos');
+        await autoBackupAfterChange(`responsavel:${novaLinha.id}`, 'inscricao');
+      } catch { /* não bloqueia */ }
+      await appendAudit({
+        actor: novaLinha.id, actor_type: 'student', action: 'conta_responsavel_criada',
+        target_id: novaLinha.id, target_name: nomeTrim,
+        details: { email: emailNorm, cpf: `***${cpfDigitsIn.slice(-2)}`, sem_perfil_aluno: true },
+      });
+
+      // Já nasce logado
+      const store = await cookies();
+      store.set(SESSION_COOKIE, serializeAlunoSession(createAlunoSession(novaLinha.id, account.username)), sessionCookieOptions());
+      return NextResponse.json({
+        success: true, logged_in: true, student_id: novaLinha.id,
+        student_name: nomeTrim.split(' ')[0],
+        conta_tipo: 'responsavel',
+      });
+    }
+
     // ── REGISTER BY NAME (fallback when CPF not in DB) ────────────────────────
     if (action === 'register-by-name') {
       const { nome_completo, email, password } = body;

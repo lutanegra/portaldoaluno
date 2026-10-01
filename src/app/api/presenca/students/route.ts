@@ -32,19 +32,22 @@ export async function GET(req: NextRequest) {
 
     let { data, error } = await supabaseAdmin
       .from('students')
-      .select('id, nome_completo, cpf, graduacao, nucleo, foto_url, telefone, email')
+      .select('id, nome_completo, cpf, graduacao, nucleo, foto_url, telefone, email, conta_tipo')
       .order('nome_completo');
 
     if (error) {
       // Retry without email if column doesn't exist
       const res = await supabaseAdmin
         .from('students')
-        .select('id, nome_completo, cpf, graduacao, nucleo, foto_url, telefone')
+        .select('id, nome_completo, cpf, graduacao, nucleo, foto_url, telefone, conta_tipo')
         .order('nome_completo');
       data = res.data as typeof data;
     }
 
     let list = (data || []) as Array<Record<string, unknown>>;
+
+    // Perfis só-responsável não participam da chamada
+    list = list.filter(s => s.conta_tipo !== 'responsavel');
 
     if (adminNucleos.length > 0) {
       // Núcleos do admin: aceita registros gravados com slug ou com nome do núcleo

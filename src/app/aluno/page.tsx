@@ -10,6 +10,7 @@ import {
   IconLogout, IconUser, IconChevron, IconBell, IconImage, IconEye, IconTrend,
   IconFlame, IconStar, IconWarn, IconClock, IconBerimbau,
   IconCheck, IconInfo, IconLock, IconTrash, IconBag, IconLink, IconRefresh, IconPrinter,
+  IconUsers,
 } from '@/components/icons';
 import { pendenciasAluno, resumoPendencias, isValidCPF, isValidRG, cpfDigits, type StudentDocsLike } from '@/lib/studentCompliance';
 import AppFooter from '@/components/AppFooter';
@@ -135,7 +136,7 @@ function getGradColor(grad: string) {
 export default function AlunoPage() {
   const [session, setSession] = useState<{ student_id: string; username: string } | null>(null);
   // Contexto de perfil: o próprio ou um tutelado (troca não muda a identidade logada)
-  const [perfis, setPerfis] = useState<{ student_id: string; nome_completo: string; foto_url: string | null; tipo: 'proprio' | 'tutelado' }[]>([]);
+  const [perfis, setPerfis] = useState<{ student_id: string; nome_completo: string; foto_url: string | null; tipo: 'proprio' | 'tutelado' | 'responsavel' }[]>([]);
   const [perfilAtivo, setPerfilAtivo] = useState<string>('');
   const [perfilLoading, setPerfilLoading] = useState(false);
   const perfilAtivoInfo = perfis.find(p => p.student_id === perfilAtivo) || null;
@@ -162,9 +163,19 @@ export default function AlunoPage() {
   const [muralLoading, setMuralLoading] = useState(false);
   const [muralUrls, setMuralUrls] = useState<Record<string, string>>({});
   const muralLoadedRef = useRef(false);
+  // Perfil só-responsável (conta_tipo='responsavel' e sem perfil de aluno ativo)
+  const [contaTipo, setContaTipo] = useState<'aluno' | 'responsavel' | null>(null);
 
   // ── Register ──────────────────────────────────────────────────────────────
   const [showRegister, setShowRegister] = useState(false);
+  // Tipo de conta: null = tela de escolha; 'aluno' fluxo normal; 'responsavel' conta de responsável
+  const [registerTipo, setRegisterTipo] = useState<null | 'aluno' | 'responsavel'>(null);
+  // Responsável também é aluno? (só quando registerTipo === 'responsavel')
+  const [respTambemAluno, setRespTambemAluno] = useState<null | boolean>(null);
+  const [respForm, setRespForm] = useState({ nome_completo: '', cpf: '', data_nascimento: '', email: '', phone: '', password: '', confirmPassword: '' });
+  const [respError, setRespError] = useState('');
+  const [respSuccess, setRespSuccess] = useState('');
+  const [respLoading, setRespLoading] = useState(false);
   const [registerForm, setRegisterForm] = useState({ cpf_or_doc: '', username: '', email: '', password: '', confirmPassword: '', phone: '', data_nascimento: '' });
   const [registerError, setRegisterError] = useState('');
   const [registerSuccess, setRegisterSuccess] = useState('');
@@ -391,6 +402,10 @@ export default function AlunoPage() {
         if (student) {
           setStudent(student);
           setStudentLoaded(true);
+          // conta_tipo: 'responsavel' (só gestão) | 'responsavel_aluno' (dois perfis) | aluno normal
+          const ct = (student as Record<string, unknown>).conta_tipo;
+          setContaTipo(ct === 'responsavel' || ct === 'responsavel_aluno' ? 'responsavel' : 'aluno');
+          setRespTambemAluno(ct === 'responsavel_aluno' ? true : ct === 'responsavel' ? false : null);
           // Fetch display ID for carteirinha (gerar-id is the authoritative source)
           const ordNum = (student as Record<string, unknown>).ordem_inscricao as number | null ?? null;
           if (ordNum) {
@@ -559,6 +574,70 @@ export default function AlunoPage() {
     setActiveTab('dashboard');
   };
 
+  const handleRegisterResponsavel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRespError(''); setRespSuccess('');
+    const soDigitos = (v: string) => v.replace(/\D/g, '');
+    const cpfOk = (() => {
+      const d = soDigitos(respForm.cpf);
+      if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+      let soma = 0;
+      for (let i = 0; i < 9; i++) soma += parseInt(d[i]) * (10 - i);
+      let r = (soma * 10) % 11; if (r === 10 || r === 11) r = 0;
+      if (r !== parseInt(d[9])) return false;
+      soma = 0;
+      for (let i = 0; i < 10; i++) soma += parseInt(d[i]) * (11 - i);
+      r = (soma * 10) % 11; if (r === 10 || r === 11) r = 0;
+      return r === parseInt(d[10]);
+    })();
+    if (respForm.nome_completo.trim().split(/\s+/).filter(Boolean).length < 2) { setRespError('Informe seu nome completo.'); return; }
+    if (!cpfOk) { setRespError('Informe um CPF válido — ele é obrigatório na conta de responsável.'); return; }
+    if (!respForm.data_nascimento) { setRespError('Informe sua data de nascimento.'); return; }
+    const idadeResp = (() => {
+      const n = new Date(`${respForm.data_nascimento}T12:00:00`);
+      if (isNaN(n.getTime())) return -1;
+      const hj = new Date(); let a = hj.getFullYear() - n.getFullYear();
+      const m = hj.getMonth() - n.getMonth();
+      if (m < 0 || (m === 0 && hj.getDate() < n.getDate())) a--;
+      return a;
+    })();
+    if (idadeResp >= 0 && idadeResp < 18) { setRespError('Função de responsável indisponível: é necessário ter 18 anos ou mais.'); return; }
+    if (!respForm.email.trim()) { setRespError('Informe um e-mail válido.'); return; }
+    if (respForm.password.length < 6) { setRespError('Senha deve ter pelo menos 6 caracteres.'); return; }
+    if (respForm.password !== respForm.confirmPassword) { setRespError('As senhas não coincidem.'); return; }
+
+    setRespLoading(true);
+    try {
+      const res = await fetch('/api/aluno/auth', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'register-responsavel',
+          nome_completo: respForm.nome_completo.trim(),
+          cpf: respForm.cpf,
+          data_nascimento: respForm.data_nascimento,
+          email: respForm.email.trim().toLowerCase(),
+          phone: respForm.phone.trim(),
+          password: respForm.password,
+          tambem_aluno: respTambemAluno === true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setRespError(data.error || 'Erro ao criar a conta.'); return; }
+      // Conta criada e logada — responsável já entra no app com o próprio perfil
+      setRespSuccess('Conta criada! Entrando no portal...');
+      try { sessionStorage.setItem('aluno_session', JSON.stringify({ student_id: data.student_id, username: data.username || respForm.email.trim().toLowerCase() })); } catch {}
+      setTimeout(() => {
+        setSession({ student_id: data.student_id, username: data.username || respForm.email.trim().toLowerCase() });
+        setStudent(null);
+        setShowRegister(false);
+        setRegisterTipo(null); setRespTambemAluno(null);
+        setRespForm({ nome_completo: '', cpf: '', data_nascimento: '', email: '', phone: '', password: '', confirmPassword: '' });
+        if (data.student_id) loadStudentData(data.student_id, true);
+      }, 900);
+    } catch { setRespError('Erro de conexão. Tente novamente.'); }
+    finally { setRespLoading(false); }
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegisterError(''); setRegisterSuccess('');
@@ -597,10 +676,11 @@ export default function AlunoPage() {
               setSession({ student_id: data.student_id, username: data.username || registerForm.email.trim().toLowerCase() });
               if (data.student) setStudent(data.student);
               setShowRegister(false);
+              setRegisterTipo(null);
               loadStudentData(data.student_id, true);
             }, 900);
           } else {
-            setTimeout(() => { setShowRegister(false); }, 2000);
+            setTimeout(() => { setShowRegister(false); setRegisterTipo(null); }, 2000);
           }
           return;
         }
@@ -635,6 +715,7 @@ export default function AlunoPage() {
         setSession({ student_id: data2.student_id, username: data2.username || registerForm.email.trim().toLowerCase() });
         if (data2.student) setStudent(data2.student);
         setShowRegister(false);
+        setRegisterTipo(null);
         loadStudentData(data2.student_id, true);
       }, 900);
     } catch { setRegisterError('Erro de conexão. Tente novamente.'); }
@@ -768,7 +849,8 @@ export default function AlunoPage() {
   const cordaColors = getCordaColors(student?.graduacao || '');
 
   // Cadastro incompleto — só avalia depois que student foi carregado do servidor (studentLoaded é one-way: false→true, nunca volta)
-  const cadastroIncompleto = studentLoaded && student !== null && (
+  // Responsável puro não tem "cadastro de aluno" para completar.
+  const cadastroIncompleto = studentLoaded && student !== null && contaTipo !== 'responsavel' && (
     !student.nucleo ||
     !student.graduacao ||
     !student.telefone ||
@@ -836,7 +918,7 @@ export default function AlunoPage() {
 
             <div className="pa-row">
               <button onClick={() => setShowForgot(true)} className="pa-btn-ghost">Esqueci minha senha</button>
-              <button onClick={() => setShowRegister(true)} className="pa-btn-ghost">Criar conta →</button>
+              <button onClick={() => { setRegisterTipo(null); setRespTambemAluno(null); setRespForm({ nome_completo: '', cpf: '', data_nascimento: '', email: '', phone: '', password: '', confirmPassword: '' }); setShowRegister(true); }} className="pa-btn-ghost">Criar conta →</button>
             </div>
 
             <div className="pa-divider" />
@@ -851,6 +933,186 @@ export default function AlunoPage() {
 
   // ── REGISTER ──────────────────────────────────────────────────────────────
   if (showRegister) {
+    // PASSO 1: escolha do tipo de conta (responsável ou aluno)
+    if (registerTipo === null) {
+      return (
+        <div className="pa-auth" style={{ alignItems: 'flex-start', overflowY: 'auto' }}>
+          <div className="pa-auth-inner" style={{ padding: '32px 0' }}>
+            <div className="pa-auth-logo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo-portal-aluno.png" alt="Portal Aluno" />
+              <h1>Criar <span>Conta</span></h1>
+              <p>Escolha o tipo de conta para começar</p>
+            </div>
+
+            <div className="pa-card">
+              <div className="pa-steps" aria-hidden="true"><i className="on" /><i /><i /></div>
+              <div className="pa-steps-label">Passo 1 de 3 — tipo de conta</div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <button type="button" onClick={() => { setRegisterTipo('responsavel'); setRespTambemAluno(null); }} className="press"
+                  style={{ textAlign: 'left', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, padding: '14px 15px', cursor: 'pointer' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 5 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, background: 'radial-gradient(circle at 32% 26%, rgba(255,146,0,0.3), rgba(255,146,0,0.08))', border: '1px solid rgba(255,146,0,0.35)', color: '#FF9200', flexShrink: 0 }}>
+                      <IconUsers size={17} />
+                    </span>
+                    <strong style={{ fontSize: '0.95rem', color: '#f5f5f4' }}>Sou responsável</strong>
+                  </span>
+                  <span style={{ display: 'block', fontSize: '0.8rem', color: '#a3a3a3', lineHeight: 1.5 }}>
+                    Para pais, mães e responsáveis legais acompanharem alunos menores: presença, graduação, avisos e justificativas.
+                    Você escolhe se <strong style={{ color: '#d4d4d4' }}>também treina</strong> (vira aluno) ou se é <strong style={{ color: '#d4d4d4' }}>só responsável</strong>.
+                    Depois de criar, você cadastra os dependentes.
+                  </span>
+                </button>
+
+                <button type="button" onClick={() => setRegisterTipo('aluno')} className="press"
+                  style={{ textAlign: 'left', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, padding: '14px 15px', cursor: 'pointer' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 5 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, background: 'radial-gradient(circle at 32% 26%, rgba(255,146,0,0.3), rgba(255,146,0,0.08))', border: '1px solid rgba(255,146,0,0.35)', color: '#FF9200', flexShrink: 0 }}>
+                      <IconUser size={17} />
+                    </span>
+                    <strong style={{ fontSize: '0.95rem', color: '#f5f5f4' }}>Sou aluno</strong>
+                  </span>
+                  <span style={{ display: 'block', fontSize: '0.8rem', color: '#a3a3a3', lineHeight: 1.5 }}>
+                    Para quem treina: carteirinha, presença, graduação, eventos e financeiro no app.
+                    A conta se conecta ao seu cadastro na associação — menores de 15 anos devem ser cadastrados pelo responsável.
+                  </span>
+                </button>
+              </div>
+
+              <div className="pa-divider" />
+              <button onClick={() => setRegisterTipo(null)} className="pa-btn-ghost" style={{ display: 'block', width: '100%', fontSize: '0.85rem' }}>
+                ← Voltar
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // PASSO 2 (responsável): também é aluno? + dados da conta
+    if (registerTipo === 'responsavel') {
+      const cpfDigitos = respForm.cpf.replace(/\D/g, '');
+      const senhasIguais = !!respForm.confirmPassword && respForm.confirmPassword === respForm.password;
+      return (
+        <div className="pa-auth" style={{ alignItems: 'flex-start', overflowY: 'auto' }}>
+          <div className="pa-auth-inner" style={{ padding: '32px 0' }}>
+            <div className="pa-auth-logo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo-portal-aluno.png" alt="Portal Aluno" />
+              <h1>Conta de <span>Responsável</span></h1>
+              <p>{respTambemAluno === null ? 'Você também treina?' : 'Seus dados de acesso'}</p>
+            </div>
+
+            <div className="pa-card">
+              <div className="pa-steps" aria-hidden="true"><i className="on" /><i className="on" /><i /></div>
+              <div className="pa-steps-label">{respTambemAluno === null ? 'Passo 2 de 3 — seu perfil' : 'Passo 3 de 3 — seus dados'}</div>
+
+              {respError && <div className="pa-alert pa-alert-error">{respError}</div>}
+              {respSuccess && <div className="pa-alert pa-alert-success">{respSuccess}</div>}
+
+              {respTambemAluno === null ? (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <button type="button" onClick={() => setRespTambemAluno(true)} className="press"
+                      style={{ textAlign: 'left', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, padding: '13px 15px', cursor: 'pointer' }}>
+                      <strong style={{ display: 'block', fontSize: '0.92rem', color: '#f5f5f4', marginBottom: 3 }}>Sim — também sou aluno</strong>
+                      <span style={{ display: 'block', fontSize: '0.8rem', color: '#a3a3a3', lineHeight: 1.5 }}>
+                        Uma única conta com os dois perfis: você acompanha seus dependentes <strong style={{ color: '#d4d4d4' }}>e</strong> tem carteirinha, presença e graduação próprios.
+                        Depois de entrar, o cadastro de aluno se conecta ao seu vínculo na associação.
+                      </span>
+                    </button>
+                    <button type="button" onClick={() => setRespTambemAluno(false)} className="press"
+                      style={{ textAlign: 'left', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, padding: '13px 15px', cursor: 'pointer' }}>
+                      <strong style={{ display: 'block', fontSize: '0.92rem', color: '#f5f5f4', marginBottom: 3 }}>Não — só responsável</strong>
+                      <span style={{ display: 'block', fontSize: '0.8rem', color: '#a3a3a3', lineHeight: 1.5 }}>
+                        Conta apenas para gerenciar quem você representa: adicionar dependentes e acompanhar presença, graduação e avisos deles.
+                        Sem carteirinha nem treinos para você.
+                      </span>
+                    </button>
+                  </div>
+                  <div className="pa-divider" />
+                  <button onClick={() => setRegisterTipo(null)} className="pa-btn-ghost" style={{ display: 'block', width: '100%', fontSize: '0.85rem' }}>
+                    ← Voltar
+                  </button>
+                </>
+              ) : (
+                <form onSubmit={handleRegisterResponsavel} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <div className="pa-field">
+                    <label htmlFor="resp-nome">Nome completo *</label>
+                    <input id="resp-nome" type="text" value={respForm.nome_completo}
+                      onChange={e => setRespForm(p => ({ ...p, nome_completo: e.target.value }))}
+                      placeholder="Ex: Carlos da Silva" required autoFocus />
+                  </div>
+                  <div className="pa-field">
+                    <label htmlFor="resp-cpf">CPF *</label>
+                    <input id="resp-cpf" type="text" inputMode="numeric" value={respForm.cpf}
+                      onChange={e => setRespForm(p => ({ ...p, cpf: e.target.value }))}
+                      placeholder="000.000.000-00" required />
+                    <p className="pa-hint">Usado para confirmar sua identidade como responsável — fica protegido.</p>
+                  </div>
+                  <div className="pa-field">
+                    <label htmlFor="resp-dob">Data de nascimento *</label>
+                    <input id="resp-dob" type="date" value={respForm.data_nascimento}
+                      onChange={e => setRespForm(p => ({ ...p, data_nascimento: e.target.value }))}
+                      max={new Date().toISOString().slice(0, 10)} required />
+                    <p className="pa-hint">A função de responsável exige 18 anos ou mais.</p>
+                  </div>
+                  {respTambemAluno === false && (
+                    <div className="pa-alert pa-alert-info" style={{ margin: '6px 0' }}>
+                      Conta só de responsável: depois de entrar, use <strong>Perfil de Guardião</strong> para cadastrar seus dependentes.
+                    </div>
+                  )}
+                  {respTambemAluno === true && (
+                    <div className="pa-alert pa-alert-info" style={{ margin: '6px 0' }}>
+                      Além da gestão dos dependentes, você terá perfil de aluno. Complete seus dados de aluno (núcleo, documentos) na aba <strong>Meus Dados</strong>.
+                    </div>
+                  )}
+                  <div className="pa-field">
+                    <label htmlFor="resp-phone">Telefone/WhatsApp <span style={{ opacity: 0.6, textTransform: 'none', fontWeight: 400 }}>(opcional)</span></label>
+                    <input id="resp-phone" type="tel" value={respForm.phone}
+                      onChange={e => setRespForm(p => ({ ...p, phone: e.target.value }))}
+                      placeholder="(21) 99999-9999" />
+                  </div>
+                  <div className="pa-field">
+                    <label htmlFor="resp-email">E-mail *</label>
+                    <input id="resp-email" type="email" value={respForm.email}
+                      onChange={e => setRespForm(p => ({ ...p, email: e.target.value }))}
+                      placeholder="seu@email.com" required />
+                  </div>
+                  <div className="pa-field">
+                    <label htmlFor="resp-pass">Senha *</label>
+                    <input id="resp-pass" type="password" value={respForm.password}
+                      onChange={e => setRespForm(p => ({ ...p, password: e.target.value }))}
+                      placeholder="Mínimo 6 caracteres" required minLength={6} />
+                  </div>
+                  <div className="pa-field">
+                    <label htmlFor="resp-pass2">Confirmar Senha *</label>
+                    <input id="resp-pass2" type="password" value={respForm.confirmPassword}
+                      onChange={e => setRespForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                      placeholder="Repita a senha" required minLength={6} />
+                    {respForm.confirmPassword && !senhasIguais && <p className="pa-hint" style={{ color: '#f87171' }}>As senhas não coincidem</p>}
+                    {senhasIguais && <p className="pa-hint" style={{ color: '#4ade80' }}>✓ Senhas coincidem</p>}
+                    {cpfDigitos.length > 0 && cpfDigitos.length !== 11 && <p className="pa-hint" style={{ color: '#f87171' }}>CPF deve ter 11 dígitos</p>}
+                  </div>
+
+                  <button type="submit" className="pa-btn" disabled={respLoading || !!respSuccess} style={{ marginTop: 8 }}>
+                    {respLoading ? 'Criando conta...' : respSuccess ? 'Preparando seu acesso...' : 'Criar minha conta'}
+                  </button>
+                </form>
+              )}
+
+              <div className="pa-divider" />
+              <button onClick={() => { setRegisterTipo(null); setRespTambemAluno(null); setRespError(''); }} className="pa-btn-ghost" style={{ display: 'block', width: '100%', fontSize: '0.85rem' }}>
+                ← Voltar
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // PASSO 2/3 (aluno): fluxo normal existente
     const emailValid = !registerForm.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email.trim());
     const passwordsMatch = !registerForm.confirmPassword || registerForm.confirmPassword === registerForm.password;
 
@@ -869,7 +1131,12 @@ export default function AlunoPage() {
             <div className="pa-steps-label">Passo 2 de 3 — seus dados de acesso</div>
 
             {registerError && (
-              <div className="pa-alert pa-alert-error">{registerError}</div>
+              <div className="pa-alert pa-alert-error">
+                {registerError}
+                <button type="button" onClick={() => setRegisterTipo(null)} style={{ display: 'block', marginTop: 8, background: 'none', border: 'none', color: '#fca5a5', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: '0.78rem', fontWeight: 700 }}>
+                  ← Escolher outro tipo de conta
+                </button>
+              </div>
             )}
             {registerSuccess && (
               <div className="pa-alert pa-alert-success">{registerSuccess}</div>
@@ -985,8 +1252,8 @@ export default function AlunoPage() {
             </form>
 
             <div className="pa-divider" />
-            <button onClick={() => { setShowRegister(false); setRegisterError(''); setRegisterSuccess(''); }} className="pa-btn-ghost" style={{ display: 'block', width: '100%', fontSize: '0.85rem' }}>
-              ← Voltar ao login
+            <button onClick={() => { setRegisterTipo(null); setRegisterError(''); setRegisterSuccess(''); }} className="pa-btn-ghost" style={{ display: 'block', width: '100%', fontSize: '0.85rem' }}>
+              ← Voltar
             </button>
           </div>
         </div>
@@ -1159,10 +1426,13 @@ export default function AlunoPage() {
   }
 
   // ── TABS NAVIGATION ───────────────────────────────────────────────────────
+  // Perfil só-responsável: sem abas de treino (conta_tipo='responsavel' e o
+  // responsável não marcou "também sou aluno" na criação da conta).
+  const respOnly = contaTipo === 'responsavel' && !respTambemAluno;
   const tabs: { id: Tab; icon: string; label: string; badge?: boolean }[] = [
     { id: 'dashboard',      icon: '', label: 'Início' },
-    { id: 'dados',          icon: '', label: 'Meus Dados', badge: !!(student && (!student.nucleo || !student.graduacao || !student.email || (docsAluno && pendencias.some(p => p.campo !== 'termo')))) },
-    { id: 'termo',          icon: '', label: 'Termo', badge: !!(student && docsAluno && pendencias.some(p => ['termo', 'nome_responsavel', 'cpf_responsavel'].includes(p.campo))) },
+    { id: 'dados',          icon: '', label: respOnly ? 'Dados da Conta' : 'Meus Dados', badge: !!(student && !respOnly && (!student.nucleo || !student.graduacao || !student.email || (docsAluno && pendencias.some(p => p.campo !== 'termo')))) },
+    { id: 'termo',          icon: '', label: 'Termo', badge: !!(student && docsAluno && !respOnly && pendencias.some(p => ['termo', 'nome_responsavel', 'cpf_responsavel'].includes(p.campo))) },
     { id: 'evolucao',       icon: '', label: 'Evolução' },
     { id: 'carteirinha',    icon: '', label: 'Carteirinha' },
     { id: 'presenca',       icon: '', label: 'Presença' },
@@ -1173,9 +1443,9 @@ export default function AlunoPage() {
     { id: 'justificativas', icon: '', label: 'Justific.' },
     { id: 'playlist',       icon: '', label: 'Playlist' },
     { id: 'conta',          icon: '', label: 'Conta' },
-  ];
+  ].filter((t): t is { id: Tab; icon: string; label: string; badge?: boolean } => !respOnly || !['evolucao', 'carteirinha', 'presenca', 'graduacao', 'playlist'].includes(t.id));
   // Barra inferior: as 4 seções mais usadas + gaveta "Mais" com o restante
-  const primaryTabIds: Tab[] = ['dashboard', 'carteirinha', 'presenca', 'financeiro'];
+  const primaryTabIds: Tab[] = respOnly ? ['dashboard', 'fotos', 'docs', 'conta'] : ['dashboard', 'carteirinha', 'presenca', 'financeiro'];
   const primaryTabs = primaryTabIds.map(id => tabs.find(t => t.id === id)!).filter(Boolean);
 
   // ── DASHBOARD (LOGGED IN) ─────────────────────────────────────────────────
@@ -1249,7 +1519,7 @@ export default function AlunoPage() {
         {activeTab === 'dashboard' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-            {!emConformidade && (
+            {!emConformidade && contaTipo !== 'responsavel' && (
               <div style={{ background: 'linear-gradient(160deg, rgba(255,146,0,0.14) 0%, rgba(255,146,0,0.05) 100%)', border: '1px solid rgba(255,146,0,0.4)', borderRadius: 16, padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 12, backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', boxShadow: '0 0 24px rgba(255,146,0,0.08)' }}>
                 <span style={{ display: 'flex', color: '#FF9200', flexShrink: 0, marginTop: 2 }}><IconWarn size={22} /></span>
                 <div style={{ flex: 1 }}>
@@ -3618,7 +3888,7 @@ export default function AlunoPage() {
                 </div>
               )}
               {/* Quem está usando? — perfis acessíveis (o próprio + tutelados) */}
-              {perfis.length > 1 && !isAdminPreview && (
+              {(perfis.length > 1 || perfis.some(p => p.tipo === 'tutelado')) && !isAdminPreview && (
                 <div style={{ marginTop: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '10px 11px' }}>
                   <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7 }}>Quem está usando?</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -3635,7 +3905,7 @@ export default function AlunoPage() {
                           </span>
                           <span style={{ flex: 1, minWidth: 0 }}>
                             <span style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#f5f5f4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pf.nome_completo}</span>
-                            <span style={{ display: 'block', fontSize: '0.66rem', color: ativo ? '#ffb84d' : '#8f8f8f', fontWeight: 600 }}>{ativo ? 'Perfil ativo' : pf.tipo === 'tutelado' ? 'Dependente' : 'Meu perfil · Aluno'}</span>
+                            <span style={{ display: 'block', fontSize: '0.66rem', color: ativo ? '#ffb84d' : '#8f8f8f', fontWeight: 600 }}>{ativo ? 'Perfil ativo' : pf.tipo === 'tutelado' ? 'Dependente' : pf.tipo === 'responsavel' ? 'Meu perfil · Responsável' : 'Meu perfil'}</span>
                           </span>
                         </button>
                       );

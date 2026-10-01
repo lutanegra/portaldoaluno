@@ -110,6 +110,9 @@ export const IconLogout = ({ size = 18, style, strokeWidth = 2 }: IconProps) =>
 export const IconUser = ({ size = 18, style, strokeWidth = 2 }: IconProps) =>
   base(size, style, strokeWidth, <><circle cx="12" cy="8" r="3.6" /><path d="M4.5 20c1.4-3.4 4.1-5 7.5-5s6.1 1.6 7.5 5" /></>);
 
+export const IconUsers = ({ size = 18, style, strokeWidth = 2 }: IconProps) =>
+  base(size, style, strokeWidth, <><circle cx="9" cy="8.5" r="3.2" /><path d="M2.8 19.5c1.2-3 3.5-4.5 6.2-4.5s5 1.5 6.2 4.5" /><path d="M15.5 5.8a3.2 3.2 0 0 1 0 5.9" /><path d="M17.6 15.4c1.7.6 3 1.9 3.7 4.1" /></>);
+
 export const IconChevron = ({ size = 18, style, strokeWidth = 2 }: IconProps) =>
   base(size, style, strokeWidth, <path d="m9 5.5 6.5 6.5L9 18.5" />);
 

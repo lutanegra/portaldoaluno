@@ -1451,15 +1451,18 @@ export default function AdminPage() {
           }));
         }
       } catch { /* contas são opcionais */ }
-      setStudents(listWithNum);
+      // Perfis só-responsável (conta_tipo='responsavel') não são alunos — ficam
+      // fora da aba Alunos e das listas; a aba Contas/Responsáveis os exibe.
+      const alunosFiltrados = listWithNum.filter(s => (s as { conta_tipo?: string | null }).conta_tipo !== 'responsavel');
+      setStudents(alunosFiltrados);
       // Guarda IDs presentes no banco — o mapa de exibição (CCLN-000) é filtrado
       // por esse conjunto para nunca "ressuscitar" alunos excluídos.
-      const dbIds = new Set(list.map(s => s.id));
+      const dbIds = new Set(alunosFiltrados.map(s => s.id));
       studentIdsRef.current = dbIds;
       // Refresh `selected` if still open — ensures edit modal gets fresh data
       setSelected(prev => {
         if (!prev) return null;
-        const fresh = listWithNum.find(s => s.id === prev.id);
+        const fresh = alunosFiltrados.find(s => s.id === prev.id);
         return fresh || prev;
       });
       // Load display IDs (CCLN-000) for all students
@@ -1473,7 +1476,7 @@ export default function AdminPage() {
         }
       }).catch(() => {});
       // Carrega registros de termos enviados para alunos menores
-      const menoresIds = list.filter(s => s.menor_de_idade).map(s => s.id);
+      const menoresIds = alunosFiltrados.filter(s => s.menor_de_idade).map(s => s.id);
       if (menoresIds.length) {
         carregarTermosEnviados(menoresIds).then(setTermosEnviados);
       }
@@ -8573,10 +8576,13 @@ _Portal Aluno_`
                 <span className="detail-label">Núcleo</span>
                 <select className="edit-input" name="nucleo" value={editForm.nucleo || ''} onChange={handleEditChange}>
                   <option value="">Selecione</option>
-{dynamicNucleos.map(n => (
-                          <option key={n.slug} value={n.nome}>{n.nome}</option>
-                        ))}
+                  {dynamicNucleos.map(n => (
+                    <option key={n.slug} value={n.nome}>{n.nome}</option>
+                  ))}
                 </select>
+                <p style={{ margin: '3px 0 0', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
+                  Lista carregada do banco — se aparecer vazio, recarregue a página.
+                </p>
               </div>
               <div className="detail-item">
                 <span className="detail-label">Tipo Graduação</span>
@@ -13033,7 +13039,7 @@ Suporte Ginga Gestão.`
       {/* ===== ABA MURAL DO ALUNO (qualquer admin) ===== */}
       {activeTab === 'mural' && (
         <div style={{ paddingTop: 24, maxWidth: 980, margin: '0 auto' }}>
-          <MuralAdmin nucleos={dynamicNucleos.map(n => ({ nome: n.nome }))} />
+          <MuralAdmin nucleos={dynamicNucleos.map(n => ({ nome: n.nome, slug: n.slug }))} />
         </div>
       )}
 

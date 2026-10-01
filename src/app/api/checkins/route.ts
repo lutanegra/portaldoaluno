@@ -217,11 +217,18 @@ export async function POST(req: Request) {
   // Dados do aluno SEMPRE do banco — nunca do corpo da requisição
   const { data: studentRow } = await admin
     .from('students')
-    .select('id, nome_completo, graduacao, nucleo, foto_url, telefone, data_nascimento, menor_de_idade, assinatura_responsavel, nome_responsavel, cpf_responsavel')
+    .select('id, nome_completo, graduacao, nucleo, foto_url, telefone, data_nascimento, menor_de_idade, assinatura_responsavel, nome_responsavel, cpf_responsavel, conta_tipo')
     .eq('id', ator.studentId)
     .maybeSingle();
   if (!studentRow) {
     return NextResponse.json({ error: 'Aluno não encontrado.' }, { status: 404 });
+  }
+  // Perfil só-responsável não tem presença — nem em nome próprio, nem por alvo
+  if ((studentRow as { conta_tipo?: string | null }).conta_tipo === 'responsavel') {
+    return NextResponse.json(
+      { error: 'Este perfil é de responsável e não registra presença. Selecione o perfil do aluno no menu lateral.', bloqueado: true, motivo: 'perfil_responsavel' },
+      { status: 422 },
+    );
   }
   type StudentCtx = {
     id: string; nome_completo: string; graduacao: string | null; nucleo?: string;

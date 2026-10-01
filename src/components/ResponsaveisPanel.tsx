@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { IconUser, IconWarn, IconCheck, IconX, IconDoc } from '@/components/icons';
 
-type Perfil = { student_id: string; nome: string; nucleo: string | null; cpf_mascarado: string; criado_em: string };
+type Perfil = { student_id: string; nome: string; nucleo: string | null; cpf_mascarado: string; criado_em: string; conta_tipo?: string | null };
 type Vinculo = {
   id: string; guardian_student_id: string; guardian_nome: string;
   student_id: string; student_nome: string; student_nucleo: string | null;
@@ -222,7 +222,7 @@ export default function ResponsaveisPanel() {
                 {perfis.map(p => (
                   <span key={p.student_id} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(255,146,0,0.08)', border: '1px solid rgba(255,146,0,0.28)', borderRadius: 999, padding: '5px 12px', fontSize: '0.78rem', color: '#f5f5f4' }}>
                     <IconCheck size={13} style={{ color: '#FF9200' }} />
-                    {p.nome}{p.nucleo ? ` · ${p.nucleo}` : ''}
+                    {p.nome}{p.nucleo ? ` · ${p.nucleo}` : ''}{p.conta_tipo === 'responsavel' ? ' · só responsável' : p.conta_tipo === 'responsavel_aluno' ? ' · responsável + aluno' : ''}
                   </span>
                 ))}
               </div>

@@ -64,20 +64,31 @@ export async function GET(req: NextRequest) {
   for (const g of guardians.data || []) ids.add(g.student_id);
   for (const l of links.data || []) { ids.add(l.guardian_student_id); ids.add(l.student_id); }
   for (const a of authzs.data || []) ids.add(a.student_id);
-  let alunosMap = new Map<string, { id: string; nome_completo: string; nucleo: string | null; foto_url: string | null }>();
+  let alunosMap = new Map<string, { id: string; nome_completo: string; nucleo: string | null; foto_url: string | null; conta_tipo: string | null }>();
   if (ids.size > 0) {
     const { data: alunos } = await supabase
       .from('students')
-      .select('id, nome_completo, nucleo, foto_url')
+      .select('id, nome_completo, nucleo, foto_url, conta_tipo')
       .in('id', [...ids]);
     alunosMap = new Map((alunos || []).map(a => [a.id, a]));
   }
 
+  // Visibilidade: aluno dentro dos núcleos do admin; conta só-responsável
+  // (sem núcleo próprio) aparece quando algum tutelado vinculado está no núcleo.
+  const alunosVisiveis = new Set<string>();
+  for (const a of alunosMap.values()) {
+    if (nucleos === 'geral' || alunoDentroDosNucleos(a, nucleos)) alunosVisiveis.add(a.id);
+  }
+  const responsaveisVisiveis = new Set<string>();
+  if (nucleos !== 'geral') {
+    for (const l of links.data || []) {
+      if (alunosVisiveis.has(l.student_id)) responsaveisVisiveis.add(l.guardian_student_id);
+    }
+  }
+
   const visivel = (sid: string) => {
     if (nucleos === 'geral') return true;
-    const a = alunosMap.get(sid);
-    if (!a) return false;
-    return alunoDentroDosNucleos(a, nucleos);
+    return alunosVisiveis.has(sid) || responsaveisVisiveis.has(sid);
   };
 
   return NextResponse.json({
@@ -90,6 +101,7 @@ export async function GET(req: NextRequest) {
           nome: a?.nome_completo || '—',
           nucleo: a?.nucleo || null,
           foto_url: a?.foto_url || null,
+          conta_tipo: (a as { conta_tipo?: string | null })?.conta_tipo || null,
           cpf_mascarado: g.cpf_digits ? `•••.${g.cpf_digits.slice(3, 6)}.${g.cpf_digits.slice(6, 9)}-••` : '—',
           criado_em: g.criado_em,
         };

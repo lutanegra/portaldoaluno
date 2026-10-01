@@ -25,6 +25,12 @@ export async function GET(req: NextRequest) {
   if (!ator || !ator.studentId) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
   const student_id = ator.studentId;
 
+  // Perfil só-responsável não tem evolução (não treina)
+  const { data: ctRow } = await admin.from('students').select('conta_tipo').eq('id', student_id).maybeSingle();
+  if ((ctRow as { conta_tipo?: string | null } | null)?.conta_tipo === 'responsavel') {
+    return NextResponse.json({ dates: [], entries: [], perfil_responsavel: true });
+  }
+
   const days = parseInt(searchParams.get('days') || '365', 10);
 
   // List all date folders in checkins/

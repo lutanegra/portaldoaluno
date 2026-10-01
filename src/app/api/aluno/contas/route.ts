@@ -120,7 +120,7 @@ export async function GET(req: NextRequest) {
             nome_completo: st.nome_completo,
             foto_url: st.foto_url || null,
             nucleo: st.nucleo || null,
-            tipo: 'proprio' as const,
+            tipo: (st as { conta_tipo?: string | null }).conta_tipo === 'responsavel' ? ('responsavel' as const) : ('proprio' as const),
           },
           ...tuts
             .filter(t => t.status_vinculo === 'active')

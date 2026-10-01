@@ -217,7 +217,12 @@ export default function NucleoLoginPage({ nucleoKey }: Props) {
         }
 
         sessionStorage.setItem('admin_auth', nucleoKey);
-        sessionStorage.setItem('admin_auth_nucleos', JSON.stringify([nucleoKey]));
+        // A conta pode gerenciar vários núcleos — salvar a lista completa,
+        // não só o principal (o painel usa isso para filtrar tudo).
+        const nucleosDaConta: string[] = Array.isArray(data.nucleos) && data.nucleos.length > 0
+          ? data.nucleos
+          : [nucleoKey];
+        sessionStorage.setItem('admin_auth_nucleos', JSON.stringify(nucleosDaConta));
         router.push('/admin');
         return;
       }
@@ -259,7 +264,10 @@ export default function NucleoLoginPage({ nucleoKey }: Props) {
       const d = await res.json();
       if (res.ok && d.ok) {
         sessionStorage.setItem('admin_auth', nucleoKey);
-        sessionStorage.setItem('admin_auth_nucleos', JSON.stringify([nucleoKey]));
+        const nucleosDaConta: string[] = Array.isArray(d.nucleos) && d.nucleos.length > 0
+          ? d.nucleos
+          : [nucleoKey];
+        sessionStorage.setItem('admin_auth_nucleos', JSON.stringify(nucleosDaConta));
         router.push('/admin');
       } else {
         setPrimeiroMsg(d.error || 'Erro ao salvar senha. Tente novamente.');

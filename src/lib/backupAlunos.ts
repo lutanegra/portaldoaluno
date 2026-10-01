@@ -120,7 +120,10 @@ function cleanName(n: unknown): string {
 }
 
 export function buildStudentsCsv(allStudents: Record<string, unknown>[]): string {
-  const rows = allStudents.map(s =>
+  // Perfis só-responsável não são alunos — não entram no CSV canônico
+  const rows = allStudents
+    .filter(s => s.conta_tipo !== 'responsavel')
+    .map(s =>
     COLUMNS.map(col => {
       const v = s[col];
       if (NAME_COLS.has(col)) return escape(cleanName(v));
