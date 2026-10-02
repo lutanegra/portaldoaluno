@@ -190,21 +190,34 @@ export default function ChamadaPanel({
   }
 
   /**
-   * FOLHA DE CHAMADA (v1.5.5): documento A4 paisagem para assinatura em papel.
-   * Topo: título, nome do grupo, nome do núcleo e data. Lista dos alunos
-   * cadastrados até o momento da geração em ordem alfabética (nomes do meio
-   * abreviados), coluna de apelidos e campo de assinatura ao lado. Linhas em
-   * branco no fim para inclusões manuais. Cabeçalho se repete a cada página.
+   * FOLHA DE CHAMADA (v1.5.5): documento A4 retrato para assinatura em papel.
+   * Topo: logo do grupo, nome da organização, título, núcleo e data. Lista dos
+   * alunos cadastrados até o momento da geração em ordem alfabética (nomes do
+   * meio abreviados), coluna de apelidos e campo de assinatura ao lado. Linhas
+   * em branco no fim para inclusões manuais. Cabeçalho da tabela se repete a
+   * cada página. Abre em janela com endereço próprio (blob), por isso a
+   * impressão mostra o título do documento em vez de "about:blank" — e nunca
+   * dispara a impressão sozinha: quem imprime é o botão no papel.
    */
   function gerarFolha() {
     if (alunos.length === 0 || gerandoFolha) return;
     setGerandoFolha(true);
     const org = config.organization_name || 'Centro Cultural Luta Negra';
+    const orgShort = config.organization_short || 'CCLN';
     const nomeNucleo = nucleosPermitidos.find(n => n.slug === nucleo)?.nome || nucleoInfo?.nome || nucleo;
 
     // Reordena no momento da geração (o servidor já entrega alfabético; aqui é garantia)
     const lista = [...alunos].sort((a, b) =>
       String(a.nome_completo).localeCompare(String(b.nome_completo), 'pt-BR', { sensitivity: 'base' }));
+
+    // Logo em URL absoluta (documento blob não resolve caminho relativo);
+    // sem logo configurada, usa a logo oficial do grupo.
+    const logoSrc = config.logo_url || '/logo-portal-aluno.png';
+    let logoTag = '';
+    try {
+      const logoAbs = new URL(logoSrc, window.location.href).href;
+      logoTag = `<img class="logo" src="${escFolha(logoAbs)}" alt="">`;
+    } catch { /* logo inválida: cabeçalho segue só com texto */ }
 
     const linhas = lista.map((a, i) => `
       <tr>
@@ -227,65 +240,101 @@ export default function ChamadaPanel({
       </tr>`;
     }
 
-    const w = window.open('', '_blank');
-    if (!w) {
-      setMsg('O navegador bloqueou a janela do documento. Permita pop-ups para este site e tente novamente.');
-      setGerandoFolha(false);
-      return;
-    }
-    w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
 <title>Folha de Chamada — ${escFolha(nomeNucleo)}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  @page { size:A4 landscape; margin:11mm 12mm; }
-  body { font-family:Arial,Helvetica,sans-serif; color:#111827; font-size:11px; }
-  .barra { display:flex; justify-content:flex-end; margin-bottom:8px; }
-  .btn-print { font-family:inherit; font-size:12px; font-weight:800; padding:8px 16px; border-radius:8px;
+  @page { size:A4 portrait; margin:12mm 14mm 14mm; }
+  body { font-family:Arial,Helvetica,sans-serif; color:#111827; font-size:11px;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .barra { display:flex; justify-content:flex-end; margin-bottom:10px; }
+  .btn-print { font-family:inherit; font-size:12.5px; font-weight:800; padding:9px 18px; border-radius:9px;
     border:1px solid #FF9200; background:rgba(255,146,0,.14); color:#b26a00; cursor:pointer; }
-  .btn-print:hover { background:rgba(255,146,0,.28); }
-  @media print { .barra { display:none; } body { font-size:11px; } }
-  .head { display:flex; align-items:center; gap:14px; border-bottom:3px solid #FF9200; padding-bottom:8px; margin-bottom:4px; }
-  .brand { flex:1; }
-  .brand h1 { font-size:15px; letter-spacing:.2px; }
-  .brand .sub { font-size:9.5px; color:#6b7280; margin-top:2px; }
-  .titulo-doc { text-align:center; font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:1.2px; margin:10px 0 2px; }
-  .meta { text-align:center; font-size:9.5px; color:#6b7280; margin-bottom:9px; }
+  .btn-print:hover { background:rgba(255,146,0,.3); }
+  @media print { .barra { display:none; } }
+  .head { display:flex; align-items:center; gap:14px; border-bottom:3px solid #FF9200; padding-bottom:10px; }
+  .logo { width:62px; height:62px; object-fit:contain; flex-shrink:0; }
+  .brand { flex:1; min-width:0; }
+  .brand h1 { font-size:16.5px; letter-spacing:.3px; text-transform:uppercase; }
+  .brand .sub { font-size:9.5px; color:#6b7280; margin-top:3px; letter-spacing:.4px; text-transform:uppercase; }
+  .data-box { border:1.5px solid #9ca3af; border-radius:8px; padding:7px 12px; text-align:center; flex-shrink:0; }
+  .data-box .lbl { font-size:8px; font-weight:800; color:#6b7280; letter-spacing:1px; text-transform:uppercase; }
+  .data-box .val { font-size:12px; font-weight:700; margin-top:4px; letter-spacing:1px; }
+  .titulo-bloco { text-align:center; margin:14px 0 12px; }
+  .titulo-doc { font-size:15px; font-weight:800; text-transform:uppercase; letter-spacing:2.5px; }
+  .titulo-sub { font-size:9.5px; color:#6b7280; margin-top:3px; letter-spacing:.3px; }
+  .titulo-linha { width:64px; height:3px; background:#FF9200; border-radius:2px; margin:7px auto 0; }
+  .meta { display:flex; justify-content:space-between; align-items:center; background:#f9fafb;
+    border:1px solid #e5e7eb; border-radius:8px; padding:7px 12px; font-size:10px; margin-bottom:10px; }
+  .meta strong { font-size:11px; }
   table { width:100%; border-collapse:collapse; }
-  th, td { border:1px solid #9ca3af; padding:0 8px; height:26px; }
-  th { background:#f3f4f6; font-size:9px; text-transform:uppercase; letter-spacing:.4px; height:auto; padding:5px 8px; }
-  td.num, th.num { text-align:center; width:30px; }
-  td.nome { font-size:11.5px; font-weight:600; }
-  td.apelido, th.apelido { width:120px; font-size:10.5px; }
-  th.ass, td.ass { width:280px; }
+  th, td { border:1px solid #9ca3af; padding:0 8px; height:27px; }
+  th { background:#f3f4f6; color:#111827; font-size:8.5px; text-transform:uppercase; letter-spacing:.8px;
+    height:auto; padding:6px 8px; text-align:left; border-bottom:2px solid #111827; }
+  td.num, th.num { text-align:center; width:26px; color:#6b7280; font-size:10px; }
+  td.nome { font-size:11.5px; font-weight:600; color:#111827; }
+  td.apelido, th.apelido { width:104px; font-size:10.5px; }
+  th.ass, td.ass { width:168px; }
   thead { display:table-header-group; }
   tr { page-break-inside:avoid; }
-  tr.extra td.num { color:#9ca3af; font-weight:700; }
-  .total { margin-top:8px; font-size:9.5px; color:#374151; display:flex; justify-content:space-between; }
-  .foot { margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:9px; color:#6b7280; display:flex; justify-content:space-between; }
+  tr.extra td { height:30px; }
+  tr.extra td.num { color:#9ca3af; font-weight:800; font-size:12px; }
+  .extras-titulo td { border:none; padding:10px 2px 4px; font-size:8.5px; font-weight:800; color:#6b7280;
+    text-transform:uppercase; letter-spacing:.8px; }
+  .resumo { margin-top:10px; display:flex; gap:8px; }
+  .resumo .cx { flex:1; border:1px solid #d1d5db; border-radius:8px; padding:6px 10px 18px; font-size:9px;
+    color:#374151; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+  .foot { margin-top:14px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:8.5px; color:#6b7280;
+    display:flex; justify-content:space-between; }
 </style></head><body>
 <div class="barra"><button class="btn-print" onclick="window.print()">🖨&nbsp; Imprimir / Salvar PDF</button></div>
 <div class="head">
+  ${logoTag}
   <div class="brand">
     <h1>${escFolha(org)}</h1>
     <div class="sub">Portal do Aluno · Ginga Gestão</div>
   </div>
+  <div class="data-box"><div class="lbl">Data</div><div class="val">____/____/______</div></div>
 </div>
-<div class="titulo-doc">Folha de Chamada</div>
-<div class="meta">Núcleo: <strong>${escFolha(nomeNucleo)}</strong> · Data: <strong>____/____/______</strong> · ${lista.length} aluno${lista.length !== 1 ? 's' : ''} cadastrado${lista.length !== 1 ? 's' : ''} até o momento da geração</div>
+<div class="titulo-bloco">
+  <div class="titulo-doc">Folha de Chamada</div>
+  <div class="titulo-sub">Registro de presença por assinatura — lista em ordem alfabética</div>
+  <div class="titulo-linha"></div>
+</div>
+<div class="meta">
+  <span>Núcleo: <strong>${escFolha(nomeNucleo)}</strong></span>
+  <span>${lista.length} aluno${lista.length !== 1 ? 's' : ''} cadastrado${lista.length !== 1 ? 's' : ''} até o momento da geração</span>
+</div>
 <table>
   <thead><tr>
     <th class="num">#</th><th>Nome do Aluno</th><th class="apelido">Apelido</th><th class="ass">Assinatura</th>
   </tr></thead>
-  <tbody>${linhas}${extras}</tbody>
+  <tbody>${linhas}
+  <tr class="extras-titulo"><td colspan="4">Inclusão manual — alunos novos ou não listados</td></tr>${extras}</tbody>
 </table>
-<div class="total"><span>Total de alunos listados: <strong>${lista.length}</strong></span><span>Presenças do dia: ______ &nbsp;·&nbsp; Ausências: ______</span></div>
+<div class="resumo">
+  <div class="cx">Total de alunos listados: ${lista.length}</div>
+  <div class="cx">Presenças do dia: ____________</div>
+  <div class="cx">Ausências: ____________</div>
+</div>
 <div class="foot">
-  <span>${escFolha(org)} — documento gerado pelo Ginga Gestão</span>
+  <span>${escFolha(orgShort)} · ${escFolha(org)} — documento gerado pelo Ginga Gestão</span>
   <span>Professor / Responsável: ____________________________</span>
 </div>
-<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\\/script>
-</body></html>`);
-    w.document.close();
+</body></html>`;
+
+    // Janela com endereço próprio (blob): o título do documento aparece na
+    // impressão/PDF em vez de "about:blank". Impressão só pelo botão.
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, '_blank');
+    if (!w) {
+      URL.revokeObjectURL(url);
+      setMsg('O navegador bloqueou a janela do documento. Permita pop-ups para este site e tente novamente.');
+      setGerandoFolha(false);
+      return;
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
     setTimeout(() => setGerandoFolha(false), 800);
   }
 
