@@ -76,6 +76,18 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.5.1',
+    data: '2026-10-02',
+    titulo: 'Condições atípicas visíveis na aba Alunos',
+    descricao:
+      'O painel passa a mostrar exatamente quais condições de desenvolvimento atípico o aluno marcou em Meus Dados — no selo da lista, nos detalhes e ao editar o cadastro, unificando o que o aluno e a administração marcaram.',
+    publico: 'admin',
+    itens: [
+      { categoria: 'novo', texto: 'No modal de detalhes do aluno, o selo 🧩 de condições atípicas agora abre a lista completa: mostra quais condições o aluno marcou em Meus Dados, junto com as registradas pela administração.' },
+      { categoria: 'correcoes', texto: 'As condições marcadas pelo aluno no app apareciam apenas na contagem da lista — agora entram também no modal de edição, sem risco de serem sobrescritas ao salvar o cadastro.' },
+    ],
+  },
+  {
     versao: '1.5.0',
     data: '2026-10-02',
     titulo: 'Contas de responsável: estrutura completa e termos desbloqueados',

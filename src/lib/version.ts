@@ -13,7 +13,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-export const APP_VERSION = '1.5.0';
+export const APP_VERSION = '1.5.1';
 
 export const APP_RELEASE_DATE = '2026-10-02';
 

@@ -119,7 +119,24 @@ interface Student {
   ordem_inscricao?: number | null;
   ultimo_checkin?: string | null;
   checkin_nucleo?: string | null;
-  condicoes_atipicas?: string | null; // JSON array string
+  condicoes_atipicas?: string | null; // JSON array string (legado, Storage)
+  desenvolvimento_atipico?: string[] | string | null; // coluna do banco — o que o ALUNO marca em Meus Dados
+}
+
+/** Condições atípicas do aluno unindo as duas fontes: banco (aluno) + Storage (painel). */
+function condicoesDoAluno(s: Pick<Student, 'desenvolvimento_atipico' | 'condicoes_atipicas'>): string[] {
+  const parse = (v: unknown): string[] => {
+    if (Array.isArray(v)) return v.filter(x => typeof x === 'string' && x.trim());
+    if (typeof v === 'string' && v.trim()) {
+      try { return parse(JSON.parse(v)); } catch { return []; }
+    }
+    return [];
+  };
+  const banco = parse(s.desenvolvimento_atipico);
+  const storage = parse(s.condicoes_atipicas);
+  const todas = [...banco];
+  for (const c of storage) if (!todas.includes(c)) todas.push(c);
+  return todas;
 }
 
 type EditForm = Partial<Student>;
@@ -1597,7 +1614,12 @@ export default function AdminPage() {
 
   const openEdit = (student: Student) => {
     setEditing(student);
-    setEditForm({ ...student });
+    setEditForm({
+      ...student,
+      // Condições atípicas: o modal de edição mostra unificado o que o ALUNO marcou
+      // (coluna no banco) e o que o painel marcou (Storage legado), para não perder nada.
+      condicoes_atipicas: JSON.stringify(condicoesDoAluno(student)),
+    } as Student);
     setEditFotoFile(null);
     setSelected(null);
   };
@@ -2990,7 +3012,7 @@ export default function AdminPage() {
                           })()}
                           {(() => {
                             try {
-                              const c: string[] = (student as any).desenvolvimento_atipico ? (Array.isArray((student as any).desenvolvimento_atipico) ? (student as any).desenvolvimento_atipico : JSON.parse((student as any).desenvolvimento_atipico)) : ((student as any).condicoes_atipicas ? JSON.parse((student as any).condicoes_atipicas) : []);
+                              const c = condicoesDoAluno(student as any);
                               return c.length > 0 ? <span title={c.join(', ')} style={{ fontSize: '0.7rem', background: 'rgba(139,92,246,0.12)', color: '#5b21b6', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, cursor: 'default', flexShrink: 0 }}>🧩 {c.length}</span> : null;
                             } catch { return null; }
                           })()}
@@ -8195,8 +8217,7 @@ _Portal Aluno_`
                 <span className="detail-value">{fmtDate(selected.created_at, { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
               </div>
               {(() => {
-                let conds: string[] = [];
-                try { conds = selected.condicoes_atipicas ? JSON.parse(selected.condicoes_atipicas) : []; } catch { conds = []; }
+                const conds = condicoesDoAluno(selected as any);
                 if (conds.length === 0) return null;
                 return (
                   <div className="detail-item detail-full" style={{ marginTop: 8 }}>
