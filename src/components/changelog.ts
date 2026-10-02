@@ -76,6 +76,18 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.5.4',
+    data: '2026-10-02',
+    titulo: 'Presença sempre validada — dia, horário e local valendo para todos',
+    descricao: 'Corrigido o furo que permitia registrar presença fora do dia/horário/local quando o aparelho tinha uma sessão de administrador aberta (ex.: painel no mesmo navegador), e a conferência de GPS voltou a valer no registro.',
+    descricaoAluno: 'A presença agora é sempre conferida pelo servidor — dia de treino, horário e local do seu núcleo — mesmo que o aparelho já tenha sido usado para acessar a área da administração.',
+    itens: [
+      { categoria: 'seguranca', texto: 'Fechado o furo: abrir o app do aluno no mesmo navegador do painel fazia o servidor tratar o aluno como administrador e pular TODAS as travas (dia, horário e local). A validação agora vale para todo aluno, sempre.' },
+      { categoria: 'correcoes', texto: 'A conferência de local não estava atuando: o GPS do celular não chegava na validação, o que bloquearia todo aluno de verdade. Agora a distância até o núcleo é medida no momento do registro (raio de 200 m), e sem permissão de localização a presença não é aceita.' },
+      { categoria: 'melhorias', publico: 'admin', texto: 'Painel: os registros feitos pela administração (fila offline, desfazer exclusão e presença pela ficha do aluno) continuam sem travas, agora identificados explicitamente como operação do painel — com auditoria correta de quem registrou.' },
+    ],
+  },
+  {
     versao: '1.5.3',
     data: '2026-10-02',
     titulo: 'Termo correto em cada conta e horário de treino valendo de verdade',

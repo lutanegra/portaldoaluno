@@ -464,7 +464,7 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
                     try {
                       const res = await fetch('/api/checkins', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ student: { id: studentId, nome_completo: student.nome_completo, graduacao: student.graduacao || '', nucleo: presencaLocalSelecionado || student.nucleo || '', local_treino: presencaLocalSelecionado || student.nucleo || '', foto_url: student.foto_url || null, telefone: student.telefone || '', lat: pos.coords.latitude, lng: pos.coords.longitude } }),
+                        body: JSON.stringify({ student: { id: studentId, nome_completo: student.nome_completo, graduacao: student.graduacao || '', nucleo: presencaLocalSelecionado || student.nucleo || '', local_treino: presencaLocalSelecionado || student.nucleo || '', foto_url: student.foto_url || null, telefone: student.telefone || '', lat: pos.coords.latitude, lng: pos.coords.longitude }, admin_op: true }),
                       });
                       const data = await res.json();
                       if (!res.ok) { setPresencaMsg(data.error || 'Erro ao registrar.'); setPresencaStatus('error'); }

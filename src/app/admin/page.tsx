@@ -1825,7 +1825,7 @@ export default function AdminPage() {
         const res = await fetch('/api/checkins', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ student: item.student, date: item.date }),
+          body: JSON.stringify({ student: item.student, date: item.date, admin_op: true }),
         });
         if (res.ok) { ok++; } else { fail++; remaining.push(item); }
       } catch { fail++; remaining.push(item); }
@@ -1864,7 +1864,7 @@ export default function AdminPage() {
       const res = await fetch('/api/checkins', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ student: { id: record.student_id, ...record }, date: presencaDate }),
+        body: JSON.stringify({ student: { id: record.student_id, ...record }, date: presencaDate, admin_op: true }),
       });
       if (res.ok) {
         await new Promise(r => setTimeout(r, 600));

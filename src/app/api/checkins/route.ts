@@ -99,6 +99,7 @@ async function validarTravas(
   student: { nucleo?: string; lat?: number | null; lng?: number | null },
   brDate: Date,
   minutos: number,
+  exigirGps = true,
 ): Promise<Bloqueio | null> {
   const nucleoNome = String(student.nucleo || '').trim();
   if (!nucleoNome || nucleoNome === 'Sem núcleo') {
@@ -154,21 +155,26 @@ async function validarTravas(
     }
   }
 
-  // Distância: exige GPS do aluno e coordenadas do núcleo
+  // Distância: exige GPS do aluno e coordenadas do núcleo.
+  // Responsável marcando pelo tutelado não tem GPS do aluno (marcado por
+  // professor/admin no local); nesse caso pula a trava de local.
   if (typeof tenant.lat === 'number' && typeof tenant.lng === 'number') {
-    if (typeof student.lat !== 'number' || typeof student.lng !== 'number') {
+    if (!exigirGps) {
+      // sem exigência de GPS — segue para o registro
+    } else if (typeof student.lat !== 'number' || typeof student.lng !== 'number') {
       return {
         motivo: 'sem_gps',
         mensagem: 'Não foi possível obter sua localização. Ative o GPS do dispositivo e autorize o acesso para registrar presença.',
       };
-    }
-    const dist = distanciaMetros(student.lat, student.lng, tenant.lat as number, tenant.lng as number);
-    const raio = RAIO_METROS;
-    if (dist > raio) {
-      return {
-        motivo: 'fora_do_local',
-        mensagem: `Você está a ~${Math.round(dist)}m do núcleo ${tenant.nome}. A presença só pode ser registrada dentro do local de treino (raio de ${raio}m).`,
-      };
+    } else {
+      const dist = distanciaMetros(student.lat, student.lng, tenant.lat as number, tenant.lng as number);
+      const raio = RAIO_METROS;
+      if (dist > raio) {
+        return {
+          motivo: 'fora_do_local',
+          mensagem: `Você está a ~${Math.round(dist)}m do núcleo ${tenant.nome}. A presença só pode ser registrada dentro do local de treino (raio de ${raio}m).`,
+        };
+      }
     }
   }
 
@@ -227,14 +233,22 @@ function extrairJanela(
   return null;
 }
 
-// POST /api/checkins  body: { student? }
+// POST /api/checkins  body: { student?, admin_op?, date? }
 // A identidade do aluno vem SEMPRE da sessão/ator resolvido no servidor —
 // o corpo não escolhe quem marca presença. Alunos passam pelas travas
 // (núcleo, dia, horário, GPS); responsável pode marcar em nome do tutelado
-// (sem GPS do aluno, exige vínculo ativo). Admins do painel têm bypass com
-// filtro de núcleo.
+// (sem GPS do aluno, exige vínculo ativo). O painel envia admin_op: true
+// para registrar sem travas — só então a sessão de admin é usada, com
+// filtro de núcleo (o cookie de admin sozinho NÃO pula travas, porque o
+// painel e o app do aluno compartilham o mesmo navegador).
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
+  // Marcação explícita de operação do painel: o painel envia admin_op: true
+  // quando está registrando a presença do aluno (fora das travas). O cookie
+  // pa_admin por si só NÃO dá bypass — sem isso, um aluno logado no app do
+  // aluno no MESMO navegador (cookie compartilhado) registrava presença
+  // fora do dia/horário/local sem nenhuma trava.
+  const adminOp = body?.admin_op === true;
   const ator = await resolverAtor(req, body?.student?.id || null);
   if (!ator || !ator.studentId) {
     return NextResponse.json(
@@ -266,16 +280,26 @@ export async function POST(req: Request) {
   };
   const student = studentRow as unknown as StudentCtx & { nucleo: string | null };
 
+  // GPS do dispositivo do aluno (corpo) — o banco não guarda coordenadas;
+  // sem elas a trava de local não tem o que validar.
+  const gpsLat = typeof body?.student?.lat === 'number' ? body.student.lat : null;
+  const gpsLng = typeof body?.student?.lng === 'number' ? body.student.lng : null;
+  student.lat = gpsLat;
+  student.lng = gpsLng;
+
   // ── CONFORMIDADE CADASTRAL (sem CPF/RG/termo não registra presença) ────────
   // Responsável respondendo pelo tutelado não é bloqueado pelo termo do menor
   // (a responsabilidade é dele), mas os documentos do aluno continuam exigidos.
   const gate = await exigirConformidadeAluno(req, String(student.id));
   if (!gate.ok && ator.emNomeDe !== 'responsavel') return gate.response;
 
-  // ── SESSÃO DE ADMIN (bypass das travas, com filtro de núcleo) ──
+  // ── SESSÃO DE ADMIN (bypass das travas APENAS com admin_op explícito) ──
+  // O cookie pa_admin sozinho não pula travas: aluno e painel compartilham o
+  // mesmo navegador, então a sessão de admin vaza para o app do aluno.
   let adminNucleo: string | null = null; // null = sem admin; 'geral' = admin geral/owner
   let adminNucleos: string[] = [];
   let adminAcc: PanelAccount | undefined;
+  let nomesPorSlug: Record<string, string> = {};
   const sess = readPanelSession(req);
   const credsAdmin = sess ? await loadCreds() : null;
   if (sess && credsAdmin) {
@@ -290,17 +314,18 @@ export async function POST(req: Request) {
       }
     }
   }
-  if (adminAcc && adminNucleos.length > 0) {
-    const nucleoNomeAluno = String(student?.nucleo || '').trim();
+  if (adminNucleos.length > 0) {
     const { data: tenants } = await admin
       .from('tenants')
       .select('slug, nome')
       .in('slug', adminNucleos);
-    const nomesPorSlug: Record<string, string> = {};
     for (const t of tenants || []) {
       const nome = String((t as { nome?: string }).nome || '').trim();
       if (nome) nomesPorSlug[(t as { slug: string }).slug] = nome;
     }
+  }
+  if (adminOp && adminAcc && adminNucleos.length > 0) {
+    const nucleoNomeAluno = String(student?.nucleo || '').trim();
     if (!accHasNucleo(adminAcc, nucleoNomeAluno, nomesPorSlug)) {
       return NextResponse.json(
         { success: false, bloqueado: true, motivo: 'fora_do_nucleo', error: 'Este aluno não é dos seus núcleos. Você só pode registrar presença de alunos dos núcleos que você gerencia.' },
@@ -318,8 +343,19 @@ export async function POST(req: Request) {
 
   await ensureBucket();
 
-  // ── TRAVAS DE PRESENÇA (somente alunos; admins têm bypass) ─────────────────
-  const bloqueio = !adminNucleo ? await validarTravas(student, brDate, minutosAgora) : null;
+  // ── TRAVAS DE PRESENÇA ──────────────────────────────────────────────────────
+  // Bypass SÓ para operação explícita do painel (admin_op) vinda de sessão de
+  // admin com o aluno dentro dos núcleos dele. Aluno no app com cookie de admin
+  // herdado do painel passa pelas travas como qualquer um.
+  const adminBypass = adminOp && !!adminAcc && (
+    adminNucleo === 'geral' || (
+      adminNucleos.length > 0 &&
+      accHasNucleo(adminAcc, String(student?.nucleo || ''), nomesPorSlug)
+    )
+  );
+  const bloqueio = !adminBypass
+    ? await validarTravas(student, brDate, minutosAgora, ator.emNomeDe !== 'responsavel')
+    : null;
   if (bloqueio) {
     await appendAudit({
       actor: student.id,
@@ -393,18 +429,18 @@ export async function POST(req: Request) {
 
   // Auditoria: registro de presença
   await appendAudit({
-    actor: adminNucleo ? `admin:${sess?.u || ''}` : (ator.emNomeDe === 'responsavel' ? `resp:${ator.studentId}` : student.id as string),
-    actor_type: adminNucleo ? 'admin' : 'student',
+    actor: adminBypass ? `admin:${sess?.u || ''}` : (ator.emNomeDe === 'responsavel' ? `resp:${ator.studentId}` : student.id as string),
+    actor_type: adminBypass ? 'admin' : 'student',
     action: 'presenca_registrada',
     target_id: student.id as string,
     target_name: student.nome_completo as string,
     details: {
       nucleo: student.nucleo || 'Sem núcleo',
       local: student.local_nome || null,
-      coords_origem: (student.nucleo && typeof student.lat === 'number' && typeof student.lng === 'number') ? 'nucleo_do_aluno' : 'gps_dispositivo',
+      coords_origem: (typeof student.lat === 'number' && typeof student.lng === 'number') ? 'gps_dispositivo' : 'sem_gps',
       hora,
       data: today,
-      registrado_por: adminNucleo ? (sess?.u || 'admin') : (ator.emNomeDe === 'responsavel' ? 'responsavel' : 'proprio_aluno'),
+      registrado_por: adminBypass ? (sess?.u || 'admin') : (ator.emNomeDe === 'responsavel' ? 'responsavel' : 'proprio_aluno'),
       fora_do_dia_de_treino: false,
     },
   });
