@@ -16,8 +16,9 @@ const dir = (date: string) => `checkins/${date}`;
 const jsonKey = (date: string, sid: string) => `checkins/${date}/${sid}.json`;
 const delKey  = (date: string, sid: string) => `checkins/${date}/${sid}.deleted`;
 
-// Tolerâncias das travas de presença
-const TOLERANCIA_MIN = 15;            // minutos antes/depois da janela de treino
+// Tolerância padrão das travas de presença (min antes/depois da janela) —
+// vale quando o núcleo não define a própria em tolerancia_min
+const TOLERANCIA_MIN = 15;
 const RAIO_METROS = 200;              // raio máximo do local de treino
 const RAIO_SEM_COORDS = 800;          // quando o núcleo não tem lat/lng cadastrados
 
@@ -34,7 +35,7 @@ async function findTenant(nome: string) {
   if (!clean || clean === 'Sem núcleo') return null;
   const { data } = await admin
     .from('tenants')
-    .select('nome, slug, dias_treino, lat, lng, endereco')
+    .select('nome, slug, dias_treino, tolerancia_min, lat, lng, endereco')
     .or(`nome.ilike.${clean},slug.eq.${clean}`)
     .limit(1)
     .maybeSingle();
@@ -115,6 +116,12 @@ async function validarTravas(
     };
   }
 
+  // Tolerância definida pelo admin do núcleo (minutos antes/depois da janela);
+  // sem cadastro, vale o padrão do sistema.
+  const tolerancia = typeof (tenant as { tolerancia_min?: number | null }).tolerancia_min === 'number'
+    ? (tenant as { tolerancia_min: number }).tolerancia_min
+    : TOLERANCIA_MIN;
+
   const dias: string[] = Array.isArray(tenant.dias_treino) ? tenant.dias_treino : [];
   const semana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
   const diaHoje = semana[brDate.getDay()];
@@ -133,16 +140,16 @@ async function validarTravas(
     };
   }
 
-  // Janela de horário: minutos ≥ início − tol e < fim + tol
+  // Janela de horário: minutos ≥ início − tol e < fim + tol (tol do núcleo)
   const treino = extrairJanela(tenant, diaHoje);
   if (treino) {
-    const minInicio = treino.inicio - TOLERANCIA_MIN;
-    const maxFim = treino.fim + TOLERANCIA_MIN;
+    const minInicio = treino.inicio - tolerancia;
+    const maxFim = treino.fim + tolerancia;
     if (minutos < minInicio || minutos >= maxFim) {
       const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
       return {
         motivo: 'fora_do_horario',
-        mensagem: `Fora do horário de treino (${fmt(treino.inicio)} às ${fmt(treino.fim)}, tolerância de ${TOLERANCIA_MIN} min). Volte no horário para registrar sua presença.`,
+        mensagem: `Fora do horário de treino (${fmt(treino.inicio)} às ${fmt(treino.fim)}, tolerância de ${tolerancia} min). Volte no horário para registrar sua presença.`,
       };
     }
   }

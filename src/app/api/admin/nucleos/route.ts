@@ -5,6 +5,8 @@ import {
   verifyPassword,
   defaultPasswordForSlug,
   sanitizeDiasTreino,
+  sanitizeHorariosTreino,
+  parseToleranciaMin,
   pickColorForSlug,
   loadCreds,
   saveCreds,
@@ -185,6 +187,8 @@ export async function POST(req: NextRequest) {
         lat: body.lat ? parseFloat(String(body.lat)) : null,
         lng: body.lng ? parseFloat(String(body.lng)) : null,
         dias_treino: dias,
+        horarios_treino: sanitizeHorariosTreino(body.horarios_treino),
+        tolerancia_min: parseToleranciaMin(body.tolerancia_min) ?? null,
         admin_login: adminLogin,
         ativo: true,
       })
@@ -351,6 +355,15 @@ export async function PATCH(req: NextRequest) {
       const dias = sanitizeDiasTreino(body.dias_treino);
       if (dias.length === 0) return NextResponse.json({ error: 'Selecione pelo menos um dia de treino.' }, { status: 400 });
       updates.dias_treino = dias;
+    }
+    if (body.horarios_treino !== undefined) {
+      updates.horarios_treino = sanitizeHorariosTreino(body.horarios_treino);
+    }
+    const tolerancia = parseToleranciaMin(body.tolerancia_min);
+    if (tolerancia !== undefined) {
+      updates.tolerancia_min = tolerancia;
+    } else if (body.tolerancia_min === null || body.tolerancia_min === '') {
+      updates.tolerancia_min = null;
     }
     if ((body.ativo !== undefined) && (auth.owner || auth.adminGeral)) updates.ativo = body.ativo;
 

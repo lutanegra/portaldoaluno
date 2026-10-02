@@ -112,6 +112,8 @@ function TermoContent() {
 
   const podeAssinar = !!form.nome_responsavel.trim() && cpfValido && !!assinatura;
 
+  const nucleoFaltando = !String(student?.nucleo || '').trim();
+
   const handleSave = async () => {
     if (!student) return;
     if (!form.nome_responsavel.trim()) {
@@ -120,6 +122,10 @@ function TermoContent() {
     }
     if (!assinatura) {
       setErro('Falta a assinatura — desenhe no espaço indicado.');
+      return;
+    }
+    if (nucleoFaltando) {
+      setErro('Falta o núcleo de treino do aluno — peça ao admin do núcleo para completar o cadastro antes de assinar.');
       return;
     }
     setErro('');
@@ -282,6 +288,13 @@ function TermoContent() {
           </div>
         )}
 
+        {/* Núcleo pendente — o termo precisa dele para ser salvo */}
+        {!saved && nucleoFaltando && (
+          <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.4)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, color: '#fbbf24', fontSize: '0.84rem', fontWeight: 600 }}>
+            ⚠ O cadastro deste aluno ainda não tem <strong>núcleo de treino</strong>. Peça ao admin para preencher o núcleo — sem ele o termo não pode ser salvo.
+          </div>
+        )}
+
         {/* Botão salvar / status */}
         {saved ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -304,16 +317,16 @@ function TermoContent() {
         ) : (
           <button
             onClick={handleSave}
-            disabled={saving || !podeAssinar}
+            disabled={saving || !podeAssinar || nucleoFaltando}
             style={{
               width: '100%', padding: '16px',
-              background: podeAssinar ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : 'var(--bg-input)',
-              border: podeAssinar ? 'none' : '1px solid var(--border)',
-              color: podeAssinar ? '#fff' : 'var(--text-secondary)',
+              background: podeAssinar && !nucleoFaltando ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : 'var(--bg-input)',
+              border: podeAssinar && !nucleoFaltando ? 'none' : '1px solid var(--border)',
+              color: podeAssinar && !nucleoFaltando ? '#fff' : 'var(--text-secondary)',
               borderRadius: 12, fontWeight: 700, fontSize: '1rem',
-              cursor: podeAssinar ? 'pointer' : 'not-allowed',
+              cursor: podeAssinar && !nucleoFaltando ? 'pointer' : 'not-allowed',
               transition: 'all 0.2s',
-              boxShadow: podeAssinar ? '0 4px 16px rgba(220,38,38,0.3)' : 'none',
+              boxShadow: podeAssinar && !nucleoFaltando ? '0 4px 16px rgba(220,38,38,0.3)' : 'none',
             }}
           >
             {saving ? 'Salvando...' : '✍ Confirmar e Assinar Termo'}

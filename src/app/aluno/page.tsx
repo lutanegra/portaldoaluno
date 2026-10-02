@@ -3425,10 +3425,25 @@ export default function AlunoPage() {
                       if (!dadosForm.data_nascimento) return null;
                       const age = idadeEm(dadosForm.data_nascimento);
                       if (age < 0 || age >= 18) return null;
+                      const termoAssinado = !pendencias.some(p => p.campo === 'termo');
+                      const faltaNome = !String(dadosForm.nome_responsavel || '').trim();
+                      const faltaCpf = !cpfDigits(dadosForm.cpf_responsavel || '');
+                      if (termoAssinado) {
+                        return (
+                          <div style={{ marginTop: 6, background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.4)', borderRadius: 8, padding: '7px 10px', fontSize: '0.75rem', color: '#166534', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span aria-hidden="true">✓</span> Menor de idade — termo do responsável assinado.
+                          </div>
+                        );
+                      }
                       return (
                         <div style={{ marginTop: 6, background: 'rgba(250,204,21,0.10)', border: '1px solid rgba(250,204,21,0.4)', borderRadius: 8, padding: '7px 10px', fontSize: '0.75rem', color: '#854d0e' }}>
                           Menor de idade — Termo de Responsabilidade obrigatório.{' '}
-                          <button type="button" onClick={() => setActiveTab('termo')} style={{ background: '#854d0e', color: '#fff', border: 'none', borderRadius: 5, padding: '2px 8px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', marginLeft: 4 }}>Assinar Termo →</button>
+                          {(faltaNome || faltaCpf) && (
+                            <span style={{ display: 'block', marginTop: 3 }}>
+                              Falta preencher {faltaNome ? 'o nome do responsável' : ''}{faltaNome && faltaCpf ? ' e ' : ''}{faltaCpf ? 'o CPF do responsável' : ''} logo abaixo para poder assinar.
+                            </span>
+                          )}
+                          <button type="button" onClick={() => setActiveTab('termo')} style={{ background: '#854d0e', color: '#fff', border: 'none', borderRadius: 5, padding: '2px 8px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', marginTop: 4 }}>Assinar Termo →</button>
                         </div>
                       );
                     })()}
@@ -3631,6 +3646,12 @@ export default function AlunoPage() {
             if (!cpfRespDigits) { setTermoMsg('O CPF do responsável é obrigatório.'); return; }
             if (!isValidCPF(cpfRespDigits)) { setTermoMsg('CPF do responsável inválido — confira os 11 dígitos.'); return; }
             if (!termoAssinatura) { setTermoMsg('Falta a assinatura do responsável — desenhe no espaço indicado.'); return; }
+            // O termo carrega o núcleo no documento; sem núcleo o salvar falha
+            // mais tarde com erro genérico — avisar aqui, apontando o preenchimento.
+            if (!String(dadosForm.nucleo || '').trim()) {
+              setTermoMsg('Falta preencher o Núcleo do aluno em Meus Dados antes de assinar o termo.');
+              return;
+            }
             setTermoSaving(true); setTermoMsg('');
             try {
               const res = await fetch('/api/aluno/dados', {
@@ -3659,7 +3680,13 @@ export default function AlunoPage() {
               setTermoSaved(true);
               setStudent(prev => prev ? { ...prev, nome_responsavel: termoForm.nome_responsavel, cpf_responsavel: termoForm.cpf_responsavel, assinatura_responsavel: true } : prev);
               setTermoMsg('✓ Termo assinado e salvo com sucesso!');
-            } catch (e) { setTermoMsg(e instanceof Error && e.message !== 'api' && e.message !== 'termo' ? e.message : 'Erro ao salvar. Tente novamente.'); }
+            } catch (e) {
+              // 'api' = falha no salvamento dos dados; rede cai no TypeError.
+              const msg = e instanceof Error ? e.message : '';
+              if (msg && msg !== 'api' && msg !== 'termo') setTermoMsg(msg);
+              else if (!String(dadosForm.nucleo || '').trim()) setTermoMsg('Não foi possível salvar — confira se o Núcleo está preenchido em Meus Dados e tente de novo.');
+              else setTermoMsg('Erro ao salvar. Tente novamente.');
+            }
             setTermoSaving(false);
           };
           const orgNome = sysConfig.organization_name || 'Centro Cultural Luta Negra';

@@ -76,6 +76,19 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.5.2',
+    data: '2026-10-02',
+    titulo: 'Termo mais claro e horário de treino sob controle',
+    descricao: 'Avisos do termo agora mostram exatamente o que falta antes de assinar, e o núcleo passa a definir horário e tolerância para o registro de presença.',
+    descricaoAluno: 'Avisos do termo agora mostram exatamente o que falta antes de assinar, e a presença respeita o dia e o horário do treino do seu núcleo.',
+    itens: [
+      { categoria: 'correcoes', texto: 'A caixa de aviso do termo (abaixo da data de nascimento) não insistia depois que o termo era assinado — agora ela vira confirmação verde "termo assinado".' },
+      { categoria: 'melhorias', texto: 'Ao assinar o termo sem o núcleo preenchido, o app agora avisa "Falta preencher o Núcleo em Meus Dados" em vez de um erro genérico — no app e no link que o responsável recebe.' },
+      { categoria: 'novo', texto: 'Presença agora respeita também o HORÁRIO do treino: enquanto os núcleos não tiverem horário cadastrado, segue liberada no dia de treino inteiro (comportamento de antes, sem mudança silenciosa).' },
+      { categoria: 'melhorias', publico: 'admin', texto: 'Gerenciar Núcleo ganhou horário por dia de treino e tolerância de presença (0–120 min, padrão 15) — salvos no núcleo e aplicados na trava de presença do aluno.' },
+    ],
+  },
+  {
     versao: '1.5.1',
     data: '2026-10-02',
     titulo: 'Condições atípicas visíveis na aba Alunos',
