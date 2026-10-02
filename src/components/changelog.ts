@@ -85,6 +85,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       { categoria: 'seguranca', texto: 'Fechado o furo: abrir o app do aluno no mesmo navegador do painel fazia o servidor tratar o aluno como administrador e pular TODAS as travas (dia, horário e local). A validação agora vale para todo aluno, sempre.' },
       { categoria: 'correcoes', texto: 'A conferência de local não estava atuando: o GPS do celular não chegava na validação, o que bloquearia todo aluno de verdade. Agora a distância até o núcleo é medida no momento do registro (raio de 200 m), e sem permissão de localização a presença não é aceita.' },
       { categoria: 'melhorias', publico: 'admin', texto: 'Painel: os registros feitos pela administração (fila offline, desfazer exclusão e presença pela ficha do aluno) continuam sem travas, agora identificados explicitamente como operação do painel — com auditoria correta de quem registrou.' },
+      { categoria: 'melhorias', publico: 'admin', texto: 'Painel: a aba Relatórios ganhou um menu de relatórios — além de Presenças e Frequência, agora há o Quantitativo de Alunos para prestação de contas, com escolha de núcleo ou todos.' },
+      { categoria: 'novo', publico: 'admin', texto: 'Relatório Quantitativo: totais de alunos, maiores e menores de idade sempre coerentes com o filtro escolhido, média e distribuição por faixa etária em gráficos, e lista completa com nome, idade, nascimento, CPF e — para menores — nome e CPF do responsável. Gera documento (PDF/impressão) com o nome do grupo e a data de geração no topo.' },
     ],
   },
   {

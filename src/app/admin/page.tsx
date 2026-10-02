@@ -20,6 +20,7 @@ import MyAccountCard from '@/components/MyAccountCard';
 import NotificationsCenter from '@/components/NotificationsCenter';
 import BackupPanel from '@/components/BackupPanel';
 import BackupSistemaPanel from '@/components/BackupSistemaPanel';
+import QuantitativoPanel from '@/components/QuantitativoPanel';
 import VersionsCard from '@/components/VersionsCard';
 import AppFooter from '@/components/AppFooter';
 import { IconHome, IconUser, IconLogout, IconMenu, IconX, IconFolder, IconMapPin, IconWallet, IconChart, IconChevron, IconMedal, IconDoc, IconGear, IconTrash, IconEye, IconLock, IconBell, IconNote, IconMusic, IconBerimbau, IconBag, IconStar, IconWarn, IconMail as IconMailOk, IconRefresh, IconShieldCheck, IconMail, IconPencil, IconClock } from '@/components/icons';
@@ -1058,6 +1059,8 @@ export default function AdminPage() {
   const [relatorioHistorico, setRelatorioHistorico] = useState<Record<string, string[]>>({});
   const [loadingRelatorio, setLoadingRelatorio] = useState(false);
   const [relDias, setRelDias] = useState(30);
+  // Aba Relatórios: qual relatório o admin escolheu ver
+  const [relatorioTipo, setRelatorioTipo] = useState<'presencas' | 'quantitativo'>('presencas');
   const [presencas, setPresencas] = useState<PresencaCount[]>([]);
   const [totalTreinos, setTotalTreinos] = useState(0);
   const [filterPresencaNucleo, setFilterPresencaNucleo] = useState('');
@@ -3883,6 +3886,37 @@ _Portal Aluno_`
       {/* ===== ABA RELATÓRIO ===== */}
       {activeTab === 'relatorio' && (
         <div>
+          {/* Seletor de relatório */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginBottom: 22 }}>
+            {([
+              { key: 'presencas' as const, icon: '✓', titulo: 'Presenças e Frequência', desc: 'Gráfico mensal, faltas e frequência por aluno', pronto: true },
+              { key: 'quantitativo' as const, icon: '👥', titulo: 'Quantitativo de Alunos', desc: 'Prestação de contas: totais, idades e responsáveis', pronto: true },
+              { key: 'financeiro' as const, icon: '💰', titulo: 'Financeiro (em breve)', desc: 'Mensalidades, pagamentos e inadimplência', pronto: false },
+            ]).map(op => (
+              <button
+                key={op.key}
+                onClick={() => { if (op.pronto) setRelatorioTipo(op.key as 'presencas' | 'quantitativo'); }}
+                disabled={!op.pronto}
+                aria-pressed={op.pronto && relatorioTipo === op.key}
+                style={{
+                  textAlign: 'left', padding: '12px 14px', borderRadius: 12, cursor: op.pronto ? 'pointer' : 'default',
+                  background: op.pronto && relatorioTipo === op.key ? 'linear-gradient(135deg, rgba(255,146,0,0.16), rgba(255,146,0,0.05))' : 'var(--bg-card)',
+                  border: op.pronto && relatorioTipo === op.key ? '2px solid #FF9200' : '1px solid var(--border)',
+                  opacity: op.pronto ? 1 : 0.5,
+                  display: 'flex', gap: 10, alignItems: 'flex-start', color: 'var(--text-primary)',
+                }}
+              >
+                <span style={{ fontSize: '1.1rem', lineHeight: 1.2 }}>{op.icon}</span>
+                <span>
+                  <span style={{ display: 'block', fontWeight: 700, fontSize: '0.86rem' }}>{op.titulo}</span>
+                  <span style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 2 }}>{op.desc}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {relatorioTipo === 'presencas' ? (
+            <>
           {/* Controles */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>Período:</span>
@@ -4338,15 +4372,19 @@ _Portal Aluno_`
                       </tbody>
                     </table>
                   </div>
-                  <div style={{ marginTop: 10, fontSize: '0.76rem', color: 'var(--text-secondary)', display: 'flex', gap: 16 }}>
-                    <span>Total: <strong>{relContas.length}</strong> conta{relContas.length !== 1 ? 's' : ''}</span>
-                    <span>Ativas: <strong>{relContas.filter(a => a.active).length}</strong></span>
-                    <span>⏳ Pendentes: <strong>{relContas.filter(a => !a.active).length}</strong></span>
-                  </div>
+                <div style={{ marginTop: 10, fontSize: '0.76rem', color: 'var(--text-secondary)', display: 'flex', gap: 16 }}>
+                  <span>Total: <strong>{relContas.length}</strong> conta{relContas.length !== 1 ? 's' : ''}</span>
+                  <span>Ativas: <strong>{relContas.filter(a => a.active).length}</strong></span>
+                  <span>⏳ Pendentes: <strong>{relContas.filter(a => !a.active).length}</strong></span>
+                </div>
                 </div>
               );
             })()}
           </div>
+            </>
+          ) : (
+            <QuantitativoPanel nucleoFilter={nucleoFilter} dynamicNucleos={dynamicNucleos} />
+          )}
         </div>
       )}
 
