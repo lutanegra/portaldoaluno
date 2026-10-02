@@ -9,6 +9,7 @@ import { useSystemConfig } from '@/hooks/useSystemConfig';
 export type ChamadaAluno = {
   id: string;
   nome_completo: string;
+  apelido?: string | null;
   graduacao?: string | null;
   foto_url?: string | null;
 };
@@ -181,12 +182,19 @@ export default function ChamadaPanel({
     setSaving(false);
   }
 
+  /** Compacta "Primeiro + meio abreviado + Último" (ex.: "Raphael S. Scoralick"). */
+  function abreviarNome(nome: string): string {
+    const partes = String(nome || '').trim().split(/\s+/);
+    if (partes.length <= 2) return partes.join(' ');
+    return `${partes[0]} ${partes.slice(1, -1).map(p => `${p.charAt(0).toUpperCase()}.`).join(' ')} ${partes[partes.length - 1]}`;
+  }
+
   /**
-   * FOLHA DE CHAMADA (v1.5.5): documento A4 para assinatura em papel.
+   * FOLHA DE CHAMADA (v1.5.5): documento A4 paisagem para assinatura em papel.
    * Topo: título, nome do grupo, nome do núcleo e data. Lista dos alunos
-   * cadastrados até o momento da geração em ordem alfabética, cada um com o
-   * campo de assinatura ao lado. Página A4 tradicional com repetição do
-   * cabeçalho quando a lista passa de uma folha.
+   * cadastrados até o momento da geração em ordem alfabética (nomes do meio
+   * abreviados), coluna de apelidos e campo de assinatura ao lado. Linhas em
+   * branco no fim para inclusões manuais. Cabeçalho se repete a cada página.
    */
   function gerarFolha() {
     if (alunos.length === 0 || gerandoFolha) return;
@@ -201,38 +209,61 @@ export default function ChamadaPanel({
     const linhas = lista.map((a, i) => `
       <tr>
         <td class="num">${i + 1}</td>
-        <td class="nome">${escFolha(a.nome_completo)}</td>
-        <td class="grad">${a.graduacao ? escFolha(a.graduacao) : ''}</td>
+        <td class="nome">${escFolha(abreviarNome(a.nome_completo))}</td>
+        <td class="apelido">${escFolha(String(a.apelido || '').trim())}</td>
         <td class="ass"></td>
       </tr>`).join('');
 
+    // Espaços para quem ficou de fora (alunos novos / esquecimentos)
+    const LINHAS_EXTRAS = 8;
+    let extras = '';
+    for (let i = 1; i <= LINHAS_EXTRAS; i++) {
+      extras += `
+      <tr class="extra">
+        <td class="num">+</td>
+        <td class="nome"></td>
+        <td class="apelido"></td>
+        <td class="ass"></td>
+      </tr>`;
+    }
+
     const w = window.open('', '_blank');
-    if (!w) { setGerandoFolha(false); return; }
+    if (!w) {
+      setMsg('O navegador bloqueou a janela do documento. Permita pop-ups para este site e tente novamente.');
+      setGerandoFolha(false);
+      return;
+    }
     w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
 <title>Folha de Chamada — ${escFolha(nomeNucleo)}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  @page { size:A4; margin:14mm 13mm; }
+  @page { size:A4 landscape; margin:11mm 12mm; }
   body { font-family:Arial,Helvetica,sans-serif; color:#111827; font-size:11px; }
-  .head { display:flex; align-items:center; gap:14px; border-bottom:3px solid #FF9200; padding-bottom:10px; margin-bottom:4px; }
+  .barra { display:flex; justify-content:flex-end; margin-bottom:8px; }
+  .btn-print { font-family:inherit; font-size:12px; font-weight:800; padding:8px 16px; border-radius:8px;
+    border:1px solid #FF9200; background:rgba(255,146,0,.14); color:#b26a00; cursor:pointer; }
+  .btn-print:hover { background:rgba(255,146,0,.28); }
+  @media print { .barra { display:none; } body { font-size:11px; } }
+  .head { display:flex; align-items:center; gap:14px; border-bottom:3px solid #FF9200; padding-bottom:8px; margin-bottom:4px; }
   .brand { flex:1; }
   .brand h1 { font-size:15px; letter-spacing:.2px; }
   .brand .sub { font-size:9.5px; color:#6b7280; margin-top:2px; }
-  .titulo-doc { text-align:center; font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:1.2px; margin:12px 0 2px; }
-  .meta { text-align:center; font-size:9.5px; color:#6b7280; margin-bottom:10px; }
+  .titulo-doc { text-align:center; font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:1.2px; margin:10px 0 2px; }
+  .meta { text-align:center; font-size:9.5px; color:#6b7280; margin-bottom:9px; }
   table { width:100%; border-collapse:collapse; }
-  th, td { border:1px solid #9ca3af; padding:0 8px; height:27px; }
-  th { background:#f3f4f6; font-size:9px; text-transform:uppercase; letter-spacing:.4px; height:auto; padding:6px 8px; }
+  th, td { border:1px solid #9ca3af; padding:0 8px; height:26px; }
+  th { background:#f3f4f6; font-size:9px; text-transform:uppercase; letter-spacing:.4px; height:auto; padding:5px 8px; }
   td.num, th.num { text-align:center; width:30px; }
   td.nome { font-size:11.5px; font-weight:600; }
-  td.grad { width:104px; font-size:8.5px; color:#6b7280; }
-  th.ass, td.ass { width:230px; }
+  td.apelido, th.apelido { width:120px; font-size:10.5px; }
+  th.ass, td.ass { width:280px; }
   thead { display:table-header-group; }
   tr { page-break-inside:avoid; }
-  .ass-linha { display:block; width:100%; height:100%; min-height:26px; }
+  tr.extra td.num { color:#9ca3af; font-weight:700; }
   .total { margin-top:8px; font-size:9.5px; color:#374151; display:flex; justify-content:space-between; }
-  .foot { margin-top:14px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:9px; color:#6b7280; display:flex; justify-content:space-between; }
+  .foot { margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:9px; color:#6b7280; display:flex; justify-content:space-between; }
 </style></head><body>
+<div class="barra"><button class="btn-print" onclick="window.print()">🖨&nbsp; Imprimir / Salvar PDF</button></div>
 <div class="head">
   <div class="brand">
     <h1>${escFolha(org)}</h1>
@@ -243,16 +274,16 @@ export default function ChamadaPanel({
 <div class="meta">Núcleo: <strong>${escFolha(nomeNucleo)}</strong> · Data: <strong>____/____/______</strong> · ${lista.length} aluno${lista.length !== 1 ? 's' : ''} cadastrado${lista.length !== 1 ? 's' : ''} até o momento da geração</div>
 <table>
   <thead><tr>
-    <th class="num">#</th><th>Nome do Aluno</th><th>Graduação</th><th class="ass">Assinatura</th>
+    <th class="num">#</th><th>Nome do Aluno</th><th class="apelido">Apelido</th><th class="ass">Assinatura</th>
   </tr></thead>
-  <tbody>${linhas}</tbody>
+  <tbody>${linhas}${extras}</tbody>
 </table>
 <div class="total"><span>Total de alunos listados: <strong>${lista.length}</strong></span><span>Presenças do dia: ______ &nbsp;·&nbsp; Ausências: ______</span></div>
 <div class="foot">
   <span>${escFolha(org)} — documento gerado pelo Ginga Gestão</span>
   <span>Professor / Responsável: ____________________________</span>
 </div>
-<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\\/script>
+<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\\/script>
 </body></html>`);
     w.document.close();
     setTimeout(() => setGerandoFolha(false), 800);

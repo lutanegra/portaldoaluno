@@ -100,7 +100,7 @@ export async function GET(req: Request) {
 async function alunosAtivosDoNucleo(nucleoSlug: string, nucleoNome: string) {
   const { data, error } = await supabase
     .from('students')
-    .select('id, nome_completo, graduacao, nucleo, foto_url')
+    .select('id, nome_completo, apelido, graduacao, nucleo, foto_url')
     .order('nome_completo', { ascending: true });
   if (error) return [];
   const nomeLower = nucleoNome.trim().toLowerCase();
