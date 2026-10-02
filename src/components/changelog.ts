@@ -76,6 +76,20 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.4.3',
+    data: '2026-10-02',
+    titulo: 'Conta de responsável corrigida: perfis e dependentes funcionando',
+    descricao:
+      'A área "Responsáveis & Perfis" voltou a funcionar — agora com botão próprio para criar o perfil do dependente (a criança recebe matrícula e já nasce vinculada). A conta de responsável não exibe mais matrícula de aluno: o painel inicial mostra os dependentes com botão para abrir cada um.',
+    itens: [
+      { categoria: 'correcoes', texto: 'A seção "Responsáveis & Perfis" carrega novamente — criação de perfil de responsável, dependentes, solicitações de acesso e autorização de adolescente estavam fora do ar.' },
+      { categoria: 'novo', texto: 'Na mesma seção (e no painel inicial do responsável), botão destacado "Criar perfil do meu dependente": cadastra a criança com matrícula automática, já vinculada, sem precisar de outra conta.' },
+      { categoria: 'correcoes', texto: 'A conta de responsável não é mais tratada como aluno: sem matrícula/graduação indevidas na tela e com lista dos dependentes no painel inicial, com botão para abrir cada perfil.' },
+      { categoria: 'correcoes', texto: 'Ações desconhecidas do app não são mais confundidas com tentativa de login (as mensagens de "usuário ou senha incorretos" em telas erradas sumiram).' },
+      { categoria: 'seguranca', texto: 'Regras de quem pode gerar código de vínculo, vincular, aprovar e revogar dependentes continuam válidadas no servidor, como antes.' },
+    ],
+  },
+  {
     versao: '1.4.2',
     data: '2026-10-01',
     titulo: 'Cadastro completo logo após criar a conta',

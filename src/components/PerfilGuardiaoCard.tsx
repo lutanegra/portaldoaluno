@@ -30,6 +30,7 @@ type AccountStatus = {
   faixa: 'bloqueado' | 'precisa_autorizacao' | 'independente';
   eh_adulto: boolean;
   maior_de_idade: boolean;
+  conta_tipo?: string;
   autorizacao_status: 'necessaria_pendente' | 'autorizado' | 'revogado' | 'desnecessaria';
   conta_liberada: boolean;
   acesso_ativo: boolean;
@@ -497,30 +498,20 @@ export default function PerfilGuardiaoCard({ onChanged }: { onChanged?: () => vo
       {souEuResponsavel && (
         <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-            <div style={{ fontWeight: 800, fontSize: '0.92rem' }}>Meus tutelados</div>
+            <div style={{ fontWeight: 800, fontSize: '0.92rem' }}>Meus dependentes</div>
             <button onClick={() => setMostrarAdd(v => !v)} className="press" style={{ ...btnGhost, padding: '7px 13px', fontSize: '0.78rem' }}>
-              {mostrarAdd ? 'Fechar' : '+ Adicionar tutelado'}
+              {mostrarAdd ? 'Fechar' : '+ Adicionar dependente'}
             </button>
           </div>
 
           {mostrarAdd && (
             <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: 13, marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 9 }}>
               <p style={{ margin: 0, fontSize: '0.78rem', color: '#a3a3a3', lineHeight: 1.5 }}>
-                Peça o <strong>código de 6 dígitos</strong> ao aluno (ele gera no app, aqui nesta aba) e informe a <strong>matrícula</strong> dele (CCLN-000). O aluno confirma a solicitação no app dele.
+                Crie o perfil do seu dependente aqui — ele já nasce vinculado a você. Se ele já tem cadastro no CCLN, use o código de autorização no fim desta tela.
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <input aria-label="Código do aluno" value={codigo} onChange={e => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Código do aluno" style={inputStyle} inputMode="numeric" maxLength={6} />
-                <input aria-label="Matrícula do aluno" value={matricula} onChange={e => setMatricula(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="Matrícula (ex.: 012)" style={inputStyle} inputMode="numeric" maxLength={4} />
-              </div>
-              <select aria-label="Parentesco" value={relacao} onChange={e => setRelacao(e.target.value)} style={inputStyle}>
-                {RELACOES.map(r => <option key={r.v} value={r.v}>{r.l}</option>)}
-              </select>
-              <button onClick={adicionarTutelado} disabled={addLoading || codigo.length !== 6 || !matricula} className="press"
-                style={{ ...btnBase, opacity: addLoading || codigo.length !== 6 || !matricula ? 0.5 : 1 }}>
-                {addLoading ? 'Enviando…' : 'Solicitar vínculo'}
-              </button>
-              <button onClick={() => setMostrarNovo(v => !v)} style={{ background: 'none', border: 'none', color: '#FF9200', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', textAlign: 'left', padding: 0 }}>
-                {mostrarNovo ? '− Fechar cadastro de criança' : '+ A criança ainda não tem cadastro? Cadastrar do zero'}
+              <button onClick={() => setMostrarNovo(v => !v)} className="press"
+                style={{ ...btnBase, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {mostrarNovo ? '− Fechar cadastro de dependente' : '+ Criar perfil do meu dependente'}
               </button>
               {mostrarNovo && (
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 9 }}>
@@ -528,7 +519,7 @@ export default function PerfilGuardiaoCard({ onChanged }: { onChanged?: () => vo
                     <div style={{ background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 10, padding: '9px 12px', fontSize: '0.78rem', color: '#86efac' }}>{novoResultado}</div>
                   )}
                   <p style={{ margin: 0, fontSize: '0.74rem', color: '#737373', lineHeight: 1.5 }}>
-                    Para crianças até 14 anos: cria o perfil de aluno <strong>sem conta própria</strong>, já vinculado a você. A matrícula é gerada automaticamente.
+                    Para crianças até 14 anos: cria o perfil de aluno <strong>sem conta própria</strong>, já vinculado a você. A matrícula é gerada automaticamente. A partir de 15 anos, o próprio adolescente cria a conta e você o vincula pelo código.
                   </p>
                   <input aria-label="Nome completo da criança" value={novoForm.nome_completo} onChange={e => setNovoForm(p => ({ ...p, nome_completo: e.target.value }))} placeholder="Nome completo da criança *" style={inputStyle} />
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -546,15 +537,42 @@ export default function PerfilGuardiaoCard({ onChanged }: { onChanged?: () => vo
                   </div>
                   <button onClick={cadastrarNovoTutelado} disabled={novoLoading || !novoForm.nome_completo.trim() || !novoForm.data_nascimento} className="press"
                     style={{ ...btnBase, opacity: novoLoading || !novoForm.nome_completo.trim() || !novoForm.data_nascimento ? 0.5 : 1 }}>
-                    {novoLoading ? 'Cadastrando…' : 'Cadastrar tutelado'}
+                    {novoLoading ? 'Cadastrando…' : 'Cadastrar dependente'}
                   </button>
                 </div>
               )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 4 }}>
+                <span style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                <span style={{ fontSize: '0.68rem', color: '#737373', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Dependente já tem cadastro?</span>
+                <span style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+              </div>
+              <p style={{ margin: 0, fontSize: '0.76rem', color: '#a3a3a3', lineHeight: 1.5 }}>
+                Peça o <strong>código de 6 dígitos</strong> ao aluno (ele gera no app dele, na aba Conta) e informe a <strong>matrícula</strong> (CCLN-000). O aluno confirma a solicitação no app dele.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <input aria-label="Código do aluno" value={codigo} onChange={e => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Código do aluno" style={inputStyle} inputMode="numeric" maxLength={6} />
+                <input aria-label="Matrícula do aluno" value={matricula} onChange={e => setMatricula(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="Matrícula (ex.: 012)" style={inputStyle} inputMode="numeric" maxLength={4} />
+              </div>
+              <select aria-label="Parentesco" value={relacao} onChange={e => setRelacao(e.target.value)} style={inputStyle}>
+                {RELACOES.map(r => <option key={r.v} value={r.v}>{r.l}</option>)}
+              </select>
+              <button onClick={adicionarTutelado} disabled={addLoading || codigo.length !== 6 || !matricula} className="press"
+                style={{ ...btnBase, opacity: addLoading || codigo.length !== 6 || !matricula ? 0.5 : 1 }}>
+                {addLoading ? 'Enviando…' : 'Solicitar vínculo'}
+              </button>
             </div>
           )}
 
           {status.tutelados.length === 0 ? (
-            <p style={{ margin: 0, fontSize: '0.8rem', color: '#737373' }}>Nenhum tutelado vinculado ainda.</p>
+            <div style={{ border: '1px dashed rgba(255,255,255,0.16)', borderRadius: 12, padding: '16px 14px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+              <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, color: '#d4d4d4' }}>Nenhum dependente vinculado ainda.</p>
+              <p style={{ margin: 0, fontSize: '0.74rem', color: '#737373', lineHeight: 1.5 }}>
+                Crie o perfil do seu dependente (até 14 anos) ou vincule um aluno que já tem cadastro pelo código de autorização.
+              </p>
+              <button onClick={() => { setMostrarAdd(true); setMostrarNovo(true); }} className="press" style={btnBase}>
+                Criar perfil do meu dependente
+              </button>
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {status.tutelados.map(t => (
@@ -628,7 +646,7 @@ export default function PerfilGuardiaoCard({ onChanged }: { onChanged?: () => vo
       )}
 
       {/* ── CÓDIGO DO ALUNO (para o responsável vincular) ──────────────────── */}
-      {!souEuResponsavel && (
+      {!souEuResponsavel && status.conta_tipo !== 'responsavel' && (
         <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             <span style={{ display: 'flex', color: '#FF9200' }}><IconDoc size={17} /></span>

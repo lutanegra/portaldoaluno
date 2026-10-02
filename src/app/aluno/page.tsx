@@ -145,6 +145,8 @@ export default function AlunoPage() {
   const [perfilAtivo, setPerfilAtivo] = useState<string>('');
   const [perfilLoading, setPerfilLoading] = useState(false);
   const perfilAtivoInfo = perfis.find(p => p.student_id === perfilAtivo) || null;
+  // Dependentes do responsável (conta só-responsável) — painel no dashboard
+  const [dependentes, setDependentes] = useState<{ student_id: string; nome_completo: string; foto_url: string | null; nucleo: string | null; idade: number | null; status_vinculo: string }[]>([]);
   const acessandoComoTutelado = !!perfilAtivoInfo && perfilAtivoInfo.tipo === 'tutelado';
   const [student, setStudent] = useState<Student | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -368,6 +370,19 @@ export default function AlunoPage() {
 
     } catch { setLoading(false); }
   }, []);
+
+  // Painel "Meus dependentes" da conta só-responsável (dashboard)
+  useEffect(() => {
+    if (!session || isAdminPreview) return;
+    fetch('/api/aluno/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'account-status' }),
+    })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d && Array.isArray(d.tutelados)) setDependentes(d.tutelados); })
+      .catch(() => {});
+  }, [session, isAdminPreview, activeTab]);
 
   // Perfis acessíveis (o próprio + tutelados) e contexto ativo — "Quem está usando?"
   const carregarPerfis = useCallback(async () => {
@@ -670,6 +685,8 @@ export default function AlunoPage() {
           setDadosInitialized(false);
           loadStudentData(data.student_id, true);
         }
+        // O seletor "Quem está usando?" deve exibir já o perfil de responsável
+        carregarPerfis();
       }, 900);
     } catch { setRespError('Erro de conexão. Tente novamente.'); }
     finally { setRespLoading(false); }
@@ -1673,6 +1690,23 @@ export default function AlunoPage() {
               </div>
               {/* Identity strip */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, position: 'relative' }}>
+                {respOnly ? (
+                  <>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '9px 12px' }}>
+                      <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Nome Completo</div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, lineHeight: 1.2 }}>{student?.nome_completo || '—'}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,146,0,0.07)', border: '1px solid rgba(255,146,0,0.25)', borderRadius: 12, padding: '9px 12px' }}>
+                      <div style={{ fontSize: '0.6rem', color: 'rgba(255,146,0,0.8)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Minha Conta</div>
+                      <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#ffb84d' }}>Responsável</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '9px 12px', gridColumn: '1 / -1' }}>
+                      <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>E-mail</div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{student?.email || '—'}</div>
+                    </div>
+                  </>
+                ) : (
+                <>
                 <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '9px 12px' }}>
                   <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Nome Completo</div>
                   <div style={{ fontSize: '0.82rem', fontWeight: 700, lineHeight: 1.2 }}>{student?.nome_completo || '—'}</div>
@@ -1696,7 +1730,57 @@ export default function AlunoPage() {
                   <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Núcleo</div>
                   <div style={{ fontSize: '0.82rem', fontWeight: 700 }}>{student?.nucleo || 'CCLN'}</div>
                 </div>
+                </>
+                )}
               </div>
+              {/* ── Painel de dependentes (conta só-responsável) ── */}
+              {respOnly && (
+                <div style={{ marginTop: 10, background: 'linear-gradient(160deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02))', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 14, padding: '13px 14px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>Meus dependentes</div>
+                    <button onClick={() => setActiveTab('conta')} className="press"
+                      style={{ background: 'linear-gradient(135deg, #ffb84d 0%, #FF9200 55%, #f07f00 100%)', color: '#141414', border: 'none', borderRadius: 9, padding: '6px 12px', fontWeight: 800, fontSize: '0.74rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      + Criar perfil / vincular
+                    </button>
+                  </div>
+                  {dependentes.length === 0 ? (
+                    <p style={{ margin: 0, fontSize: '0.76rem', color: '#8f8f8f', lineHeight: 1.5 }}>
+                      Nenhum dependente vinculado ainda. Toque em “+ Criar perfil / vincular” para cadastrar quem você representa (até 14 anos) ou vincular um aluno que já tem cadastro.
+                    </p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                      {dependentes.map(d => (
+                        <div key={d.student_id} style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 11, padding: '8px 10px' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,146,0,0.12)', color: '#FF9200', flexShrink: 0, overflow: 'hidden' }}>
+                            {d.foto_url
+                              ? // eslint-disable-next-line @next/next/no-img-element
+                                <img src={d.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              : <IconUser size={15} />}
+                          </span>
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#f5f5f4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nome_completo}</span>
+                            <span style={{ display: 'block', fontSize: '0.66rem', color: '#8f8f8f', fontWeight: 600 }}>
+                              {d.idade != null ? `${d.idade} anos` : ''}{d.nucleo ? ` · ${d.nucleo}` : ''}
+                            </span>
+                          </span>
+                          <span style={{
+                            fontSize: '0.62rem', fontWeight: 800, padding: '3px 8px', borderRadius: 999,
+                            background: d.status_vinculo === 'active' ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
+                            color: d.status_vinculo === 'active' ? '#4ade80' : '#facc15',
+                            textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0,
+                          }}>
+                            {d.status_vinculo === 'active' ? 'Ativo' : 'Pendente'}
+                          </span>
+                          <button onClick={() => { setPerfilLoading(true); trocarPerfil(d.student_id).finally(() => setPerfilLoading(false)); }} disabled={perfilLoading || d.status_vinculo !== 'active'} className="press"
+                            style={{ background: 'rgba(255,146,0,0.10)', border: '1px solid rgba(255,146,0,0.35)', color: '#ffb84d', borderRadius: 9, padding: '5px 10px', fontSize: '0.7rem', fontWeight: 800, cursor: d.status_vinculo === 'active' ? 'pointer' : 'not-allowed', opacity: d.status_vinculo === 'active' ? 1 : 0.5, flexShrink: 0 }}>
+                            Abrir
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               {/* ── Banner cadastro incompleto ── */}
               {cadastroIncompleto && (
                 <div style={{ marginTop: 14, borderRadius: 15, overflow: 'hidden', border: '1px solid rgba(239,68,68,0.42)', background: 'linear-gradient(160deg, rgba(239,68,68,0.14) 0%, rgba(239,68,68,0.05) 100%)', boxShadow: '0 10px 30px rgba(0,0,0,0.35)', position: 'relative', animation: 'pulseCard 1.6s ease-in-out infinite' }}>
@@ -3970,7 +4054,7 @@ export default function AlunoPage() {
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 800, fontSize: '0.98rem', color: '#f5f5f4', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
                     <div style={{ fontSize: '0.7rem', color: '#FF9200', fontWeight: 600, marginTop: 1 }}>
-                      {student?.graduacao || 'Aluno'}{student?.nucleo ? ` · ${student.nucleo}` : ''}
+                      {respOnly ? 'Responsável' : `${student?.graduacao || 'Aluno'}${student?.nucleo ? ` · ${student.nucleo}` : ''}`}
                     </div>
                   </div>
                 </div>
