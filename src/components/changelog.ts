@@ -76,6 +76,20 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.4.4',
+    data: '2026-10-02',
+    titulo: 'Perfil do dependente: salvar dados e assinar termo funcionando',
+    descricao:
+      'Com o perfil do dependente aberto, completar cadastro, assinar o Termo, registrar presença e gerenciar arquivos e financeiro passam a agir sobre o perfil aberto — antes, tudo ia para a conta do responsável e falhava sem explicação.',
+    itens: [
+      { categoria: 'correcoes', texto: 'Ao completar o cadastro do dependente, todos os campos são salvos de verdade — antes só nome, e-mail e alguns dados persistiam.' },
+      { categoria: 'correcoes', texto: 'Assinar o Termo de Responsabilidade do dependente volta a funcionar: o erro "Erro ao salvar, tente novamente" vinha de uma exigência impossível (o termo teria de estar assinado antes de poder ser assinado).' },
+      { categoria: 'correcoes', texto: 'Presença, justificativas, documentos, fotos, playlist, evolução e ficha financeira acompanham o perfil aberto no "Quem está usando?".' },
+      { categoria: 'correcoes', texto: 'O formulário do responsável não apaga mais dados que o dependente ou a administração já haviam preenchido — só atualiza o que for informado.' },
+      { categoria: 'seguranca', texto: 'A assinatura do termo agora é validada no servidor: uma conta só assina para si mesma ou para um dependente com vínculo ativo.' },
+    ],
+  },
+  {
     versao: '1.4.3',
     data: '2026-10-02',
     titulo: 'Conta de responsável corrigida: perfis e dependentes funcionando',

@@ -148,6 +148,11 @@ export default function AlunoPage() {
   // Dependentes do responsável (conta só-responsável) — painel no dashboard
   const [dependentes, setDependentes] = useState<{ student_id: string; nome_completo: string; foto_url: string | null; nucleo: string | null; idade: number | null; status_vinculo: string }[]>([]);
   const acessandoComoTutelado = !!perfilAtivoInfo && perfilAtivoInfo.tipo === 'tutelado';
+  // Alvo das ações com escopo de perfil: com o perfil de um dependente aberto,
+  // salvar dados, termo, presença etc. age sobre ELE — o servidor valida o
+  // vínculo de responsabilidade (resolverAtor). A identidade logada (session)
+  // continua sendo usada só para senha/conta/updates de acesso.
+  const alvoPerfil = perfilAtivoInfo ? perfilAtivoInfo.student_id : session?.student_id ?? '';
   const [student, setStudent] = useState<Student | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [loading, setLoading] = useState(true);
@@ -516,9 +521,9 @@ export default function AlunoPage() {
 
   useEffect(() => {
     if (session) {
-      if (activeTab === 'justificativas') loadJustificativas(session.student_id);
+      if (activeTab === 'justificativas') loadJustificativas(alvoPerfil);
       if (activeTab === 'graduacao') {
-        loadHistorico(session.student_id);
+        loadHistorico(alvoPerfil);
         setEventosLoading(true);
         fetch('/api/eventos', { cache: 'no-store' })
           .then(r => r.json())
@@ -551,22 +556,22 @@ export default function AlunoPage() {
           })
           .catch(() => setMuralLoading(false));
       }
-      if (activeTab === 'fotos') loadFotos(session.student_id);
-      if (activeTab === 'docs') loadDocs(session.student_id);
+      if (activeTab === 'fotos') loadFotos(alvoPerfil);
+      if (activeTab === 'docs') loadDocs(alvoPerfil);
       if (activeTab === 'financeiro') {
         setFichaFinLoading(true);
-        fetch(`/api/financeiro?student_id=${session.student_id}`)
+        fetch(`/api/financeiro?student_id=${alvoPerfil}`)
           .then(r => r.json())
           .then(d => { setFichaFin(d); setFichaFinLoading(false); })
           .catch(() => setFichaFinLoading(false));
       }
       if (activeTab === 'playlist') {
         setPlaylistLoading(true);
-        fetch(`/api/aluno/playlist?student_id=${session.student_id}`).then(r => r.json()).then(d => { setPlaylistItems(Array.isArray(d) ? d : []); setPlaylistLoading(false); }).catch(() => setPlaylistLoading(false));
+        fetch(`/api/aluno/playlist?student_id=${alvoPerfil}`).then(r => r.json()).then(d => { setPlaylistItems(Array.isArray(d) ? d : []); setPlaylistLoading(false); }).catch(() => setPlaylistLoading(false));
       }
       if (activeTab === 'evolucao') {
         setEvolucaoLoading(true);
-        fetch(`/api/aluno/evolucao?student_id=${session.student_id}`).then(r => r.json()).then(d => { setEvolucaoDates(Array.isArray(d.dates) ? d.dates : []); setEvolucaoEntries(Array.isArray(d.entries) ? d.entries : []); setEvolucaoLoading(false); }).catch(() => setEvolucaoLoading(false));
+        fetch(`/api/aluno/evolucao?student_id=${alvoPerfil}`).then(r => r.json()).then(d => { setEvolucaoDates(Array.isArray(d.dates) ? d.dates : []); setEvolucaoEntries(Array.isArray(d.entries) ? d.entries : []); setEvolucaoLoading(false); }).catch(() => setEvolucaoLoading(false));
       }
     }
   }, [session, activeTab, student, loadJustificativas, loadHistorico, loadFotos, loadDocs]);
@@ -823,13 +828,13 @@ export default function AlunoPage() {
     if (!exigirConformidade(pendencias.some(p => p.campo === 'termo') ? 'termo' : 'dados')) return;
     setJustLoading(true); setJustMsg('');
     try {
-      const res = await fetch('/api/aluno/justificativas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'submit', student_id: session!.student_id, ...justForm }) });
+      const res = await fetch('/api/aluno/justificativas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'submit', student_id: alvoPerfil, ...justForm }) });
       const data = await res.json();
       if (!res.ok) { setJustMsg(data.error || 'Erro.'); setJustMsgType('error'); return; }
       setJustMsg('Justificativa enviada com sucesso!');
       setJustMsgType('success');
       setJustForm({ data_falta: '', motivo: '' });
-      loadJustificativas(session!.student_id);
+      loadJustificativas(alvoPerfil);
     } catch { setJustMsg('Erro de conexão.'); setJustMsgType('error'); }
     finally { setJustLoading(false); }
   };
@@ -2031,9 +2036,9 @@ export default function AlunoPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <SectionTitle icon={<IconWallet size={17} />}>Ficha Financeira</SectionTitle>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => { if (!session) return; setFichaFinLoading(true); fetch(`/api/financeiro?student_id=${session.student_id}`).then(r=>r.json()).then(d=>{setFichaFin(d);setFichaFinLoading(false);}).catch(()=>setFichaFinLoading(false)); }}
+                <button onClick={() => { if (!session) return; setFichaFinLoading(true); fetch(`/api/financeiro?student_id=${alvoPerfil}`).then(r=>r.json()).then(d=>{setFichaFin(d);setFichaFinLoading(false);}).catch(()=>setFichaFinLoading(false)); }}
                   style={{ background: 'none', border: '1px solid rgba(255,146,0,0.45)', color: '#FF9200', borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}><IconRefresh size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 5 }} />Atualizar</button>
-                <a href={`/financeiro?student_id=${session?.student_id}`} target="_blank" rel="noreferrer"
+                <a href={`/financeiro?student_id=${alvoPerfil}`} target="_blank" rel="noreferrer"
                   style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff', textDecoration: 'none', borderRadius: 8, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600 }}>↗ Portal completo</a>
               </div>
             </div>
@@ -2080,7 +2085,7 @@ export default function AlunoPage() {
                           if (!exigirConformidade(pendencias.some(p => p.campo === 'termo') ? 'termo' : 'dados')) return;
                           setSolBatizadoSaving(true); setSolBatizadoMsg('');
                           try {
-                            const getRes = await fetch(`/api/financeiro?student_id=${session.student_id}`);
+                            const getRes = await fetch(`/api/financeiro?student_id=${alvoPerfil}`);
                             const { data: fd } = await getRes.json();
                             const ficha = fd || {};
                             const batizado = {
@@ -2089,12 +2094,12 @@ export default function AlunoPage() {
                               status_geral: 'pendente',
                               parcelas: solBatizadoModalidade === 'integral' ? (ficha.batizado?.parcelas?.length ? ficha.batizado.parcelas : [{ numero: 1, valor: ficha.batizado?.valor_total || 0, status: 'pendente', vencimento: '' }]) : Array.from({ length: solBatizadoParcelas }, (_, i) => ({ numero: i+1, valor: 0, status: 'pendente', vencimento: '' })),
                             };
-                            const updated = { ...ficha, batizado, student_id: session.student_id };
+                            const updated = { ...ficha, batizado, student_id: alvoPerfil };
                             const saveRes = await fetch('/api/financeiro', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) });
                             if (!saveRes.ok) throw new Error();
                             setSolBatizadoMsg('Solicitação enviada! O administrador irá configurar os valores.');
                             setFichaFinLoading(true);
-                            fetch(`/api/financeiro?student_id=${session.student_id}`).then(r=>r.json()).then(d=>{setFichaFin(d);setFichaFinLoading(false);}).catch(()=>setFichaFinLoading(false));
+                            fetch(`/api/financeiro?student_id=${alvoPerfil}`).then(r=>r.json()).then(d=>{setFichaFin(d);setFichaFinLoading(false);}).catch(()=>setFichaFinLoading(false));
                             setShowSolBatizado(false);
                           } catch { setSolBatizadoMsg('Erro ao enviar solicitação. Tente novamente.'); }
                           setSolBatizadoSaving(false);
@@ -2143,17 +2148,17 @@ export default function AlunoPage() {
                         if (!exigirConformidade(pendencias.some(p => p.campo === 'termo') ? 'termo' : 'dados')) return;
                         setSolUnifSaving(true); setSolUnifMsg('');
                         try {
-                          const getRes = await fetch(`/api/financeiro?student_id=${session.student_id}`);
+                          const getRes = await fetch(`/api/financeiro?student_id=${alvoPerfil}`);
                           const { data: fd } = await getRes.json();
                           const ficha = fd || {};
                           const novoItem = { id: Date.now().toString(), descricao: `${solUnifItem.trim()} | ${solUnifTam} | ${solUnifQtd}`, tamanho: solUnifTam, quantidade: solUnifQtd, valor_unitario: 0, status: 'solicitado', data_pedido: new Date().toISOString().slice(0,10) };
-                          const updated = { ...ficha, uniformes: [...(ficha.uniformes || []), novoItem], student_id: session.student_id };
+                          const updated = { ...ficha, uniformes: [...(ficha.uniformes || []), novoItem], student_id: alvoPerfil };
                           const saveRes = await fetch('/api/financeiro', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) });
                           if (!saveRes.ok) throw new Error();
                           setSolUnifMsg('Solicitação enviada!');
                           setSolUnifItem(''); setSolUnifTam('M'); setSolUnifQtd(1);
                           setFichaFinLoading(true);
-                          fetch(`/api/financeiro?student_id=${session.student_id}`).then(r=>r.json()).then(d=>{setFichaFin(d);setFichaFinLoading(false);}).catch(()=>setFichaFinLoading(false));
+                          fetch(`/api/financeiro?student_id=${alvoPerfil}`).then(r=>r.json()).then(d=>{setFichaFin(d);setFichaFinLoading(false);}).catch(()=>setFichaFinLoading(false));
                           setShowSolUniforme(false);
                         } catch { setSolUnifMsg('Erro ao enviar solicitação. Tente novamente.'); }
                         setSolUnifSaving(false);
@@ -2493,10 +2498,10 @@ export default function AlunoPage() {
                 try {
                   const fd = new FormData();
                   fd.append('file', file);
-                  fd.append('student_id', session.student_id);
+                  fd.append('student_id', alvoPerfil);
                   const res = await fetch('/api/aluno/media', { method: 'POST', body: fd });
                   const json = await res.json();
-                  if (res.ok) { setFotosMsg('✓ Arquivo enviado com sucesso!'); await loadFotos(session.student_id); }
+                  if (res.ok) { setFotosMsg('✓ Arquivo enviado com sucesso!'); await loadFotos(alvoPerfil); }
                   else { setFotosMsg('Erro: ' + (json.error || 'falha no upload')); }
                 } catch (err: unknown) { setFotosMsg('Erro de conexão.'); }
                 setFotosUploading(false);
@@ -2577,14 +2582,14 @@ export default function AlunoPage() {
                 setDocsUploading(true); setDocsMsg('');
                 try {
                   const fd = new FormData();
-                  fd.append('student_id', session.student_id);
+                  fd.append('student_id', alvoPerfil);
                   fd.append('file', file);
                   const res = await fetch('/api/aluno/docs', { method: 'POST', body: fd });
                   const data = await res.json();
                   if (!res.ok) { setDocsMsg(data.error || 'Erro ao enviar.'); }
                   else {
                     setDocsMsg('✓ Documento enviado com sucesso!');
-                    loadDocs(session.student_id);
+                    loadDocs(alvoPerfil);
                     setTimeout(() => setDocsMsg(''), 3000);
                   }
                 } catch { setDocsMsg('Erro de conexão.'); }
@@ -2624,7 +2629,7 @@ export default function AlunoPage() {
                       </a>
                       <button onClick={async () => {
                         if (!session) return;
-                        const res = await fetch('/api/aluno/docs', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: session.student_id, name: doc.name }) });
+                        const res = await fetch('/api/aluno/docs', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: alvoPerfil, name: doc.name }) });
                         if (res.ok) { setDocsItems(prev => prev.filter(d => d.name !== doc.name)); setDocsMsg('✓ Documento removido.'); setTimeout(() => setDocsMsg(''), 3000); }
                         else setDocsMsg('Erro ao remover documento.');
                       }}
@@ -2757,7 +2762,7 @@ export default function AlunoPage() {
                           // Update email in student state directly from API response
                           if (student) setStudent(prev => prev ? { ...prev, email: data.email !== undefined ? data.email : prev.email } : prev);
                           // Reload full student data to ensure all fields are fresh
-                          loadStudentData(session.student_id);
+                          loadStudentData(alvoPerfil || session.student_id);
                           setTimeout(() => setContaSection('main'), 1500);
                         } else { setContaMsg(data.error || 'Erro ao atualizar.'); setContaMsgType('error'); }
                       } catch { setContaMsg('Erro de conexão.'); setContaMsgType('error'); }
@@ -2912,7 +2917,7 @@ export default function AlunoPage() {
               const res = await fetch('/api/aluno/playlist', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ student_id: session.student_id, url: playlistAddUrl.trim(), title: playlistAddTitle.trim() || undefined }),
+                body: JSON.stringify({ student_id: alvoPerfil, url: playlistAddUrl.trim(), title: playlistAddTitle.trim() || undefined }),
               });
               const data = await res.json();
               if (res.ok) {
@@ -2935,7 +2940,7 @@ export default function AlunoPage() {
               const res = await fetch('/api/aluno/playlist', {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ student_id: session.student_id, id }),
+                body: JSON.stringify({ student_id: alvoPerfil, id }),
               });
               if (res.ok) setPlaylistItems(prev => prev.filter(i => i.id !== id));
             } catch {}
@@ -2946,7 +2951,7 @@ export default function AlunoPage() {
               const res = await fetch('/api/aluno/playlist', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ student_id: session.student_id, id, title: playlistEditTitle.trim() || undefined, url: playlistEditUrl.trim() || undefined }),
+                body: JSON.stringify({ student_id: alvoPerfil, id, title: playlistEditTitle.trim() || undefined, url: playlistEditUrl.trim() || undefined }),
               });
               const data = await res.json();
               if (res.ok) {
@@ -3175,7 +3180,7 @@ export default function AlunoPage() {
               const res = await fetch('/api/aluno/dados', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ student_id: session.student_id, ...payload }),
+                body: JSON.stringify({ student_id: alvoPerfil, ...payload }),
               });
               const data = await res.json();
               if (res.ok) {
@@ -3185,7 +3190,7 @@ export default function AlunoPage() {
                     await fetch('/api/aluno/contas', {
                       method: 'PUT',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ student_id: session.student_id, email: dadosForm.email.trim().toLowerCase() }),
+                      body: JSON.stringify({ student_id: alvoPerfil, email: dadosForm.email.trim().toLowerCase() }),
                     });
                   } catch { /* sincronização de e-mail é melhor-esforço */ }
                 }
@@ -3204,7 +3209,7 @@ export default function AlunoPage() {
             setFotoUploading(true); setFotoMsg('');
             try {
               const fd = new FormData();
-              fd.append('student_id', session.student_id);
+              fd.append('student_id', alvoPerfil);
               fd.append('foto', file);
               const res = await fetch('/api/aluno/dados', { method: 'POST', body: fd });
               const data = await res.json();
@@ -3460,7 +3465,7 @@ export default function AlunoPage() {
                         const val = e.target.value.trim();
                         if (!val || !val.includes('@')) return;
                         try {
-                          const r = await fetch(`/api/check-email?email=${encodeURIComponent(val)}&exclude_id=${session.student_id}`);
+                          const r = await fetch(`/api/check-email?email=${encodeURIComponent(val)}&exclude_id=${alvoPerfil}`);
                           const d = await r.json();
                           if (d.exists) {
                             setDadosMsg(`Este e-mail já está cadastrado para outro aluno: ${d.nome}`);
@@ -3630,14 +3635,14 @@ export default function AlunoPage() {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  student_id: session.student_id,
+                  student_id: alvoPerfil,
                   nome_responsavel: termoForm.nome_responsavel,
                   cpf_responsavel: termoForm.cpf_responsavel,
                 }),
               });
               if (!res.ok) throw new Error('api');
               // Registra assinatura + evidências e marca o termo como assinado
-              const resTermo = await fetch(`/api/termo?id=${session.student_id}`, {
+              const resTermo = await fetch(`/api/termo?id=${alvoPerfil}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

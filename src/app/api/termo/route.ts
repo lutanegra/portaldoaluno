@@ -63,6 +63,16 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { nome_responsavel, cpf_responsavel, assinatura_trajeto } = body;
 
+  // Conta de aluno autenticada: só pode assinar o termo do PRÓPRIO id ou de um
+  // tutelado com vínculo ACTIVE (mesma regra do restante do app). Sem sessão,
+  // vale o fluxo já existente do link público enviado ao responsável.
+  if (sessaoAluno && !ehAdmin && id !== sessaoAluno) {
+    const { podeAgirComo } = await import('@/lib/guardians');
+    if (!(await podeAgirComo(sessaoAluno, id))) {
+      return NextResponse.json({ error: 'Você não pode assinar o termo deste aluno.' }, { status: 403 });
+    }
+  }
+
   if (!nome_responsavel?.trim()) {
     return NextResponse.json({ error: 'Nome do responsável é obrigatório.' }, { status: 400 });
   }

@@ -198,6 +198,15 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    // Responsável no perfil do tutelado: o formulário envia o cadastro inteiro,
+    // mas campos que chegaram vazios NÃO apagam o que o tutelado/admin já
+    // preenchera (mesma semântica de "vazio não apaga" do próprio aluno).
+    if (emNomeDeResponsavel) {
+      for (const chave of Object.keys(payload)) {
+        if (payload[chave] === null || payload[chave] === '') delete payload[chave];
+      }
+    }
+
     if (Object.keys(payload).length === 0) {
       return NextResponse.json({ error: 'Nenhum campo válido para atualizar.' }, { status: 400 });
     }
@@ -281,7 +290,11 @@ export async function PATCH(req: NextRequest) {
     const menorFinal = typeof novosDocs.menor_de_idade === 'boolean' ? novosDocs.menor_de_idade : undefined;
     const camposMenor = ['assinatura_responsavel', 'nome_responsavel', 'cpf_responsavel'];
     const mexeuEmMenor = camposMenor.some(k => k in payload);
-    if (mexeuEmMenor && !ehAdmin) {
+    // O responsável pode (e precisa poder) preencher nome/CPF do responsável e
+    // concluir o termo do tutelado — validar conformidade aqui criava um círculo
+    // vicioso: o termo só seria válido se JÁ estivesse assinado. O painel e o
+    // próprio aluno adulto continuam validados.
+    if (mexeuEmMenor && !ehAdmin && !emNomeDeResponsavel) {
       const simulado = {
         cpf: novosDocs.cpf as string | null,
         identidade: novosDocs.identidade as string | null,
