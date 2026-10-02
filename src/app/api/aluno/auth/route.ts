@@ -551,12 +551,16 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Este e-mail já está vinculado a outra conta.' }, { status: 409 });
       }
 
-      // Próxima ordem de inscrição (fonte da verdade da matrícula CCLN-XXX)
-      const { data: maxRow } = await supabaseAdmin
-        .from('students').select('ordem_inscricao')
-        .not('ordem_inscricao', 'is', null)
-        .order('ordem_inscricao', { ascending: false }).limit(1).maybeSingle();
-      const ordem = (maxRow?.ordem_inscricao ?? 0) + 1;
+      // Matrícula CCLN só para quem é aluno. Conta SÓ-responsável não ganha
+      // matrícula (não é aluno) — o campo fica nulo e as telas tratam null.
+      let ordem: number | null = null;
+      if (body.tambem_aluno === true) {
+        const { data: maxRow } = await supabaseAdmin
+          .from('students').select('ordem_inscricao')
+          .not('ordem_inscricao', 'is', null)
+          .order('ordem_inscricao', { ascending: false }).limit(1).maybeSingle();
+        ordem = (maxRow?.ordem_inscricao ?? 0) + 1;
+      }
 
       const salt = generateSalt();
       const account: AlunoAccount = {
@@ -619,16 +623,15 @@ export async function POST(req: NextRequest) {
         await notificarSeguranca(novaLinha.id, 'Conta criada', 'Sua conta de responsável foi criada. Se não foi você, procure o admin do seu núcleo.', 'conta_criada');
       } catch { /* best-effort */ }
 
-      // Backup de alunos + auditoria
+      // Conta de responsável não entra na numeração de alunos — não força backup
+      // da base de alunos nem relatório de inscrição (não é matrícula).
       try {
-        const { autoBackupAfterChange } = await import('@/lib/backupAlunos');
-        await autoBackupAfterChange(`responsavel:${novaLinha.id}`, 'inscricao');
+        await appendAudit({
+          actor: novaLinha.id, actor_type: 'student', action: 'conta_responsavel_criada',
+          target_id: novaLinha.id, target_name: nomeTrim,
+          details: { email: emailNorm, cpf: `***${cpfDigitsIn.slice(-2)}`, com_perfil_aluno: body.tambem_aluno === true },
+        });
       } catch { /* não bloqueia */ }
-      await appendAudit({
-        actor: novaLinha.id, actor_type: 'student', action: 'conta_responsavel_criada',
-        target_id: novaLinha.id, target_name: nomeTrim,
-        details: { email: emailNorm, cpf: `***${cpfDigitsIn.slice(-2)}`, sem_perfil_aluno: true },
-      });
 
       // Já nasce logado
       const store = await cookies();
@@ -787,6 +790,48 @@ export async function POST(req: NextRequest) {
       store.set(SESSION_COOKIE, serializeAlunoSession(sess), sessionCookieOptions());
 
       return NextResponse.json({ success: true, logged_in: true, student_id: target.id, username: emailNorm, student, student_name: (target.nome_completo || nome_completo).split(' ')[0], inscricao_numero });
+    }
+
+    /* ── EXCLUIR CONTA DE ACESSO (exclusivo do painel) ────────────────────── */
+    // Usada pela aba Contas do painel ("Excluir Conta Definitivamente"). Remove
+    // login/senha/dispositivos; a linha do cadastro permanece (Alunos continua
+    // exibindo o histórico). Se a conta tinha dependentes ativos, passa a valer
+    // "só responsável" (sem acesso) em vez de voltar a aparecer como aluno.
+    if (action === 'admin-delete-account') {
+      const painel = readPanelSession(req);
+      if (!painel) return NextResponse.json({ error: 'Sessão administrativa necessária.' }, { status: 401 });
+      const alvoId = String(body.student_id || '');
+      if (!alvoId) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
+
+      const authMap = await loadAuthMap();
+      const acc = authMap[alvoId];
+      if (!acc) return NextResponse.json({ error: 'Conta de acesso não encontrada. Ela já deve ter sido excluída.' }, { status: 404 });
+
+      let reclassificadoComo: string | null = null;
+      try {
+        const { tutoradosDoResponsavel } = await import('@/lib/guardians');
+        const tuts = await tutoradosDoResponsavel(alvoId);
+        if ((tuts || []).some(t => t.status_vinculo === 'active')) {
+          await supabaseAdmin.from('students').update({ conta_tipo: 'responsavel' }).eq('id', alvoId);
+          reclassificadoComo = 'responsavel';
+        } else {
+          await supabaseAdmin.from('students').update({ conta_tipo: null }).eq('id', alvoId);
+        }
+      } catch { /* sem vínculos */ }
+
+      delete authMap[alvoId];
+      await saveAuthMap(authMap);
+
+      try {
+        await supabaseAdmin.from('push_subscriptions').delete().eq('user_id', alvoId);
+        await supabaseAdmin.from('notification_preferences').delete().eq('user_id', alvoId);
+      } catch { /* melhor-esforço */ }
+
+      try {
+        await appendAudit({ actor: painel.u, actor_type: 'admin', action: 'conta_aluno_excluida_painel', target_id: alvoId });
+      } catch {}
+
+      return NextResponse.json({ success: true, reclassificado_como: reclassificadoComo });
     }
 
     // ── ACCOUNT STATUS (Responsáveis & Perfis) ────────────────────────────────
@@ -1129,6 +1174,63 @@ export async function POST(req: NextRequest) {
       username: acc.username,
       student,
     });
+    }
+
+    /* ── EXCLUIR A PRÓPRIA CONTA (aluno ou responsável, com senha) ─────────── */
+    // O cadastro (linha students) NÃO é apagado: histórico, matrícula e vínculos
+    // ficam preservados. O que é removido: conta de acesso, cookies, dispositivos
+    // push, preferências e a função de responsável (quando a conta não tem
+    // dependentes ativos). Usada pelo "Excluir minha conta" do app do aluno.
+    if (action === 'delete-account') {
+      const sess = readAlunoSessionFromReq(req);
+      if (!sess) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+      const alvoId = String(body.student_id || sess.sid || '');
+      if (alvoId !== sess.sid) {
+        return NextResponse.json({ error: 'Você só pode excluir a sua própria conta.' }, { status: 403 });
+      }
+      const senha = String(body.current_password || body.password || '');
+      if (!senha) return NextResponse.json({ error: 'Confirme sua senha para excluir.' }, { status: 400 });
+
+      const authMap = await loadAuthMap();
+      const acc = authMap[alvoId];
+      if (!acc) return NextResponse.json({ error: 'Conta de acesso não encontrada.' }, { status: 404 });
+      if (hashPassword(senha, acc.salt) !== acc.password_hash) {
+        return NextResponse.json({ error: 'Senha incorreta.' }, { status: 403 });
+      }
+
+      // Proteção da família: responsável só exclui a própria função quando não
+      // deixa dependente ativo sem gestão. Com dependente(s) ativo(s), a função
+      // de responsável permanece (os dados dos tutelados continuam gerenciáveis).
+      try {
+        const { tutoradosDoResponsavel } = await import('@/lib/guardians');
+        const tuts = await tutoradosDoResponsavel(alvoId);
+        const temAtivo = (tuts || []).some(t => t.status_vinculo === 'active');
+        if (temAtivo) {
+          const { desativarPerfilResponsavel } = await import('@/lib/guardians');
+          await desativarPerfilResponsavel(alvoId);
+        }
+      } catch { /* sem perfil de responsável */ }
+
+      delete authMap[alvoId];
+      await saveAuthMap(authMap);
+
+      // Limpeza de derivações da conta (tabelas com PK user_id e vínculos)
+      try {
+        await supabaseAdmin.from('push_subscriptions').delete().eq('user_id', alvoId);
+        await supabaseAdmin.from('notification_preferences').delete().eq('user_id', alvoId);
+        await supabaseAdmin.from('guardians').delete().eq('student_id', alvoId);
+        await supabaseAdmin.from('guardian_links').delete().eq('guardian_student_id', alvoId);
+      } catch { /* melhor-esforço */ }
+
+      try {
+        await appendAudit({ actor: acc.username || alvoId, actor_type: 'student', action: 'conta_excluida_pelo_titular', target_id: alvoId });
+      } catch {}
+
+      const store = await cookies();
+      store.set(SESSION_COOKIE, '', { ...sessionCookieOptions(), maxAge: 0 });
+      store.set(PROFILE_COOKIE, '', { ...profileCookieOptions(), maxAge: 0 });
+
+      return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ error: 'Ação desconhecida.' }, { status: 400 });

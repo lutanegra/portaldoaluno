@@ -11,6 +11,8 @@ import AlunoViewer from '@/components/AlunoViewer';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import WhatsappFilaPanel from '@/components/WhatsappFilaPanel';
 import ResponsaveisPanel from '@/components/ResponsaveisPanel';
+import ResponsaveisContasPanel from '@/components/ResponsaveisContasPanel';
+import TermoAssinadoBotao from '@/components/TermoAssinadoBotao';
 import MuralAdmin from '@/components/MuralAdmin';
 import { invalidateConfigCache } from '@/hooks/useSystemConfig';
 import EditAccountModal from '@/components/EditAccountModal';
@@ -934,7 +936,7 @@ export default function AdminPage() {
   const [deleteAdminPass, setDeleteAdminPass] = useState('');
   const [matriculaEditNum, setMatriculaEditNum] = useState('');
   const [matriculaEditPass, setMatriculaEditPass] = useState('');
-  const [activeTab, setActiveTab] = useState<'alunos' | 'presencas' | 'relatorio' | 'ranking' | 'certificado' | 'financeiro' | 'doacoes' | 'editais' | 'materiais' | 'patrimonio' | 'rascunhos' | 'dados-faltantes' | 'manual' | 'eventos' | 'lixeira' | 'justificativas' | 'contas' | 'auditoria' | 'responsaveis' | 'docs-historicos' | 'bibliografia' | 'estatuto' | 'regimento' | 'informacoes' | 'playlist' | 'minha-conta' | 'email-config' | 'backup' | 'mural' | 'aluno-view' | 'restauracao' | 'organograma' | 'hierarquia' | 'nucleos' | 'system-config' | 'versoes'>('alunos');
+  const [activeTab, setActiveTab] = useState<'alunos' | 'presencas' | 'relatorio' | 'ranking' | 'certificado' | 'financeiro' | 'doacoes' | 'editais' | 'materiais' | 'patrimonio' | 'rascunhos' | 'dados-faltantes' | 'manual' | 'eventos' | 'lixeira' | 'justificativas' | 'contas' | 'auditoria' | 'responsaveis' | 'responsaveis-contas' | 'docs-historicos' | 'bibliografia' | 'estatuto' | 'regimento' | 'informacoes' | 'playlist' | 'minha-conta' | 'email-config' | 'backup' | 'mural' | 'aluno-view' | 'restauracao' | 'organograma' | 'hierarquia' | 'nucleos' | 'system-config' | 'versoes'>('alunos');
   const [institucionalExpanded, setInstitucionalExpanded] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   // Área do Aluno — visualização pelo admin
@@ -1769,6 +1771,7 @@ export default function AdminPage() {
         student_id: deleteConfirm.id,
         admin_username: sessionUser(),
         admin_password: deleteAdminPass,
+        confirm: 'APAGAR',
       }),
     });
     const data = await res.json();
@@ -2432,6 +2435,7 @@ export default function AdminPage() {
               buttons: [
                 { key: 'aluno-view',    icon: '🔭', label: 'Área do Aluno' },
                 { key: 'contas',        icon: '👤', label: 'Contas Alunos', badge: undefined },
+                { key: 'responsaveis-contas', icon: '👨‍👩‍👧', label: 'Responsáveis' },
                 { key: 'alunos',        icon: '🎓', label: 'Alunos' },
                 { key: 'responsaveis',  icon: '🔐', label: 'Contas de Acesso', geralOnly: true },
                 { key: 'minha-conta',   icon: '👤', label: 'Minha Conta' },
@@ -8181,6 +8185,9 @@ _Portal Aluno_`
                     <span className="detail-label">CPF do Responsável</span>
                     <span className="detail-value">{selected.cpf_responsavel || '—'}</span>
                   </div>
+                  {selected.assinatura_responsavel && (
+                    <TermoAssinadoBotao studentId={selected.id} />
+                  )}
                 </>
               )}
               <div className="detail-item detail-full" style={{ marginTop: 8 }}>
@@ -11353,6 +11360,13 @@ dynamicNucleos.find(n => n.slug === activeNucleo)?.nome || ''
           </div>
         );
       })()}
+
+      {/* ===== ABA RESPONSÁVEIS (contas) ===== */}
+      {activeTab === 'responsaveis-contas' && (
+        <div style={{ paddingTop: 24 }}>
+          <ResponsaveisContasPanel />
+        </div>
+      )}
 
       {/* ===== ABA CONTAS ALUNOS ===== */}
       {activeTab === 'contas' && (

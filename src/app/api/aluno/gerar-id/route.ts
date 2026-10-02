@@ -77,15 +77,20 @@ export async function GET(req: NextRequest) {
     // Banco primeiro, mapa antigo como fallback
     const { data: row } = await supabaseAdmin
       .from('students')
-      .select('ordem_inscricao')
+      .select('ordem_inscricao, conta_tipo')
       .eq('id', ator.studentId)
       .maybeSingle();
+    if (row?.conta_tipo === 'responsavel') {
+      return NextResponse.json({ display_id: null, sem_matricula: true });
+    }
     if (row?.ordem_inscricao != null) {
       return NextResponse.json({ display_id: formatId(row.ordem_inscricao) });
     }
-    const idMap = await loadIdMap();
-    if (idMap[ator.studentId]) {
-      return NextResponse.json({ display_id: idMap[ator.studentId] });
+    if (row?.conta_tipo === 'responsavel_aluno' || !row || row.ordem_inscricao == null) {
+      const idMap = await loadIdMap();
+      if (idMap[ator.studentId]) {
+        return NextResponse.json({ display_id: idMap[ator.studentId] });
+      }
     }
     return NextResponse.json({ display_id: null });
   }
@@ -117,6 +122,13 @@ export async function POST(req: NextRequest) {
 
   if (action === 'assign') {
     if (!student_id) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
+
+    // Conta SÓ-responsável não recebe matrícula — nem por este gerador.
+    const { data: tipoRow } = await supabaseAdmin
+      .from('students').select('conta_tipo').eq('id', student_id).maybeSingle();
+    if (tipoRow?.conta_tipo === 'responsavel') {
+      return NextResponse.json({ display_id: null, sem_matricula: true });
+    }
 
     // Já numerado? Mantém (nunca repete nem reordena)
     const { data: row } = await supabaseAdmin

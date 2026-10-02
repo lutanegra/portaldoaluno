@@ -59,6 +59,29 @@ export async function GET(req: NextRequest) {
     supabase.from('adolescent_authorizations').select('*').order('updated_at', { ascending: false }),
   ]);
 
+  // Contas de responsável (students.conta_tipo) — gestão na aba dedicada
+  const { data: contasResp } = await supabase
+    .from('students')
+    .select('id, nome_completo, nucleo, foto_url, conta_tipo, ordem_inscricao, created_at')
+    .in('conta_tipo', ['responsavel', 'responsavel_aluno'])
+    .is('deleted_at', null)
+    .order('nome_completo', { ascending: true });
+
+  // Acesso (mapa de contas do app) e dependentes por responsável
+  let contasComAcesso = new Set<string>();
+  try {
+    const { data: urlData } = await supabase.storage.from('photos').createSignedUrl('config/aluno-auth.json', 30);
+    if (urlData?.signedUrl) {
+      const res = await fetch(urlData.signedUrl, { cache: 'no-store' });
+      if (res.ok) {
+        const map = (await res.json()) as Record<string, { student_id?: string; email?: string }>;
+        contasComAcesso = new Set(Object.values(map).map(a => a.student_id || ''));
+      }
+    }
+  } catch { /* sem mapa de contas */ }
+
+  const guardiansSet = new Set((guardians.data || []).map(g => g.student_id));
+
   // Enriquece com dados seguros dos alunos envolvidos
   const ids = new Set<string>();
   for (const g of guardians.data || []) ids.add(g.student_id);
@@ -91,7 +114,44 @@ export async function GET(req: NextRequest) {
     return alunosVisiveis.has(sid) || responsaveisVisiveis.has(sid);
   };
 
+  // Dependentes por responsável (usa o mapa de alunos já carregado)
+  const dependentesPorGuardian = new Map<string, { id: string; nome: string; status: string }[]>();
+  for (const l of links.data || []) {
+    const arr = dependentesPorGuardian.get(l.guardian_student_id) || [];
+    arr.push({ id: l.student_id, nome: alunosMap.get(l.student_id)?.nome_completo || '—', status: l.status });
+    dependentesPorGuardian.set(l.guardian_student_id, arr);
+  }
+
+  // Enriquecimento adicional para a lista de contas de responsável
+  const idsExtra = (contasResp || []).filter(c => !ids.has(c.id));
+  for (const c of idsExtra) ids.add(c.id);
+  if (idsExtra.length > 0) {
+    const { data: alunosExtra } = await supabase
+      .from('students')
+      .select('id, nome_completo, nucleo, foto_url, conta_tipo')
+      .in('id', idsExtra.map(c => c.id));
+    for (const a of alunosExtra || []) alunosMap.set(a.id, a);
+  }
+
   return NextResponse.json({
+    contas: (contasResp || [])
+      .filter(c => nucleos === 'geral' || responsaveisVisiveis.has(c.id) || alunosVisiveis.has(c.id))
+      .map(c => {
+        const deps = dependentesPorGuardian.get(c.id) || [];
+        return {
+          student_id: c.id,
+          nome: c.nome_completo,
+          nucleo: c.nucleo || null,
+          foto_url: c.foto_url || null,
+          conta_tipo: c.conta_tipo,
+          tem_matricula: c.ordem_inscricao != null,
+          matricula: c.ordem_inscricao != null ? String(c.ordem_inscricao).padStart(3, '0') : null,
+          tem_acesso: contasComAcesso.has(c.id),
+          eh_perfil_responsavel: guardiansSet.has(c.id),
+          dependentes: deps.map(d => ({ id: d.id, nome: d.nome, status: d.status })),
+          criado_em: c.created_at,
+        };
+      }),
     perfis: (guardians.data || [])
       .filter(g => visivel(g.student_id))
       .map(g => {
@@ -330,6 +390,82 @@ export async function POST(req: NextRequest) {
     await appendAudit({
       actor: `painel:${sess.u}`, actor_type: 'admin', action: 'autorizacao_presencial_registrada',
       target_id: studentId, details: { resp_nome: respNome },
+    });
+    return NextResponse.json({ success: true });
+  }
+
+  /* ── CONTAS DE RESPONSÁVEL (aba dedicada) ────────────────────────────────── */
+
+  if (action === 'remover-funcao') {
+    // Remove a FUNÇÃO de responsável da conta (students.conta_tipo → null e
+    // perfil desativado). Mantém a linha e os vínculos registrados. Se a conta
+    // tem acesso próprio, ela volta a se comportar como aluno comum.
+    const studentId = String(body.student_id || '');
+    if (!studentId) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
+    if (nucleos !== 'geral') {
+      const { data: alvo } = await supabase
+        .from('students').select('nucleo').eq('id', studentId).maybeSingle();
+      if (!alvo || !alunoDentroDosNucleos(alvo as { nucleo?: string | null }, nucleos)) {
+        return NextResponse.json({ error: 'Fora dos seus núcleos.' }, { status: 403 });
+      }
+    }
+    const { error } = await supabase
+      .from('students').update({ conta_tipo: null }).eq('id', studentId);
+    if (error) return NextResponse.json({ error: 'Não foi possível atualizar a conta.' }, { status: 500 });
+    try {
+      const { desativarPerfilResponsavel } = await import('@/lib/guardians');
+      await desativarPerfilResponsavel(studentId);
+    } catch { /* sem perfil ativo */ }
+    await appendAudit({
+      actor: `painel:${sess.u}`, actor_type: 'admin', action: 'responsavel_funcao_removida',
+      target_id: studentId,
+    });
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === 'delete-account') {
+    // Exclui a conta de ACESSO de um responsável (login/senha/dispositivos),
+    // mantendo o cadastro. A conta permanece "só responsável" se tem
+    // dependentes ativos; sem dependentes, volta a não ter tipo.
+    const studentId = String(body.student_id || '');
+    if (!studentId) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
+    if (nucleos !== 'geral') {
+      const { data: alvo } = await supabase
+        .from('students').select('nucleo').eq('id', studentId).maybeSingle();
+      if (!alvo || !alunoDentroDosNucleos(alvo as { nucleo?: string | null }, nucleos)) {
+        return NextResponse.json({ error: 'Fora dos seus núcleos.' }, { status: 403 });
+      }
+    }
+    // Mapa de contas do app (mesmo padrão das outras rotas: Storage como fonte)
+    const AUTH_KEY = 'config/aluno-auth.json';
+    const { data: urlData } = await supabase.storage.from('photos').createSignedUrl(AUTH_KEY, 30);
+    let authMap: Record<string, Record<string, unknown>> = {};
+    if (urlData?.signedUrl) {
+      const res = await fetch(urlData.signedUrl, { cache: 'no-store' });
+      if (res.ok) authMap = await res.json();
+    }
+    if (!authMap[studentId]) {
+      return NextResponse.json({ error: 'Esta conta não tem acesso (login) para excluir.' }, { status: 404 });
+    }
+    delete authMap[studentId];
+    const blob = new Blob([JSON.stringify(authMap, null, 2)], { type: 'application/json' });
+    await supabase.storage.from('photos').upload(AUTH_KEY, blob, { upsert: true });
+    try {
+      await supabase.from('push_subscriptions').delete().eq('user_id', studentId);
+      await supabase.from('notification_preferences').delete().eq('user_id', studentId);
+    } catch { /* melhor-esforço */ }
+    try {
+      const { tutoradosDoResponsavel } = await import('@/lib/guardians');
+      const tuts = await tutoradosDoResponsavel(studentId);
+      if ((tuts || []).some(t => t.status_vinculo === 'active')) {
+        await supabase.from('students').update({ conta_tipo: 'responsavel' }).eq('id', studentId);
+      } else {
+        await supabase.from('students').update({ conta_tipo: null }).eq('id', studentId);
+      }
+    } catch { /* sem vínculos */ }
+    await appendAudit({
+      actor: `painel:${sess.u}`, actor_type: 'admin', action: 'responsavel_acesso_excluido',
+      target_id: studentId,
     });
     return NextResponse.json({ success: true });
   }

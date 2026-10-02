@@ -284,9 +284,22 @@ function TermoContent() {
 
         {/* Botão salvar / status */}
         {saved ? (
-          <div style={{ background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.3)', borderRadius: 12, padding: '16px 20px', textAlign: 'center', color: '#16a34a', fontWeight: 700, fontSize: '0.95rem' }}>
-            ✅ Termo assinado e salvo com sucesso!<br />
-            <span style={{ fontWeight: 400, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Você pode fechar esta página.</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.3)', borderRadius: 12, padding: '16px 20px', textAlign: 'center', color: '#16a34a', fontWeight: 700, fontSize: '0.95rem' }}>
+              ✅ Termo assinado e salvo com sucesso!<br />
+              <span style={{ fontWeight: 400, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>O documento fica salvo na conta do aluno — o admin também o visualiza na aba Alunos.</span>
+            </div>
+            <button
+              onClick={() => window.print()}
+              style={{
+                width: '100%', padding: '15px',
+                background: 'linear-gradient(135deg,#16a34a,#15803d)',
+                border: 'none', color: '#fff', borderRadius: 12, fontWeight: 700, fontSize: '0.95rem',
+                cursor: 'pointer', boxShadow: '0 4px 16px rgba(22,163,74,0.3)',
+              }}
+            >
+              ⬇ Salvar PDF / Imprimir
+            </button>
           </div>
         ) : (
           <button

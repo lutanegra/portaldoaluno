@@ -3322,7 +3322,8 @@ export default function AlunoPage() {
                 </div>
               )}
 
-              {/* ── Identificação na Associação ── */}
+              {/* ── Identificação na Associação — escondida na conta só-responsável ── */}
+              {!respOnly && (
               <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '18px 20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
                 <div style={sec}>Identificação na Associação</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -3372,6 +3373,7 @@ export default function AlunoPage() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* ── Dados Pessoais ── */}
               <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', borderRadius: 16, padding: '18px 20px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>

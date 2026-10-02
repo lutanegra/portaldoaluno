@@ -76,6 +76,26 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.5.0',
+    data: '2026-10-02',
+    titulo: 'Contas de responsável: estrutura completa e termos desbloqueados',
+    descricao:
+      'A conta de responsável ficou com regras claras: quem não é aluno não ganha matrícula nem campos de treino; o cadastro do dependente é gerenciado pelo perfil dele; e a assinatura do Termo volta a funcionar em todos os caminhos, com o documento salvo na conta do aluno e liberado para salvar em PDF.',
+    descricaoAluno:
+      'Contas de responsável com regras mais claras, correção da assinatura do Termo de Responsabilidade e do salvamento de dados — e o termo assinado agora pode ser salvo em PDF na hora.',
+    itens: [
+      { categoria: 'correcoes', texto: 'Assinar o Termo de Responsabilidade funciona de novo em todos os caminhos: pelo responsável no perfil do dependente, pelo aluno menor que preenche os dados do responsável e pelo link de assinatura. O erro "Erro ao salvar" veio de exigências que se contradiziam.' },
+      { categoria: 'novo', texto: 'Depois de assinar, o termo pode ser salvo em PDF / impresso direto da tela de confirmação — com a assinatura desenhada no documento.' },
+      { categoria: 'correcoes', texto: 'Contas criadas como "somente responsável" deixam de receber matrícula de aluno (CCLN-000) e não veem núcleo, graduação ou campos de treino no próprio cadastro — apenas dados pessoais.' },
+      { categoria: 'correcoes', texto: '"Excluir minha conta" voltou a funcionar no app, e o responsável com dependentes ativos mantém os vínculos deles ao sair.' },
+      { categoria: 'correcoes', texto: 'O formulário do responsável agora salva o cadastro completo do dependente (núcleo, documentos, endereço), sem apagar o que já estava preenchido.' },
+      { categoria: 'novo', publico: 'admin', texto: 'Nova aba "Responsáveis" no painel: todas as contas de responsável com tipo, núcleo, matrícula (quando houver), dependentes vinculados, situação do acesso e ações de excluir acesso / remover função.' },
+      { categoria: 'correcoes', publico: 'admin', texto: 'Exclusão definitiva de aluno na aba Alunos voltou a funcionar (a rota tinha sido removida sem querer) — mantendo o snapshot na lixeira e a confirmação por senha.' },
+      { categoria: 'correcoes', publico: 'admin', texto: 'No cadastro do aluno menor, o admin passa a visualizar o termo assinado (com a assinatura) direto do modal de detalhes.' },
+      { categoria: 'seguranca', publico: 'admin', texto: 'Exclusões destrutivas passam a exigir confirmação explícita validada no servidor.' },
+    ],
+  },
+  {
     versao: '1.4.4',
     data: '2026-10-02',
     titulo: 'Perfil do dependente: salvar dados e assinar termo funcionando',

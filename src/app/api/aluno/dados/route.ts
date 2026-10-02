@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { readPanelSession } from '@/lib/panelSession';
 import { readAlunoSessionFromReq } from '@/lib/alunoSession';
 import { resolverAtor } from '@/lib/ator';
-import { alunoEmConformidade, resumoPendencias, isValidCPF, isValidRG, cpfDigits } from '@/lib/studentCompliance';
+import { alunoEmConformidade, pendenciasAluno, resumoPendencias, isValidCPF, isValidRG, cpfDigits } from '@/lib/studentCompliance';
 
 export const dynamic = 'force-dynamic';
 
@@ -147,21 +147,10 @@ export async function PATCH(req: NextRequest) {
 
     // Responsável acessando tutelado: campos de identidade/documentos são
     // restritos ao aluno adulto e ao painel (minimização de dados).
-    const CAMPOS_RESPONSAVEL_AUTORIZADOS = new Set([
-      'telefone', 'email', 'cep', 'endereco', 'numero', 'complemento',
-      'bairro', 'cidade', 'estado', 'nome_pai', 'nome_mae', 'autoriza_imagem',
-    ]);
-    if (emNomeDeResponsavel) {
-      for (const chave of Object.keys(updates)) {
-        if (chave === 'student_id') continue;
-        if (!CAMPOS_RESPONSAVEL_AUTORIZADOS.has(chave)) {
-          return NextResponse.json(
-            { error: `Responsáveis não podem alterar o campo "${chave}" do tutelado.` },
-            { status: 403 },
-          );
-        }
-      }
-    }
+    // O responsável gerencia o cadastro COMPLETO do tutelado (núcleo, graduação,
+    // documentos, endereço). A lista ALLOWED acima já exclui campos de sistema,
+    // e o "vazio não apaga" abaixo protege dados existentes — não há mais
+    // restrição adicional de campos para o responsável.
 
     // Verify student exists
     const { data: existing, error: fetchError } = await supabaseAdmin
@@ -294,7 +283,15 @@ export async function PATCH(req: NextRequest) {
     // concluir o termo do tutelado — validar conformidade aqui criava um círculo
     // vicioso: o termo só seria válido se JÁ estivesse assinado. O painel e o
     // próprio aluno adulto continuam validados.
-    if (mexeuEmMenor && !ehAdmin && !emNomeDeResponsavel) {
+    // Menor com pendência APENAS do termo: pode preencher nome/CPF do
+    // responsável — é o passo que precede a assinatura. Exigir conformidade
+    // aqui criava o círculo "para assinar o termo precisa já ter assinado".
+    // Painel e responsável atuando em tutelado também passam.
+    const pendAtuais = pendenciasAluno(novosDocs as Parameters<typeof pendenciasAluno>[0], menorFinal);
+    const pendSemTermo = pendAtuais.filter(p => p.campo !== 'termo');
+    const preenchendoResponsavelDoMenor = !!(payload.nome_responsavel || payload.cpf_responsavel);
+    if (mexeuEmMenor && !ehAdmin && !emNomeDeResponsavel &&
+        !(pendSemTermo.length === 0 && pendAtuais.length > 0 && preenchendoResponsavelDoMenor)) {
       const simulado = {
         cpf: novosDocs.cpf as string | null,
         identidade: novosDocs.identidade as string | null,

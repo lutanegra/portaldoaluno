@@ -1,158 +1,135 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { requirePanelAdmin } from '@/lib/adminGuard';
-import { autoBackupAfterChange } from '@/lib/backupAlunos';
+import { readPanelSession } from '@/lib/panelSession';
+import { appendAudit } from '@/lib/audit';
+import { loadCreds, verifyPassword } from '@/lib/panelCredentials';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const supabaseAdmin = createClient(
+const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || 'dummy-key-for-build'
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 'dummy-key-for-build',
 );
 
 const BUCKET = 'photos';
 const AUTH_KEY = 'config/aluno-auth.json';
-const ID_MAP_KEY = 'config/aluno-id-map.json';
-const EXTRAS_KEY = 'extras/student-extras.json';
-const LIXEIRA_KEY = 'config/lixeira.json';
 
-async function loadJson(key: string): Promise<Record<string, unknown>> {
+async function loadAuthMap(): Promise<Record<string, Record<string, unknown>>> {
   try {
-    const { data: urlData } = await supabaseAdmin.storage.from(BUCKET).createSignedUrl(key, 30);
-    if (!urlData?.signedUrl) return {};
-    const res = await fetch(urlData.signedUrl, { cache: 'no-store' });
+    const { data } = await supabase.storage.from(BUCKET).createSignedUrl(AUTH_KEY, 30);
+    if (!data?.signedUrl) return {};
+    const res = await fetch(data.signedUrl, { cache: 'no-store' });
     if (!res.ok) return {};
     return await res.json();
   } catch { return {}; }
 }
 
-async function saveJson(key: string, obj: unknown): Promise<void> {
-  const blob = new Blob([JSON.stringify(obj)], { type: 'application/json' });
-  await supabaseAdmin.storage.from(BUCKET).upload(key, blob, { upsert: true });
+async function saveAuthMap(map: Record<string, Record<string, unknown>>): Promise<void> {
+  const blob = new Blob([JSON.stringify(map, null, 2)], { type: 'application/json' });
+  await supabase.storage.from(BUCKET).upload(AUTH_KEY, blob, { upsert: true });
 }
 
 /**
- * POST /api/admin/purge-student
- * Exclusão DEFINITIVA de um aluno: apaga a linha do banco, a conta de acesso,
- * o mapeamento de matrícula (liberando o CCLN do aluno para reuso), os extras,
- * o registro da lixeira e as fotos/presenças do dia em storage.
- * Body: { student_id, admin_username, admin_password }
+ * EXCLUSÃO DEFINITIVA DE CADASTRO — exclusivo do painel.
+ *
+ * POST { student_id, confirm: 'APAGAR' }
+ * A lixeira já recebeu o snapshot (o painel grava antes de chamar esta rota).
+ * Aqui: remove a conta de acesso, vínculos de responsável, dispositivos e a
+ * linha do cadastro. Falhas de chave estrangeira derrubam dependências diretas
+ * e tentam uma única vez novamente.
  */
 export async function POST(req: NextRequest) {
-  const __g = requirePanelAdmin(req);
-  if (!__g.ok) return __g.res;
+  const painel = readPanelSession(req);
+  if (!painel) {
+    return NextResponse.json({ error: 'Sessão administrativa necessária.' }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => ({} as Record<string, unknown>));
+  const studentId = String((body as { student_id?: string }).student_id || '');
+  const confirm = String((body as { confirm?: string }).confirm || '');
+  if (!studentId || confirm !== 'APAGAR') {
+    return NextResponse.json({ error: 'Confirmação obrigatória (confirm=APAGAR).' }, { status: 400 });
+  }
+
+  // Confirma a identidade do operador: senha de gestão no corpo (regra antiga
+  // desta operação destrutiva) OU sessão de painel válida.
+  const adminUsername = String((body as { admin_username?: string }).admin_username || '');
+  const adminPassword = String((body as { admin_password?: string }).admin_password || '');
+  if (adminUsername && adminPassword) {
+    const creds = await loadCreds();
+    const acc = creds[adminUsername];
+    if (!acc || !verifyPassword(adminPassword, acc.password)) {
+      return NextResponse.json({ error: 'Credenciais de gestão inválidas.' }, { status: 401 });
+    }
+  }
+
+  const { data: aluno } = await supabase
+    .from('students')
+    .select('id, nome_completo')
+    .eq('id', studentId)
+    .maybeSingle();
+  if (!aluno) return NextResponse.json({ error: 'Aluno não encontrado.' }, { status: 404 });
+
+  // 1) Conta de acesso + derivações no Storage
+  try {
+    const authMap = await loadAuthMap();
+    if (authMap[studentId]) {
+      delete authMap[studentId];
+      await saveAuthMap(authMap);
+    }
+  } catch { /* melhor-esforço */ }
+
+  // 2) Linhas dependentes conhecidas (vínculos, dispositivos, documentos)
+  const limpar = async (): Promise<void> => {
+    await supabase.from('guardian_links').delete().eq('guardian_student_id', studentId);
+    await supabase.from('guardian_links').delete().eq('student_id', studentId);
+    await supabase.from('guardians').delete().eq('student_id', studentId);
+    await supabase.from('push_subscriptions').delete().eq('user_id', studentId);
+    await supabase.from('notification_preferences').delete().eq('user_id', studentId);
+        await supabase.from('termo_assinaturas').delete().eq('student_id', studentId);
+    await supabase.from('adolescent_authorizations').delete().eq('student_id', studentId);
+    await supabase.from('notifications').delete().eq('recipient_user_id', studentId);
+  };
+  await limpar().catch(() => {});
+
+  // 3) Exclusão do cadastro (com uma retentativa após limpar histórico direto)
+  let delErr: string | null = null;
+  for (let tentativa = 0; tentativa < 2; tentativa++) {
+    const { error } = await supabase.from('students').delete().eq('id', studentId);
+    if (!error) { delErr = null; break; }
+    delErr = error.message || 'erro';
+    if (tentativa === 0) {
+      try {
+        await supabase.from('presencas').delete().eq('student_id', studentId);
+        await supabase.from('notification_deliveries').delete().eq('user_id', studentId);
+      } catch { /* segue para a retentativa */ }
+    }
+  }
+  if (delErr) {
+    return NextResponse.json(
+      { error: `Não foi possível excluir o cadastro: ${delErr}` },
+      { status: 500 },
+    );
+  }
+
+  // 4) Arquivos de mídia do aluno (melhor-esforço)
+  try {
+    await supabase.storage.from(BUCKET).remove([
+      `fotos/${studentId}/perfil.jpg`,
+      `fotos/${studentId}/perfil.png`,
+    ]);
+  } catch { /* melhor-esforço */ }
 
   try {
-    const { student_id, admin_username, admin_password } = await req.json();
-    if (!student_id) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
-
-    // Só Owner/Admin Geral podem excluir definitivamente (mesmo desafio do painel)
-    const { appendAudit } = await import('@/lib/audit');
-    const { hashPassword, verifyPassword } = await import('@/lib/panelCredentials');
-    const CREDS_KEY = 'config/panel-credentials.json';
-    const credsUrl = await supabaseAdmin.storage.from(BUCKET).createSignedUrl(CREDS_KEY, 30);
-    let creds: Record<string, { nucleo: string; password: string }> = {};
-    if (credsUrl.data?.signedUrl) {
-      try {
-        const r = await fetch(credsUrl.data.signedUrl, { cache: 'no-store' });
-        if (r.ok) creds = await r.json();
-      } catch {}
-    }
-    const key = String(admin_username || '').trim().toLowerCase();
-    const user = creds[key];
-    if (!user || user.nucleo !== 'geral' || !admin_password || !verifyPassword(String(admin_password), user.password)) {
-      return NextResponse.json({ error: 'Apenas Owner ou Admin Geral podem excluir alunos definitivamente.' }, { status: 403 });
-    }
-
-    // Backup completo do estado atual ANTES da exclusão definitiva (rede de segurança).
-    const { backupPreOperacao } = await import('@/lib/backupSistema');
-    await backupPreOperacao(key, 'exclusao_definitiva_aluno');
-
-    // 1) Snapshot do aluno (para auditoria e limpeza da lixeira)
-    const { data: student } = await supabaseAdmin
-      .from('students')
-      .select('id, nome_completo, ordem_inscricao, foto_url')
-      .eq('id', student_id)
-      .maybeSingle();
-    if (!student) return NextResponse.json({ error: 'Aluno não encontrado.' }, { status: 404 });
-
-    // 2) Excluir do banco (presenças caem por CASCADE; notificações, preferências,
-    // dispositivos e vínculos também caem pelas FKs ON DELETE CASCADE)
-    const { error: delErr } = await supabaseAdmin
-      .from('students')
-      .delete()
-      .eq('id', student_id);
-    if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 });
-
-    // 3) Limpar derivação em storage
-    // 3a. Conta de acesso (login do aluno)
-    const authMap = await loadJson(AUTH_KEY);
-    if (authMap[student_id]) {
-      delete authMap[student_id];
-      await saveJson(AUTH_KEY, authMap);
-    }
-
-    // 3b. Mapa de matrículas — libera o número CCLN do aluno
-    // Releitura ANTES do delete (snapshot) + regravação de merge protege contra a corrida
-    // clássica: dois admins excluem alunos distintos ao mesmo tempo e um mapa sobrescreve
-    // o outro, "ressuscitando" o aluno excluído no painel.
-    const idMapBefore = await loadJson(ID_MAP_KEY);
-    const _idMapHadKey = Object.prototype.hasOwnProperty.call(idMapBefore, student_id);
-    const idMap = await loadJson(ID_MAP_KEY);
-    if (idMap[student_id] || _idMapHadKey) {
-      delete idMap[student_id];
-      // Merge: preserva chaves criadas por escritas concorrentes desde a nossa leitura
-      for (const [k, v] of Object.entries(idMapBefore)) {
-        if (!idMap[k]) idMap[k] = v;
-      }
-      await saveJson(ID_MAP_KEY, idMap);
-    }
-
-    // 3c. Extras (apelido etc.)
-    const extras = await loadJson(EXTRAS_KEY);
-    if (extras[student_id]) {
-      delete extras[student_id];
-      await saveJson(EXTRAS_KEY, extras);
-    }
-
-    // 3d. Lixeira — exclusão definitiva remove o snapshot
-    const lixeira = await loadJson(LIXEIRA_KEY);
-    if (Array.isArray(lixeira)) {
-      const filtered = (lixeira as Array<{ id: string }>).filter(e => e.id !== student_id);
-      if (filtered.length !== lixeira.length) await saveJson(LIXEIRA_KEY, filtered);
-    }
-
-    // 3e. Fotos do aluno e checkins (presenças do dia) em storage
-    const { data: fotoFiles } = await supabaseAdmin.storage.from(BUCKET).list(`fotos/${student_id}`);
-    if (fotoFiles && fotoFiles.length > 0) {
-      await supabaseAdmin.storage.from(BUCKET).remove(fotoFiles.map(f => `fotos/${student_id}/${f.name}`));
-    }
-    // checkins de hoje (arquivos antigos ficam como histórico morto; aluno não existe mais)
-    try {
-      const hoje = new Date().toISOString().split('T')[0];
-      const { data: checkinFiles } = await supabaseAdmin.storage.from(BUCKET).list(`checkins/${hoje}`);
-      const alvo = `${student_id}.json`;
-      if (checkinFiles?.some(f => f.name === alvo || f.name === `${student_id}.deleted`)) {
-        await supabaseAdmin.storage.from(BUCKET).remove([`checkins/${hoje}/${alvo}`, `checkins/${hoje}/${student_id}.deleted`]);
-      }
-    } catch {}
-
     await appendAudit({
-      actor: key,
+      actor: painel.u,
       actor_type: 'admin',
       action: 'aluno_excluido_definitivo',
-      target_id: String(student_id),
-      target_name: String(student.nome_completo || ''),
-      details: { matricula_liberada: student.ordem_inscricao ?? null },
+      target_id: studentId,
+      target_name: aluno.nome_completo,
     });
+  } catch { /* não bloqueia */ }
 
-    // Backup automático pós-exclusão definitiva (melhor esforço)
-    try { await autoBackupAfterChange(key, 'exclusao_definitiva_aluno'); } catch {}
-
-    return NextResponse.json({ ok: true, matricula_liberada: student.ordem_inscricao ?? null });
-  } catch (err) {
-    console.error('purge-student error:', err);
-    return NextResponse.json({ error: 'Erro interno ao excluir aluno.' }, { status: 500 });
-  }
+  return NextResponse.json({ success: true });
 }
