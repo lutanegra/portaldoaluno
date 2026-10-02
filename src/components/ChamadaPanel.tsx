@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   IconCheck, IconWarn, IconMapPin, IconClock, IconSearch, IconRefresh,
 } from '@/components/icons';
+import { useSystemConfig } from '@/hooks/useSystemConfig';
 
 export type ChamadaAluno = {
   id: string;
@@ -35,6 +36,13 @@ export function formatarDataBR(data: string): string {
   return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('pt-BR', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC',
   });
+}
+
+/** Escape para o HTML da folha de chamada (documento aberto em janela separada). */
+function escFolha(s: string): string {
+  return String(s || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 /**
@@ -70,6 +78,8 @@ export default function ChamadaPanel({
   const [confirmar, setConfirmar] = useState(false);
   const [busca, setBusca] = useState('');
   const [filtro, setFiltro] = useState<'todos' | 'P' | 'F' | 'JU'>('todos');
+  const [gerandoFolha, setGerandoFolha] = useState(false);
+  const { config } = useSystemConfig();
 
   async function carregar(dataArg = data, nucleoArg = nucleo) {
     setLoading(true);
@@ -171,6 +181,83 @@ export default function ChamadaPanel({
     setSaving(false);
   }
 
+  /**
+   * FOLHA DE CHAMADA (v1.5.5): documento A4 para assinatura em papel.
+   * Topo: título, nome do grupo, nome do núcleo e data. Lista dos alunos
+   * cadastrados até o momento da geração em ordem alfabética, cada um com o
+   * campo de assinatura ao lado. Página A4 tradicional com repetição do
+   * cabeçalho quando a lista passa de uma folha.
+   */
+  function gerarFolha() {
+    if (alunos.length === 0 || gerandoFolha) return;
+    setGerandoFolha(true);
+    const org = config.organization_name || 'Centro Cultural Luta Negra';
+    const nomeNucleo = nucleosPermitidos.find(n => n.slug === nucleo)?.nome || nucleoInfo?.nome || nucleo;
+
+    // Reordena no momento da geração (o servidor já entrega alfabético; aqui é garantia)
+    const lista = [...alunos].sort((a, b) =>
+      String(a.nome_completo).localeCompare(String(b.nome_completo), 'pt-BR', { sensitivity: 'base' }));
+
+    const linhas = lista.map((a, i) => `
+      <tr>
+        <td class="num">${i + 1}</td>
+        <td class="nome">${escFolha(a.nome_completo)}</td>
+        <td class="grad">${a.graduacao ? escFolha(a.graduacao) : ''}</td>
+        <td class="ass"></td>
+      </tr>`).join('');
+
+    const w = window.open('', '_blank');
+    if (!w) { setGerandoFolha(false); return; }
+    w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<title>Folha de Chamada — ${escFolha(nomeNucleo)}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  @page { size:A4; margin:14mm 13mm; }
+  body { font-family:Arial,Helvetica,sans-serif; color:#111827; font-size:11px; }
+  .head { display:flex; align-items:center; gap:14px; border-bottom:3px solid #FF9200; padding-bottom:10px; margin-bottom:4px; }
+  .brand { flex:1; }
+  .brand h1 { font-size:15px; letter-spacing:.2px; }
+  .brand .sub { font-size:9.5px; color:#6b7280; margin-top:2px; }
+  .titulo-doc { text-align:center; font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:1.2px; margin:12px 0 2px; }
+  .meta { text-align:center; font-size:9.5px; color:#6b7280; margin-bottom:10px; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { border:1px solid #9ca3af; padding:0 8px; height:27px; }
+  th { background:#f3f4f6; font-size:9px; text-transform:uppercase; letter-spacing:.4px; height:auto; padding:6px 8px; }
+  td.num, th.num { text-align:center; width:30px; }
+  td.nome { font-size:11.5px; font-weight:600; }
+  td.grad { width:104px; font-size:8.5px; color:#6b7280; }
+  th.ass, td.ass { width:230px; }
+  thead { display:table-header-group; }
+  tr { page-break-inside:avoid; }
+  .ass-linha { display:block; width:100%; height:100%; min-height:26px; }
+  .total { margin-top:8px; font-size:9.5px; color:#374151; display:flex; justify-content:space-between; }
+  .foot { margin-top:14px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:9px; color:#6b7280; display:flex; justify-content:space-between; }
+</style></head><body>
+<div class="head">
+  <div class="brand">
+    <h1>${escFolha(org)}</h1>
+    <div class="sub">Portal do Aluno · Ginga Gestão</div>
+  </div>
+</div>
+<div class="titulo-doc">Folha de Chamada</div>
+<div class="meta">Núcleo: <strong>${escFolha(nomeNucleo)}</strong> · Data: <strong>____/____/______</strong> · ${lista.length} aluno${lista.length !== 1 ? 's' : ''} cadastrado${lista.length !== 1 ? 's' : ''} até o momento da geração</div>
+<table>
+  <thead><tr>
+    <th class="num">#</th><th>Nome do Aluno</th><th>Graduação</th><th class="ass">Assinatura</th>
+  </tr></thead>
+  <tbody>${linhas}</tbody>
+</table>
+<div class="total"><span>Total de alunos listados: <strong>${lista.length}</strong></span><span>Presenças do dia: ______ &nbsp;·&nbsp; Ausências: ______</span></div>
+<div class="foot">
+  <span>${escFolha(org)} — documento gerado pelo Ginga Gestão</span>
+  <span>Professor / Responsável: ____________________________</span>
+</div>
+<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\\/script>
+</body></html>`);
+    w.document.close();
+    setTimeout(() => setGerandoFolha(false), 800);
+  }
+
   const inputStyle: React.CSSProperties = {
     padding: '9px 12px', borderRadius: 9, border: '1px solid var(--border)',
     background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.86rem', outline: 'none',
@@ -208,6 +295,20 @@ export default function ChamadaPanel({
         <button onClick={() => carregar()} disabled={loading}
           style={{ ...inputStyle, display: 'flex', alignItems: 'center', gap: 6, cursor: loading ? 'wait' : 'pointer', fontWeight: 700 }}>
           <IconRefresh size={14} style={loading ? { animation: 'spin 0.8s linear infinite' } : undefined} /> Atualizar
+        </button>
+        <button
+          onClick={gerarFolha}
+          disabled={loading || alunos.length === 0 || gerandoFolha}
+          title="Gera a folha de chamada em ordem alfabética, com campo de assinatura para cada aluno"
+          style={{
+            ...inputStyle, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 800,
+            cursor: loading || alunos.length === 0 ? 'not-allowed' : 'pointer',
+            opacity: loading || alunos.length === 0 ? 0.55 : 1,
+            background: 'linear-gradient(135deg, rgba(255,146,0,0.18), rgba(255,146,0,0.06))',
+            borderColor: 'rgba(255,146,0,0.5)', color: '#FF9200',
+          }}
+        >
+          🖨 {gerandoFolha ? 'Gerando…' : 'Folha de Chamada'}
         </button>
         {salvoEm && (
           <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginLeft: 'auto' }}>

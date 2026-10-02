@@ -76,6 +76,17 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.5.5',
+    data: '2026-10-02',
+    titulo: 'Folha de Chamada para assinatura em papel',
+    descricao: 'Novo documento na aba Presenças: a lista dos alunos do núcleo em ordem alfabética, cada um com campo para assinar — pronta para imprimir ou salvar em PDF.',
+    descricaoAluno: undefined,
+    itens: [
+      { categoria: 'novo', publico: 'admin', texto: 'Painel: botão "Folha de Chamada" na aba Presenças gera o documento oficial do núcleo — topo com título, nome do grupo, nome do núcleo e espaço para a data, seguido da lista de alunos cadastrados em ordem alfabética com campo de assinatura ao lado de cada nome. Quando a lista não cabe em uma folha, o documento continua nas páginas seguintes repetindo o cabeçalho da tabela.' },
+      { categoria: 'melhorias', publico: 'admin', texto: 'Painel: a folha ainda traz o total de alunos, campos para o total de presenças e ausências do dia e uma linha de identificação do professor/responsável ao pé do documento.' },
+    ],
+  },
+  {
     versao: '1.5.4',
     data: '2026-10-02',
     titulo: 'Presença sempre validada — dia, horário e local valendo para todos',
