@@ -85,6 +85,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       { categoria: 'correcoes', texto: 'Ao terminar o cadastro (ou entrar na conta), os dados já preenchidos aparecem na tela "Meus Dados" sem precisar recarregar a página.' },
       { categoria: 'correcoes', texto: 'O ID do aluno (CCLN-000) passa a aparecer na hora — inclusive no primeiro acesso, antes de qualquer salvamento.' },
       { categoria: 'correcoes', texto: 'O aviso de "Menor de idade — Termo obrigatório" surge imediatamente quando a data de nascimento informa menoridade.' },
+      { categoria: 'correcoes', texto: 'A assinatura desenhada pelo responsável aparece novamente no documento do Termo para impressão/PDF — antes o espaço saía em branco.' },
       { categoria: 'seguranca', texto: 'Sair da conta agora limpa também o perfil aberto no dispositivo: o próximo login desta tela não herda o acesso de quem saiu antes.' },
     ],
   },

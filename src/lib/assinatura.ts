@@ -25,9 +25,11 @@ export function renderizarAssinaturaSvg(trajeto: string, largura = 560, altura =
     }, [])
     .filter(pontos => pontos.length >= 2);
 
+  // Cada traço vira um <path> próprio — o "d" é o único atributo que o
+  // renderizador do navegador desenha; texto solto dentro do <g> sai em branco.
   const paths = tracos
-    .map(pontos => `M ${pontos.map(([x, y]) => `${x} ${y}`).join(' L ')}`)
-    .join(' ');
+    .map(pontos => `<path d="M ${pontos.map(([x, y]) => `${x} ${y}`).join(' L ')}"/>`)
+    .join('');
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${largura} ${altura}" width="${largura}" height="${altura}"><g fill="none" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${paths}</g></svg>`;
 
