@@ -175,15 +175,37 @@ async function validarTravas(
   return null;
 }
 
+/** "HH:MM" → minutos do dia; inválido → null. */
+function hhmmParaMinutos(v: unknown): number | null {
+  if (typeof v !== 'string') return null;
+  const m = v.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+
+/** Duração assumida quando o núcleo define só o início do treino. */
+const DURACAO_PADRAO_TREINO_MIN = 120;
+
 /** Extrai {inicio, fim} em minutos do dia de treino do tenant. */
 function extrairJanela(
   tenant: Record<string, unknown>,
   diaHoje: string,
 ): { inicio: number; fim: number } | null {
+  // Formato atual (mapas dia → "HH:MM" gravados pelo painel)
+  const inicio = hhmmParaMinutos((tenant.horarios_treino as Record<string, string> | null)?.[diaHoje]);
+  const fim = hhmmParaMinutos((tenant.horarios_fim_treino as Record<string, string> | null)?.[diaHoje]);
+  if (inicio !== null) {
+    return { inicio, fim: fim !== null ? Math.max(fim, inicio) : inicio + DURACAO_PADRAO_TREINO_MIN };
+  }
+  if (fim !== null) return null; // só término não define janela
+
   const dias = tenant.dias_treino;
   if (!Array.isArray(dias)) return null;
   for (const d of dias) {
-    // Formato objeto: {"dia":"segunda","inicio":"19:00","fim":"21:00"}
+    // Formato legado: {"dia":"segunda","inicio":"19:00","fim":"21:00"}
     if (d && typeof d === 'object') {
       const obj = d as { dia?: string; inicio?: string; fim?: string };
       if (obj.dia === diaHoje && obj.inicio && obj.fim) {
@@ -193,7 +215,7 @@ function extrairJanela(
       }
       continue;
     }
-    // Formato string: "segunda 19:00-21:00" ou apenas "segunda"
+    // Formato legado: "segunda 19:00-21:00"
     if (typeof d === 'string' && d.startsWith(diaHoje)) {
       const m = d.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
       if (m) {

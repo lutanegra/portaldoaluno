@@ -1021,12 +1021,12 @@ export default function AdminPage() {
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [auditSearch, setAuditSearch] = useState('');
   // ── Gerenciamento de Núcleos (tenants) ────────────────────────────────────
-  type NucleoTenant = { id: string; nome: string; slug: string; endereco?: string; cidade?: string; estado?: string; telefone?: string; email?: string; logo_url?: string; ativo: boolean; created_at: string; dias_treino?: string[]; horarios_treino?: Record<string, string>; tolerancia_min?: number | null; admin_login?: string; lat?: number; lng?: number };
+  type NucleoTenant = { id: string; nome: string; slug: string; endereco?: string; cidade?: string; estado?: string; telefone?: string; email?: string; logo_url?: string; ativo: boolean; created_at: string; dias_treino?: string[]; horarios_treino?: Record<string, string>; horarios_fim_treino?: Record<string, string>; tolerancia_min?: number | null; admin_login?: string; lat?: number; lng?: number };
   const [nucleosList, setNucleosList] = useState<NucleoTenant[]>([]);
   const [muralItems, setMuralItems] = useState<MuralItem[]>([]);
   const [loadingNucleos, setLoadingNucleos] = useState(false);
   const [showCreateNucleoModal, setShowCreateNucleoModal] = useState(false);
-  const [nucleoForm, setNucleoForm] = useState<{ nome: string; endereco: string; cidade: string; estado: string; telefone: string; email: string; lat: string; lng: string; dias_treino: string[]; horarios_treino: Record<string, string>; tolerancia_min: string; admin_login: string; admin_senha: string; admin_nome: string; admin_email: string; admin_cpf: string }>({ nome: '', endereco: '', cidade: '', estado: '', telefone: '', email: '', lat: '', lng: '', dias_treino: [], horarios_treino: {}, tolerancia_min: '15', admin_login: '', admin_senha: '', admin_nome: '', admin_email: '', admin_cpf: '' });
+  const [nucleoForm, setNucleoForm] = useState<{ nome: string; endereco: string; cidade: string; estado: string; telefone: string; email: string; lat: string; lng: string; dias_treino: string[]; horarios_treino: Record<string, string>; horarios_fim_treino: Record<string, string>; tolerancia_min: string; admin_login: string; admin_senha: string; admin_nome: string; admin_email: string; admin_cpf: string }>({ nome: '', endereco: '', cidade: '', estado: '', telefone: '', email: '', lat: '', lng: '', dias_treino: [], horarios_treino: {}, horarios_fim_treino: {}, tolerancia_min: '15', admin_login: '', admin_senha: '', admin_nome: '', admin_email: '', admin_cpf: '' });
   const [nucleoEditForm, setNucleoEditForm] = useState<Record<string, any> | null>(null);
   const [nucleoEditSaving, setNucleoEditSaving] = useState(false);
   const [nucleoEditMsg, setNucleoEditMsg] = useState('');
@@ -6227,7 +6227,7 @@ _Portal Aluno_`
             </div>
             {souGestor ? (
               <button
-                onClick={() => { setNucleoForm({ nome: '', endereco: '', cidade: '', estado: '', telefone: '', email: '', lat: '', lng: '', dias_treino: [], horarios_treino: {}, tolerancia_min: '15', admin_login: '', admin_senha: '', admin_nome: '', admin_email: '', admin_cpf: '' }); setNucleoFormMsg(''); setShowCreateNucleoModal(true); }}
+                onClick={() => { setNucleoForm({ nome: '', endereco: '', cidade: '', estado: '', telefone: '', email: '', lat: '', lng: '', dias_treino: [], horarios_treino: {}, horarios_fim_treino: {}, tolerancia_min: '15', admin_login: '', admin_senha: '', admin_nome: '', admin_email: '', admin_cpf: '' }); setNucleoFormMsg(''); setShowCreateNucleoModal(true); }}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: 'linear-gradient(135deg,#FF9200,#d97706)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 4px 18px rgba(255,146,0,0.25)' }}
               >
                 <span style={{ fontSize: '1rem' }}>+</span> Criar Novo Núcleo
@@ -6302,7 +6302,7 @@ _Portal Aluno_`
                       <button
                         onClick={() => {
                           setNucleoEditForm({
-                            id: nucleo.id, nome: nucleo.nome, endereco: nucleo.endereco || '', cidade: nucleo.cidade || '', estado: nucleo.estado || '', telefone: nucleo.telefone || '', email: nucleo.email || '', lat: nucleo.lat != null ? String(nucleo.lat) : '', lng: nucleo.lng != null ? String(nucleo.lng) : '', dias_treino: ((nucleo as any).dias_treino || []) as string[], horarios_treino: (((nucleo as any).horarios_treino || {}) as Record<string, string>), tolerancia_min: nucleo.tolerancia_min != null ? String(nucleo.tolerancia_min) : '15',
+                            id: nucleo.id, nome: nucleo.nome, endereco: nucleo.endereco || '', cidade: nucleo.cidade || '', estado: nucleo.estado || '', telefone: nucleo.telefone || '', email: nucleo.email || '', lat: nucleo.lat != null ? String(nucleo.lat) : '', lng: nucleo.lng != null ? String(nucleo.lng) : '', dias_treino: ((nucleo as any).dias_treino || []) as string[], horarios_treino: (((nucleo as any).horarios_treino || {}) as Record<string, string>), horarios_fim_treino: (((nucleo as any).horarios_fim_treino || {}) as Record<string, string>), tolerancia_min: nucleo.tolerancia_min != null ? String(nucleo.tolerancia_min) : '15',
                           });
                           setNucleoEditMsg(''); setNucleoEditAuth({ user: sessionUser(), pass: '' });
                         }}
@@ -6543,16 +6543,24 @@ _Portal Aluno_`
                     </div>
                     <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {DIAS_TREINO_LABELS.filter(d => nucleoForm.dias_treino.includes(d.k)).map(d => (
-                        <div key={d.k} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div key={d.k} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fdba74', width: 86, flexShrink: 0 }}>{d.l}</span>
                           <input
                             type="time"
                             value={nucleoForm.horarios_treino[d.k] || ''}
                             onChange={e => setNucleoForm(f => ({ ...f, horarios_treino: { ...f.horarios_treino, [d.k]: e.target.value } }))}
-                            style={{ ...inpDark, width: 120, padding: '7px 9px' }}
-                            aria-label={`Horário de ${d.l}`}
+                            style={{ ...inpDark, width: 104, padding: '7px 9px' }}
+                            aria-label={`Início do treino de ${d.l}`}
                           />
-                          <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>início do treino (opcional)</span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>às</span>
+                          <input
+                            type="time"
+                            value={nucleoForm.horarios_fim_treino[d.k] || ''}
+                            onChange={e => setNucleoForm(f => ({ ...f, horarios_fim_treino: { ...f.horarios_fim_treino, [d.k]: e.target.value } }))}
+                            style={{ ...inpDark, width: 104, padding: '7px 9px' }}
+                            aria-label={`Término do treino de ${d.l}`}
+                          />
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>início e fim (opcional)</span>
                         </div>
                       ))}
                       {nucleoForm.dias_treino.length === 0 && (
@@ -6766,16 +6774,24 @@ _Portal Aluno_`
                     </div>
                     <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {DIAS_TREINO_LABELS.filter(d => (nucleoEditForm.dias_treino as string[]).includes(d.k)).map(d => (
-                        <div key={d.k} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div key={d.k} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fdba74', width: 86, flexShrink: 0 }}>{d.l}</span>
                           <input
                             type="time"
                             value={(nucleoEditForm.horarios_treino as Record<string, string> | undefined)?.[d.k] || ''}
                             onChange={e => setNucleoEditForm(f => f && ({ ...f, horarios_treino: { ...(f.horarios_treino as Record<string, string> | undefined), [d.k]: e.target.value } }))}
-                            style={{ ...inpDark, width: 120, padding: '7px 9px' }}
-                            aria-label={`Horário de ${d.l}`}
+                            style={{ ...inpDark, width: 104, padding: '7px 9px' }}
+                            aria-label={`Início do treino de ${d.l}`}
                           />
-                          <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>início do treino (opcional)</span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>às</span>
+                          <input
+                            type="time"
+                            value={(nucleoEditForm.horarios_fim_treino as Record<string, string> | undefined)?.[d.k] || ''}
+                            onChange={e => setNucleoEditForm(f => f && ({ ...f, horarios_fim_treino: { ...(f.horarios_fim_treino as Record<string, string> | undefined), [d.k]: e.target.value } }))}
+                            style={{ ...inpDark, width: 104, padding: '7px 9px' }}
+                            aria-label={`Término do treino de ${d.l}`}
+                          />
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>início e fim (opcional)</span>
                         </div>
                       ))}
                     </div>
@@ -6831,8 +6847,8 @@ _Portal Aluno_`
                             method: 'PATCH',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(souGestor
-                              ? { id: nucleoEditForm.id, nome: nucleoEditForm.nome, endereco: nucleoEditForm.endereco, cidade: nucleoEditForm.cidade, estado: nucleoEditForm.estado, telefone: nucleoEditForm.telefone, email: nucleoEditForm.email, lat: nucleoEditForm.lat, lng: nucleoEditForm.lng, dias_treino: nucleoEditForm.dias_treino, horarios_treino: nucleoEditForm.horarios_treino, tolerancia_min: nucleoEditForm.tolerancia_min, admin_username: nucleoEditAuth.user, admin_password: nucleoEditAuth.pass }
-                              : { id: nucleoEditForm.id, nome: nucleoEditForm.nome, endereco: nucleoEditForm.endereco, cidade: nucleoEditForm.cidade, estado: nucleoEditForm.estado, telefone: nucleoEditForm.telefone, email: nucleoEditForm.email, lat: nucleoEditForm.lat, lng: nucleoEditForm.lng, dias_treino: nucleoEditForm.dias_treino, horarios_treino: nucleoEditForm.horarios_treino, tolerancia_min: nucleoEditForm.tolerancia_min, nucleo_login: nucleoEditAuth.user, nucleo_password: nucleoEditAuth.pass }
+                              ? { id: nucleoEditForm.id, nome: nucleoEditForm.nome, endereco: nucleoEditForm.endereco, cidade: nucleoEditForm.cidade, estado: nucleoEditForm.estado, telefone: nucleoEditForm.telefone, email: nucleoEditForm.email, lat: nucleoEditForm.lat, lng: nucleoEditForm.lng, dias_treino: nucleoEditForm.dias_treino, horarios_treino: nucleoEditForm.horarios_treino, horarios_fim_treino: nucleoEditForm.horarios_fim_treino, tolerancia_min: nucleoEditForm.tolerancia_min, admin_username: nucleoEditAuth.user, admin_password: nucleoEditAuth.pass }
+                              : { id: nucleoEditForm.id, nome: nucleoEditForm.nome, endereco: nucleoEditForm.endereco, cidade: nucleoEditForm.cidade, estado: nucleoEditForm.estado, telefone: nucleoEditForm.telefone, email: nucleoEditForm.email, lat: nucleoEditForm.lat, lng: nucleoEditForm.lng, dias_treino: nucleoEditForm.dias_treino, horarios_treino: nucleoEditForm.horarios_treino, horarios_fim_treino: nucleoEditForm.horarios_fim_treino, tolerancia_min: nucleoEditForm.tolerancia_min, nucleo_login: nucleoEditAuth.user, nucleo_password: nucleoEditAuth.pass }
                             ),
                           });
                           const data = await res.json();

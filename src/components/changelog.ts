@@ -76,6 +76,18 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.5.3',
+    data: '2026-10-02',
+    titulo: 'Termo correto em cada conta e horário de treino valendo de verdade',
+    descricao: 'Ao trocar de conta ou perfil, o app recalcula o status do termo (não herda mais o "assinado" da conta anterior), e a trava de horário da presença passa a usar a janela realmente cadastrada pelo núcleo — início e término.',
+    descricaoAluno: 'Ao trocar de conta ou perfil, o termo de cada aluno agora aparece com o status certo (não herda mais o "assinado" de outra conta), e a presença passa a respeitar de verdade o horário do treino do seu núcleo.',
+    itens: [
+      { categoria: 'correcoes', texto: 'Corrigido: ao criar/entrar em outra conta no mesmo dispositivo, o termo aparecia como "já assinado" com a assinatura de outra conta de teste — o estado era herdado do perfil anterior. Agora o status e a assinatura são recalculados a cada troca.' },
+      { categoria: 'correcoes', texto: 'A trava de horário da presença não estava sendo aplicada: o servidor lia um formato antigo de horário que nenhum núcleo usava. Agora vale a janela real — presença aceita de X min antes do início até X min depois do término (tolerância do núcleo). Sem horário cadastrado, segue liberada no dia de treino inteiro.' },
+      { categoria: 'melhorias', publico: 'admin', texto: 'Gerenciar Núcleo: além do horário de início, agora cada dia de treino tem horário de TÉRMINO — os dois alimentam a janela de presença junto com a tolerância.' },
+    ],
+  },
+  {
     versao: '1.5.2',
     data: '2026-10-02',
     titulo: 'Termo mais claro e horário de treino sob controle',

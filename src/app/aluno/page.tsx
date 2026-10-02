@@ -802,7 +802,7 @@ export default function AlunoPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             student: {
-              id: session!.student_id,
+              id: alvoPerfil, // perfil aberto (tutelado) — nunca a conta por baixo
               nome_completo: student?.nome_completo || '',
               graduacao: student?.graduacao || '',
               nucleo: student.nucleo,
@@ -839,21 +839,26 @@ export default function AlunoPage() {
     finally { setJustLoading(false); }
   };
 
-  // Populate termo form when student data is loaded
+  // Populate termo form when student data is loaded — sempre REINICIA o estado
+  // ao trocar de aluno/perfil (sem isso, "termo assinado" e a assinatura
+  // desenhada do perfil anterior vazavam para o aluno seguinte)
   useEffect(() => {
-    if (student) {
-      setTermoForm({
-        nome_responsavel: student.nome_responsavel as string || '',
-        cpf_responsavel: student.cpf_responsavel as string || '',
-      });
-      if (student.assinatura_responsavel) setTermoSaved(true);
+    if (!student) return;
+    const assinado = !!student.assinatura_responsavel;
+    setTermoForm({
+      nome_responsavel: student.nome_responsavel as string || '',
+      cpf_responsavel: student.cpf_responsavel as string || '',
+    });
+    setTermoSaved(assinado);
+    setTermoAssinatura('');
+    setTermoAssinaturaPng(null);
+    setTermoMsg('');
+    if (assinado) {
       // Assinatura registrada volta como imagem (para o documento impresso)
-      if (student.assinatura_responsavel && !termoAssinaturaPng) {
-        fetch(`/api/termo?id=${student.id}`)
-          .then(r => (r.ok ? r.json() : null))
-          .then(d => { if (d?.assinatura_png) setTermoAssinaturaPng(d.assinatura_png); })
-          .catch(() => {});
-      }
+      fetch(`/api/termo?id=${student.id}`)
+        .then(r => (r.ok ? r.json() : null))
+        .then(d => { if (d?.assinatura_png) setTermoAssinaturaPng(d.assinatura_png); })
+        .catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student?.id, student?.assinatura_responsavel]);

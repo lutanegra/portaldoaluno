@@ -6,6 +6,7 @@ import {
   defaultPasswordForSlug,
   sanitizeDiasTreino,
   sanitizeHorariosTreino,
+  sanitizeHorariosFimTreino,
   parseToleranciaMin,
   pickColorForSlug,
   loadCreds,
@@ -188,6 +189,7 @@ export async function POST(req: NextRequest) {
         lng: body.lng ? parseFloat(String(body.lng)) : null,
         dias_treino: dias,
         horarios_treino: sanitizeHorariosTreino(body.horarios_treino),
+        horarios_fim_treino: sanitizeHorariosFimTreino(body.horarios_fim_treino),
         tolerancia_min: parseToleranciaMin(body.tolerancia_min) ?? null,
         admin_login: adminLogin,
         ativo: true,
@@ -358,6 +360,9 @@ export async function PATCH(req: NextRequest) {
     }
     if (body.horarios_treino !== undefined) {
       updates.horarios_treino = sanitizeHorariosTreino(body.horarios_treino);
+    }
+    if (body.horarios_fim_treino !== undefined) {
+      updates.horarios_fim_treino = sanitizeHorariosFimTreino(body.horarios_fim_treino);
     }
     const tolerancia = parseToleranciaMin(body.tolerancia_min);
     if (tolerancia !== undefined) {

@@ -249,6 +249,19 @@ export function sanitizeHorariosTreino(input: unknown): Record<string, string> {
   return out;
 }
 
+/** Horário de TÉRMINO por dia — mesmo formato de sanitizeHorariosTreino. */
+export function sanitizeHorariosFimTreino(input: unknown): Record<string, string> {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  const out: Record<string, string> = {};
+  for (const [dia, valor] of Object.entries(input as Record<string, unknown>)) {
+    if (!(DIAS_SEMANA as readonly string[]).includes(dia)) continue;
+    if (typeof valor !== 'string') continue;
+    const m = valor.trim().match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+    if (m) out[dia] = `${m[1].padStart(2, '0')}:${m[2]}`;
+  }
+  return out;
+}
+
 /** Tolerância em minutos (0–120). Inválida → undefined (mantém a atual). */
 export function parseToleranciaMin(input: unknown): number | undefined {
   if (input === null || input === '' || input === undefined) return undefined;
