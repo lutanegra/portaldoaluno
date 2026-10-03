@@ -76,6 +76,18 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.6.5',
+    data: '2026-10-03',
+    titulo: 'Gestão completa de responsáveis no painel',
+    descricao: 'A aba Responsáveis virou gestão completa: editar dados pessoais da conta, criar ou editar o acesso (usuário, e-mail, telefone e senha), resetar senha, vincular dependente já cadastrado, excluir acesso e remover função — tudo com sessão do painel validada no servidor.',
+    descricaoAluno: 'Melhorias no painel de administração para a gestão das contas de responsáveis. Nada muda para você no app.',
+    itens: [
+      { categoria: 'melhorias', publico: 'admin', texto: 'Aba Responsáveis completa: ✏️ Editar dados (nome, contato e endereço), ➕ Criar acesso (usuário e senha, com matrícula automática quando o perfil é de aluno), 🔑 Editar acesso, 🔒 Resetar senha, 👨‍👩‍👧 Vincular dependente já cadastrado (busca por nome ou matrícula), Excluir acesso e Remover função.' },
+      { categoria: 'correcoes', publico: 'admin', texto: 'Contas de responsável "invisíveis": quem tinha perfil de responsável criado sem a marcação de tipo na conta não aparecia na aba Responsáveis e entrava na chamada como aluna. O sistema agora detecta e classifica essas contas corretamente (caso real corrigido na base).' },
+      { categoria: 'correcoes', publico: 'admin', texto: 'Chamada, relatórios de Quantitativo e Uniformes e o CSV de backup agora excluem qualquer conta que não seja um perfil de aluno de verdade (responsável sem matrícula e sem núcleo não entra mais em nenhuma lista de alunos).' },
+    ],
+  },
+  {
     versao: '1.6.4',
     data: '2026-10-03',
     titulo: 'Relatório de Uniformes e graduação infantil corrigida',

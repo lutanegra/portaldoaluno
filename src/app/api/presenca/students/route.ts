@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { readPanelSession } from '@/lib/panelSession';
 import { loadCreds, accIsGeral, accNucleos } from '@/lib/panelCredentials';
+import { ehPerfilAluno } from '@/lib/conta';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,8 +47,9 @@ export async function GET(req: NextRequest) {
 
     let list = (data || []) as Array<Record<string, unknown>>;
 
-    // Perfis só-responsável não participam da chamada
-    list = list.filter(s => s.conta_tipo !== 'responsavel');
+    // Perfis que não são alunos (só responsável, ou responsável sem matrícula
+    // e sem núcleo) não participam da chamada
+    list = list.filter(s => ehPerfilAluno(s as { conta_tipo?: string | null; ordem_inscricao?: number | null; nucleo?: string | null }));
 
     if (adminNucleos.length > 0) {
       // Núcleos do admin: aceita registros gravados com slug ou com nome do núcleo

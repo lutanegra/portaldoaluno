@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { readPanelSession } from '@/lib/panelSession';
 import { loadCreds, accIsGeral, accNucleos } from '@/lib/panelCredentials';
 import { appendAudit } from '@/lib/audit';
+import { ehPerfilAluno } from '@/lib/conta';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -62,8 +63,9 @@ export async function GET(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: 'Falha ao carregar alunos.' }, { status: 500 });
 
-  // Somente perfis de aluno (contas só-responsável não fazem parte do quantitativo).
-  const perfisAluno = (alunos || []).filter(a => a.conta_tipo !== 'responsavel');
+  // Somente perfis de aluno (contas de responsável sem matrícula e sem núcleo
+  // não fazem parte do quantitativo).
+  const perfisAluno = (alunos || []).filter(a => ehPerfilAluno(a));
 
   const filtrados = nucleoLower
     ? perfisAluno.filter(a => String(a.nucleo || '').trim().toLowerCase() === nucleoLower)

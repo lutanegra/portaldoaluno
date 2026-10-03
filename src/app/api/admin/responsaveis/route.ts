@@ -62,20 +62,22 @@ export async function GET(req: NextRequest) {
   // Contas de responsável (students.conta_tipo) — gestão na aba dedicada
   const { data: contasResp } = await supabase
     .from('students')
-    .select('id, nome_completo, nucleo, foto_url, conta_tipo, ordem_inscricao, created_at')
+    .select('id, nome_completo, nucleo, foto_url, conta_tipo, ordem_inscricao, telefone, email, created_at')
     .in('conta_tipo', ['responsavel', 'responsavel_aluno'])
     .is('deleted_at', null)
     .order('nome_completo', { ascending: true });
 
   // Acesso (mapa de contas do app) e dependentes por responsável
-  let contasComAcesso = new Set<string>();
+  const acessoPorConta = new Map<string, { username: string; email: string }>();
   try {
     const { data: urlData } = await supabase.storage.from('photos').createSignedUrl('config/aluno-auth.json', 30);
     if (urlData?.signedUrl) {
       const res = await fetch(urlData.signedUrl, { cache: 'no-store' });
       if (res.ok) {
-        const map = (await res.json()) as Record<string, { student_id?: string; email?: string }>;
-        contasComAcesso = new Set(Object.values(map).map(a => a.student_id || ''));
+        const map = (await res.json()) as Record<string, { student_id?: string; username?: string; email?: string }>;
+        for (const a of Object.values(map)) {
+          if (a.student_id) acessoPorConta.set(a.student_id, { username: a.username || '', email: a.email || '' });
+        }
       }
     }
   } catch { /* sem mapa de contas */ }
@@ -138,6 +140,7 @@ export async function GET(req: NextRequest) {
       .filter(c => nucleos === 'geral' || responsaveisVisiveis.has(c.id) || alunosVisiveis.has(c.id))
       .map(c => {
         const deps = dependentesPorGuardian.get(c.id) || [];
+        const acesso = acessoPorConta.get(c.id) || null;
         return {
           student_id: c.id,
           nome: c.nome_completo,
@@ -146,7 +149,11 @@ export async function GET(req: NextRequest) {
           conta_tipo: c.conta_tipo,
           tem_matricula: c.ordem_inscricao != null,
           matricula: c.ordem_inscricao != null ? String(c.ordem_inscricao).padStart(3, '0') : null,
-          tem_acesso: contasComAcesso.has(c.id),
+          tem_acesso: !!acesso,
+          acesso_username: acesso?.username || null,
+          acesso_email: acesso?.email || null,
+          telefone: c.telefone || null,
+          email: c.email || null,
           eh_perfil_responsavel: guardiansSet.has(c.id),
           dependentes: deps.map(d => ({ id: d.id, nome: d.nome, status: d.status })),
           criado_em: c.created_at,
@@ -395,6 +402,97 @@ export async function POST(req: NextRequest) {
   }
 
   /* ── CONTAS DE RESPONSÁVEL (aba dedicada) ────────────────────────────────── */
+
+  if (action === 'editar-dados') {
+    // Edita os dados pessoais da conta de responsável (mesma integridade da
+    // edição de alunos: nome no padrão "Nome Sobrenome", sem duplicar nomes).
+    const studentId = String(body.student_id || '');
+    if (!studentId) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
+    if (nucleos !== 'geral') {
+      // Visibilidade: núcleo próprio OU vínculo ativo com aluno do núcleo
+      const { data: alvo } = await supabase
+        .from('students').select('nucleo').eq('id', studentId).maybeSingle();
+      let visivel = !!alvo && alunoDentroDosNucleos(alvo as { nucleo?: string | null }, nucleos);
+      if (!visivel) {
+        const { data: linksAlvo } = await supabase
+          .from('guardian_links').select('student_id')
+          .eq('guardian_student_id', studentId).eq('status', 'active');
+        const ids = (linksAlvo || []).map(l => l.student_id);
+        if (ids.length > 0) {
+          const { data: alunosDosLinks } = await supabase
+            .from('students').select('id, nucleo').in('id', ids);
+          visivel = (alunosDosLinks || []).some(a => alunoDentroDosNucleos(a as { nucleo?: string | null }, nucleos));
+        }
+      }
+      if (!visivel) return NextResponse.json({ error: 'Fora dos seus núcleos.' }, { status: 403 });
+    }
+
+    const { chaveDeNome, capitalizarNome } = await import('@/lib/nome');
+    const payload: Record<string, unknown> = {};
+    if (body.nome !== undefined) {
+      const nome = capitalizarNome(String(body.nome || '').trim());
+      if (nome.length < 3) return NextResponse.json({ error: 'Informe o nome completo.' }, { status: 400 });
+      const chave = chaveDeNome(nome);
+      const { data: conflito } = await supabase
+        .from('students').select('id, nome_completo')
+        .neq('id', studentId)
+        .is('deleted_at', null)
+        .ilike('nome_completo', nome);
+      if ((conflito || []).some(c => chaveDeNome(c.nome_completo) === chave)) {
+        return NextResponse.json({ error: 'Já existe uma conta com este nome no sistema.' }, { status: 409 });
+      }
+      payload.nome_completo = nome;
+    }
+    for (const campo of ['telefone', 'cep', 'endereco', 'numero', 'complemento', 'bairro', 'cidade', 'estado']) {
+      if (body[campo] !== undefined) payload[campo] = String(body[campo] || '').trim() || null;
+    }
+    if (body.email !== undefined) {
+      const email = String(body.email || '').trim().toLowerCase() || null;
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return NextResponse.json({ error: 'E-mail inválido.' }, { status: 400 });
+      }
+      if (email) {
+        const { data: conflitoEmail } = await supabase
+          .from('students').select('id, nome_completo')
+          .neq('id', studentId)
+          .is('deleted_at', null)
+          .eq('email', email)
+          .maybeSingle();
+        if (conflitoEmail) {
+          return NextResponse.json({ error: `Este e-mail já está cadastrado para ${conflitoEmail.nome_completo}.` }, { status: 409 });
+        }
+      }
+      payload.email = email;
+    }
+    if (Object.keys(payload).length === 0) {
+      return NextResponse.json({ error: 'Nada para atualizar.' }, { status: 400 });
+    }
+    const { error } = await supabase.from('students').update(payload).eq('id', studentId);
+    if (error) return NextResponse.json({ error: 'Não foi possível salvar os dados.' }, { status: 500 });
+    // Mantém o acesso (login/e-mail) coerente quando o e-mail muda
+    if (payload.email !== undefined) {
+      try {
+        const AUTH_KEY = 'config/aluno-auth.json';
+        const { data: urlData } = await supabase.storage.from('photos').createSignedUrl(AUTH_KEY, 30);
+        if (urlData?.signedUrl) {
+          const res = await fetch(urlData.signedUrl, { cache: 'no-store' });
+          if (res.ok) {
+            const authMap = (await res.json()) as Record<string, { email?: string }>;
+            if (authMap[studentId]) {
+              authMap[studentId].email = String(payload.email || '');
+              const blob = new Blob([JSON.stringify(authMap, null, 2)], { type: 'application/json' });
+              await supabase.storage.from('photos').upload(AUTH_KEY, blob, { upsert: true });
+            }
+          }
+        }
+      } catch { /* conta sem acesso — ok */ }
+    }
+    await appendAudit({
+      actor: `painel:${sess.u}`, actor_type: 'admin', action: 'responsavel_dados_editados',
+      target_id: studentId, details: { campos: Object.keys(payload) },
+    });
+    return NextResponse.json({ success: true });
+  }
 
   if (action === 'remover-funcao') {
     // Remove a FUNÇÃO de responsável da conta (students.conta_tipo → null e

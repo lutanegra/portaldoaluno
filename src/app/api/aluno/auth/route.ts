@@ -906,6 +906,156 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, email_sent, email_skipped });
     }
 
+    /* ── CRIAR ACESSO (exclusivo do painel — restaurado do 49adcf8) ─────────── */
+    // Usado na aba Responsáveis ("Acesso · criar") e na aba Contas de Alunos.
+    // Cria login/senha para uma conta que ainda não tem acesso; atribui
+    // matrícula CCLN quando o perfil é de aluno (nunca para só-responsável).
+    if (action === 'admin-create-auto') {
+      if (!readPanelSession(req)) {
+        return NextResponse.json({ error: 'Sessão administrativa necessária.' }, { status: 401 });
+      }
+      const { student_id, password, email: emailOverride } = body;
+      if (!student_id) return NextResponse.json({ error: 'student_id é obrigatório.' }, { status: 400 });
+      if (String(password || '').length < 6) return NextResponse.json({ error: 'A senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
+
+      const authMap = await loadAuthMap();
+      if (authMap[String(student_id)]) {
+        return NextResponse.json({ error: 'Esta conta já possui acesso.', existing: { username: authMap[String(student_id)].username } }, { status: 409 });
+      }
+
+      const { data: dbStudent } = await supabaseAdmin
+        .from('students')
+        .select('id, nome_completo, telefone, email, nucleo, conta_tipo, ordem_inscricao')
+        .eq('id', String(student_id))
+        .maybeSingle();
+      if (!dbStudent) return NextResponse.json({ error: 'Conta não encontrada.' }, { status: 404 });
+
+      // Só-responsável não recebe matrícula nem acesso de aluno
+      if (dbStudent.conta_tipo === 'responsavel') {
+        return NextResponse.json({ error: 'Contas só de responsável não recebem acesso de aluno.' }, { status: 422 });
+      }
+
+      // Matrícula: banco é a fonte da verdade (mesma lógica do gerador de ID)
+      let displayId = dbStudent.ordem_inscricao != null
+        ? `CCLN-${String(dbStudent.ordem_inscricao).padStart(3, '0')}`
+        : '';
+      if (!displayId) {
+        const { data: maxRow } = await supabaseAdmin
+          .from('students')
+          .select('ordem_inscricao')
+          .not('ordem_inscricao', 'is', null)
+          .order('ordem_inscricao', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const nextId = (maxRow?.ordem_inscricao ?? 0) + 1;
+        const { error: errId } = await supabaseAdmin
+          .from('students').update({ ordem_inscricao: nextId }).eq('id', String(student_id));
+        if (errId) return NextResponse.json({ error: 'Não foi possível atribuir a matrícula.' }, { status: 500 });
+        displayId = `CCLN-${String(nextId).padStart(3, '0')}`;
+        // Compatibilidade com telas antigas: recria o mapa no Storage (melhor-esforço)
+        try {
+          const { data: todos } = await supabaseAdmin
+            .from('students').select('id, ordem_inscricao')
+            .not('ordem_inscricao', 'is', null)
+            .order('ordem_inscricao', { ascending: true });
+          const idMap: Record<string, string> = {};
+          for (const s of todos || []) {
+            if (s.ordem_inscricao != null) idMap[s.id] = `CCLN-${String(s.ordem_inscricao).padStart(3, '0')}`;
+          }
+          await supabaseAdmin.storage.from(BUCKET).upload('config/aluno-id-map.json', new Blob([JSON.stringify(idMap, null, 2)], { type: 'application/json' }), { upsert: true });
+        } catch { /* melhor-esforço */ }
+      }
+
+      // Usuário: primeiro nome + número da matrícula, único no mapa
+      const slugify = (s: string) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
+      const firstName = String(dbStudent.nome_completo || 'aluno').split(' ')[0];
+      const idNum = displayId.replace('CCLN-', '') || String(Date.now()).slice(-4);
+      let username = `${slugify(firstName)}${idNum}`;
+      let suffix = 0;
+      while (Object.values(authMap).some(a => a.username.toLowerCase() === username.toLowerCase())) {
+        suffix++;
+        username = `${slugify(firstName)}${idNum}${suffix}`;
+      }
+
+      const emailNorm = String(emailOverride || dbStudent.email || '').trim().toLowerCase();
+      if (emailNorm && Object.values(authMap).some(a => a.email && a.email.toLowerCase() === emailNorm)) {
+        return NextResponse.json({ error: 'Este e-mail já está vinculado a outra conta.' }, { status: 409 });
+      }
+
+      const salt = generateSalt();
+      authMap[String(student_id)] = {
+        student_id: String(student_id),
+        username,
+        email: emailNorm,
+        password_hash: hashPassword(String(password), salt),
+        salt,
+        active: true,
+        phone: String(dbStudent.telefone || '').replace(/\D/g, ''),
+        created_at: new Date().toISOString(),
+      };
+      await saveAuthMap(authMap as unknown as Record<string, unknown>);
+      await appendAudit({
+        actor: readPanelSession(req)?.u || 'painel', actor_type: 'admin',
+        action: 'aluno_acesso_criado_painel', target_id: String(student_id),
+        details: { username, display_id: displayId },
+      });
+
+      return NextResponse.json({ success: true, username, display_id: displayId, email: emailNorm });
+    }
+
+    /* ── EDITAR ACESSO (exclusivo do painel — restaurado do 49adcf8) ────────── */
+    // Usado na aba Responsáveis e na aba Contas de Alunos: usuário, e-mail,
+    // telefone e senha de uma conta existente.
+    if (action === 'admin-edit-account') {
+      if (!readPanelSession(req)) {
+        return NextResponse.json({ error: 'Sessão administrativa necessária.' }, { status: 401 });
+      }
+      const { student_id, new_username, new_email, new_phone, new_password } = body;
+      if (!student_id) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
+      const authMap = await loadAuthMap();
+      const account = authMap[String(student_id)];
+      if (!account) return NextResponse.json({ error: 'Conta não encontrada.' }, { status: 404 });
+
+      if (new_username && String(new_username).trim() !== account.username) {
+        const taken = Object.values(authMap).find(
+          a => a.student_id !== String(student_id) && a.username.toLowerCase() === String(new_username).trim().toLowerCase(),
+        );
+        if (taken) return NextResponse.json({ error: 'Nome de usuário já está em uso por outra conta.' }, { status: 409 });
+        account.username = String(new_username).trim();
+      }
+
+      if (new_email !== undefined) {
+        const emailNorm = String(new_email || '').trim().toLowerCase();
+        if (emailNorm && Object.values(authMap).some(a => a.student_id !== String(student_id) && a.email && a.email.toLowerCase() === emailNorm)) {
+          return NextResponse.json({ error: 'Este e-mail já está vinculado a outra conta.' }, { status: 409 });
+        }
+        account.email = emailNorm;
+        try { await supabaseAdmin.from('students').update({ email: new_email || null }).eq('id', String(student_id)); } catch { /* coluna pode não existir */ }
+      }
+
+      if (new_phone !== undefined) {
+        const digits = String(new_phone || '').replace(/\D/g, '');
+        account.phone = digits ? (digits.startsWith('55') ? digits : `55${digits}`) : '';
+        try { await supabaseAdmin.from('students').update({ telefone: new_phone || null }).eq('id', String(student_id)); } catch { /* melhor-esforço */ }
+      }
+
+      if (new_password) {
+        if (String(new_password).length < 6) return NextResponse.json({ error: 'A senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
+        const salt = generateSalt();
+        account.password_hash = hashPassword(String(new_password), salt);
+        account.salt = salt;
+      }
+
+      authMap[String(student_id)] = account;
+      await saveAuthMap(authMap as unknown as Record<string, unknown>);
+      await appendAudit({
+        actor: readPanelSession(req)?.u || 'painel', actor_type: 'admin',
+        action: 'aluno_acesso_editado_painel', target_id: String(student_id),
+        details: { username: account.username, senha_alterada: !!new_password },
+      });
+      return NextResponse.json({ success: true, username: account.username, email: account.email, phone: account.phone });
+    }
+
     // ── ACCOUNT STATUS (Responsáveis & Perfis) ────────────────────────────────
     // Fonte do card "Responsáveis & Perfis": faixa de idade, autorização de
     // adolescente (15–17), perfil de responsável, tutelados e solicitações.

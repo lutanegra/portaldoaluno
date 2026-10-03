@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { appendAudit } from '@/lib/audit';
 import { getTenantId } from '@/lib/tenants';
+import { ehPerfilAluno } from '@/lib/conta';
 
 /**
  * Backup automático dos alunos.
@@ -120,9 +121,10 @@ function cleanName(n: unknown): string {
 }
 
 export function buildStudentsCsv(allStudents: Record<string, unknown>[]): string {
-  // Perfis só-responsável não são alunos — não entram no CSV canônico
+  // Perfis que não são alunos (só responsável, ou responsável sem matrícula e
+  // sem núcleo) não entram no CSV canônico
   const rows = allStudents
-    .filter(s => s.conta_tipo !== 'responsavel')
+    .filter(s => ehPerfilAluno(s as { conta_tipo?: string | null; ordem_inscricao?: number | null; nucleo?: string | null }))
     .map(s =>
     COLUMNS.map(col => {
       const v = s[col];
