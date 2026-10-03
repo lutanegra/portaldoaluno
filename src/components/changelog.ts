@@ -76,6 +76,17 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.6.3',
+    data: '2026-10-03',
+    titulo: 'Ficha de Uniforme com botão dedicado no painel',
+    descricao: 'A Ficha de Uniforme agora tem um botão próprio na aba Alunos: abre a ficha do aluno com nome, matrícula e foto, e o admin preenche camisa, calça e camisas do grupo/projeto direto ali — sem passar pelo cadastro completo.',
+    descricaoAluno: 'Solicitações de uniforme continuam funcionando como sempre: as medidas que você informa no pedido ficam registradas no seu cadastro para a confecção.',
+    itens: [
+      { categoria: 'novo', publico: 'admin', texto: 'Botão 👕 Uniforme na linha de cada aluno e na tela "Ver": abre a ficha dedicada com nome, matrícula, núcleo e foto no topo, campos de camisa (tamanho), calça (altura, cintura, gavião) e camisas do grupo/projeto, e salvamento imediato sem tocar no restante do cadastro.' },
+      { categoria: 'melhorias', publico: 'admin', texto: 'A ficha já abre preenchida com as medidas colhidas na solicitação do aluno, e o que for ajustado pela administração é o mesmo dado que o app exibe.' },
+    ],
+  },
+  {
     versao: '1.6.2',
     data: '2026-10-03',
     titulo: 'Recuperação de senha restabelecida e formulários legíveis',

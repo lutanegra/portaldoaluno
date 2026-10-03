@@ -954,6 +954,14 @@ export default function AdminPage() {
   const [sortOrder, setSortOrder] = useState<'nome-asc' | 'nome-desc' | 'grad-asc' | 'grad-desc' | 'data-asc' | 'data-desc'>('nome-asc');
   const [selected, setSelected] = useState<Student | null>(null);
   const [editing, setEditing] = useState<Student | null>(null);
+  // Ficha de Uniforme — atalho dedicado (botão na linha do aluno / tela Ver)
+  const [uniformAluno, setUniformAluno] = useState<Student | null>(null);
+  const [uniformForm, setUniformForm] = useState({
+    camisa_tamanho: '', calca_altura: '', calca_cintura: '',
+    calca_gaviao: '', camisa_grupo: '', camisa_projeto: '',
+  });
+  const [uniformSaving, setUniformSaving] = useState(false);
+  const [uniformMsg, setUniformMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({});
   const [saving, setSaving] = useState(false);
   const [editFotoFile, setEditFotoFile] = useState<File | null>(null);
@@ -1633,6 +1641,53 @@ export default function AdminPage() {
     } as Student);
     setEditFotoFile(null);
     setSelected(null);
+  };
+
+  // ── Ficha de Uniforme — abre o modal dedicado com as medidas atuais do aluno ──
+  const abrirUniforme = (student: Student) => {
+    setUniformAluno(student);
+    setUniformForm({
+      camisa_tamanho: (student.uniforme_camisa_tamanho || '').trim(),
+      calca_altura:   (student.uniforme_calca_altura   || '').trim(),
+      calca_cintura:  (student.uniforme_calca_cintura  || '').trim(),
+      calca_gaviao:   (student.uniforme_calca_gaviao   || '').trim(),
+      camisa_grupo:   (student.uniforme_camisa_grupo   || '').trim(),
+      camisa_projeto: (student.uniforme_camisa_projeto || '').trim(),
+    });
+    setUniformMsg(null);
+  };
+
+  const salvarUniforme = async () => {
+    if (!uniformAluno || uniformSaving) return;
+    setUniformSaving(true);
+    setUniformMsg(null);
+    try {
+      const payload = {
+        uniforme_camisa_tamanho: uniformForm.camisa_tamanho.trim() || null,
+        uniforme_calca_altura:   uniformForm.calca_altura.trim()   || null,
+        uniforme_calca_cintura:  uniformForm.calca_cintura.trim()  || null,
+        uniforme_calca_gaviao:   uniformForm.calca_gaviao.trim()   || null,
+        uniforme_camisa_grupo:   uniformForm.camisa_grupo.trim()   || null,
+        uniforme_camisa_projeto: uniformForm.camisa_projeto.trim() || null,
+      };
+      const { error } = await supabase
+        .from('students')
+        .update(payload)
+        .eq('id', uniformAluno.id);
+      if (error) {
+        setUniformMsg({ tipo: 'erro', texto: 'Erro ao salvar: ' + error.message });
+        return;
+      }
+      logAdminAction('edit_student', `uniforme id:${uniformAluno.id} nome:${uniformAluno.nome_completo}`);
+      // Atualiza a linha na lista e no painel "Ver" sem recarregar tudo
+      const atualizado = { ...uniformAluno, ...payload } as Student;
+      setStudents(prev => prev.map(s => s.id === atualizado.id ? atualizado : s));
+      setSelected(prev => prev?.id === atualizado.id ? atualizado : prev);
+      setUniformAluno(atualizado);
+      setUniformMsg({ tipo: 'ok', texto: 'Medidas do uniforme salvas para ' + (atualizado.nome_completo || 'o aluno') + '.' });
+    } finally {
+      setUniformSaving(false);
+    }
   };
 
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -3107,6 +3162,13 @@ export default function AdminPage() {
                             style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', color: '#a78bfa', padding: '5px 10px', borderRadius: 7, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}
                           >
                             {t('admin_edit')}
+                          </button>
+                          <button
+                            onClick={() => abrirUniforme(student)}
+                            title="Ficha de Uniforme"
+                            style={{ background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.3)', color: '#d97706', padding: '5px 10px', borderRadius: 7, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}
+                          >
+                            👕
                           </button>
                           <button
                             onClick={() => { setChartStudent(student); fetchHistorico(); }}
@@ -8671,10 +8733,108 @@ _Portal Aluno_`
                 Editar Cadastro
               </button>
               <button
+                onClick={() => abrirUniforme(selected)}
+                style={{ flex: 1, padding: '10px', background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.35)', color: '#d97706', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem' }}
+              >
+                👕 Uniforme
+              </button>
+              <button
                 onClick={() => { setDeleteConfirm(selected); setSelected(null); }}
                 style={{ flex: 1, padding: '10px', background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#f87171', borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
               >
                 Excluir Cadastro
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Uniforme Modal — ficha dedicada do aluno */}
+      {uniformAluno && (
+        <div className="modal-overlay" onClick={() => setUniformAluno(null)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
+            <h2>
+              👕 Ficha de Uniforme
+              <button className="modal-close" onClick={() => setUniformAluno(null)}>&times;</button>
+            </h2>
+
+            {/* Cabeçalho com nome, matrícula e foto */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, padding: '12px 16px', background: 'var(--bg-input)', borderRadius: 12, border: '1px solid var(--border)' }}>
+              {uniformAluno.foto_url ? (
+                <img src={uniformAluno.foto_url} alt="" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '3px solid #FF9200', flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,146,0,0.12)', border: '3px solid rgba(255,146,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF9200" strokeWidth="1.5"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a6 6 0 0112 0v2"/></svg>
+                </div>
+              )}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{uniformAluno.nome_completo}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                  Matrícula: <strong style={{ fontFamily: 'monospace', color: '#FF9200' }}>{studentDisplayIds[uniformAluno.id] || (uniformAluno.ordem_inscricao ? `CCLN-${String(uniformAluno.ordem_inscricao).padStart(3, '0')}` : '—')}</strong>
+                  {uniformAluno.nucleo ? <> · Núcleo: <strong>{uniformAluno.nucleo}</strong></> : null}
+                </div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', marginTop: 3 }}>
+                  {uniformMsg?.tipo === 'ok' ? '✓ Medidas salvas' : (uniformForm.camisa_tamanho || uniformForm.calca_altura || uniformForm.calca_cintura || uniformForm.calca_gaviao || uniformForm.camisa_grupo || uniformForm.camisa_projeto ? 'Preenchido — pode atualizar quando quiser' : 'Nenhuma medida lançada ainda')}
+                </div>
+              </div>
+              <div style={{ marginLeft: 'auto', textAlign: 'right', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.66rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'rgba(217,119,6,0.12)', color: '#d97706', border: '1px solid rgba(217,119,6,0.3)', whiteSpace: 'nowrap' }}>
+                  Lançado pela administração
+                </span>
+                <div style={{ fontSize: '0.64rem', color: 'var(--text-tertiary)', marginTop: 4 }}>só o painel edita</div>
+              </div>
+            </div>
+
+            <div className="detail-grid" style={{ gap: 14 }}>
+              <div className="detail-item detail-full" style={{ paddingBottom: 6, borderBottom: '1px solid var(--border)' }}>
+                <span className="detail-label" style={{ color: '#d97706' }}>Medidas para confecção</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Camisa — Tamanho</span>
+                <input className="edit-input" value={uniformForm.camisa_tamanho} onChange={e => setUniformForm(p => ({ ...p, camisa_tamanho: e.target.value }))} placeholder="PP, P, M, G, GG, 8, 10…" />
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Calça — Altura</span>
+                <input className="edit-input" value={uniformForm.calca_altura} onChange={e => setUniformForm(p => ({ ...p, calca_altura: e.target.value }))} placeholder="Ex: 1,70 m" />
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Calça — Cintura</span>
+                <input className="edit-input" value={uniformForm.calca_cintura} onChange={e => setUniformForm(p => ({ ...p, calca_cintura: e.target.value }))} placeholder="Ex: 78 cm" />
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Calça — Gavião</span>
+                <input className="edit-input" value={uniformForm.calca_gaviao} onChange={e => setUniformForm(p => ({ ...p, calca_gaviao: e.target.value }))} placeholder="Ex: 96 cm" />
+              </div>
+
+              <div className="detail-item detail-full" style={{ paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                <span className="detail-label" style={{ color: '#d97706' }}>Camisas</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Camisa do Grupo (tamanho)</span>
+                <input className="edit-input" value={uniformForm.camisa_grupo} onChange={e => setUniformForm(p => ({ ...p, camisa_grupo: e.target.value }))} placeholder="Tamanho" />
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Camisa do Projeto (tamanho)</span>
+                <input className="edit-input" value={uniformForm.camisa_projeto} onChange={e => setUniformForm(p => ({ ...p, camisa_projeto: e.target.value }))} placeholder="Tamanho" />
+              </div>
+            </div>
+
+            {uniformMsg && (
+              <div style={{ marginTop: 12, padding: '9px 12px', borderRadius: 9, fontSize: '0.8rem', fontWeight: 600, ...(uniformMsg.tipo === 'ok'
+                ? { background: 'rgba(22,163,74,0.12)', border: '1px solid rgba(22,163,74,0.3)', color: '#16a34a' }
+                : { background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', color: '#f87171' }) }}>
+                {uniformMsg.texto}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+              <button onClick={salvarUniforme} disabled={uniformSaving}
+                style={{ flex: 1, padding: '11px', background: uniformSaving ? 'var(--border)' : '#FF9200', border: 'none', color: uniformSaving ? 'var(--text-tertiary)' : '#1a1a1a', borderRadius: 10, cursor: uniformSaving ? 'wait' : 'pointer', fontWeight: 800, fontSize: '0.9rem' }}>
+                {uniformSaving ? 'Salvando…' : 'Salvar Uniforme'}
+              </button>
+              <button onClick={() => setUniformAluno(null)}
+                style={{ padding: '11px 18px', background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
+                Fechar
               </button>
             </div>
           </div>
