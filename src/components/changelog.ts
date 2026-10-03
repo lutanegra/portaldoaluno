@@ -76,6 +76,17 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.6.4',
+    data: '2026-10-03',
+    titulo: 'Relatório de Uniformes e graduação infantil corrigida',
+    descricao: 'A aba Relatórios ganhou o relatório de Uniformes: lista de alunos com matrícula e todos os tamanhos lançados, pronta para gerar PDF ou imprimir para a confecção. Na edição do cadastro do painel, escolher o tipo Infantil agora mostra de fato as graduações infantis.',
+    descricaoAluno: 'Melhorias no painel de administração: novo relatório de uniformes e correção na lista de graduações infantis. Nada muda para você no app.',
+    itens: [
+      { categoria: 'novo', publico: 'admin', texto: 'Relatório de Uniformes na aba Relatórios: escolhe o núcleo (ou todos), mostra nome, matrícula, camisa, altura, cintura e gavião da calça e as camisas do grupo/projeto, com totais de alunos com e sem medidas. O PDF sai em A4 em pé, com a logo do grupo e células em branco para quem ainda não tem medida lançada — dá para anotar à mão na hora da conferência com a confecção.' },
+      { categoria: 'correcoes', publico: 'admin', texto: 'Editar Cadastro: ao selecionar o tipo de graduação Infantil, a lista mostrava apenas graduações adultas (a escolha era gravada num formato que a comparação não reconhecia). Corrigido — e trocar o tipo agora limpa a corda incompatível, como já acontece no app do aluno.' },
+    ],
+  },
+  {
     versao: '1.6.3',
     data: '2026-10-03',
     titulo: 'Ficha de Uniforme com botão dedicado no painel',

@@ -22,6 +22,7 @@ import NotificationsCenter from '@/components/NotificationsCenter';
 import BackupPanel from '@/components/BackupPanel';
 import BackupSistemaPanel from '@/components/BackupSistemaPanel';
 import QuantitativoPanel from '@/components/QuantitativoPanel';
+import UniformesPanel from '@/components/UniformesPanel';
 import VersionsCard from '@/components/VersionsCard';
 import AppFooter from '@/components/AppFooter';
 import { IconHome, IconUser, IconLogout, IconMenu, IconX, IconFolder, IconMapPin, IconWallet, IconChart, IconChevron, IconMedal, IconDoc, IconGear, IconTrash, IconEye, IconLock, IconBell, IconNote, IconMusic, IconBerimbau, IconBag, IconStar, IconWarn, IconMail as IconMailOk, IconRefresh, IconShieldCheck, IconMail, IconPencil, IconClock } from '@/components/icons';
@@ -1076,7 +1077,7 @@ export default function AdminPage() {
   const [loadingRelatorio, setLoadingRelatorio] = useState(false);
   const [relDias, setRelDias] = useState(30);
   // Aba Relatórios: qual relatório o admin escolheu ver
-  const [relatorioTipo, setRelatorioTipo] = useState<'presencas' | 'quantitativo'>('presencas');
+  const [relatorioTipo, setRelatorioTipo] = useState<'presencas' | 'quantitativo' | 'uniformes'>('presencas');
   const [presencas, setPresencas] = useState<PresencaCount[]>([]);
   const [totalTreinos, setTotalTreinos] = useState(0);
   const [filterPresencaNucleo, setFilterPresencaNucleo] = useState('');
@@ -3969,11 +3970,12 @@ _Portal Aluno_`
             {([
               { key: 'presencas' as const, icon: '✓', titulo: 'Presenças e Frequência', desc: 'Gráfico mensal, faltas e frequência por aluno', pronto: true },
               { key: 'quantitativo' as const, icon: '👥', titulo: 'Quantitativo de Alunos', desc: 'Prestação de contas: totais, idades e responsáveis', pronto: true },
+              { key: 'uniformes' as const, icon: '👕', titulo: 'Uniformes', desc: 'Tamanhos de camisa e calça por aluno para confecção', pronto: true },
               { key: 'financeiro' as const, icon: '💰', titulo: 'Financeiro (em breve)', desc: 'Mensalidades, pagamentos e inadimplência', pronto: false },
             ]).map(op => (
               <button
                 key={op.key}
-                onClick={() => { if (op.pronto) setRelatorioTipo(op.key as 'presencas' | 'quantitativo'); }}
+                onClick={() => { if (op.pronto) setRelatorioTipo(op.key as 'presencas' | 'quantitativo' | 'uniformes'); }}
                 disabled={!op.pronto}
                 aria-pressed={op.pronto && relatorioTipo === op.key}
                 style={{
@@ -4460,8 +4462,10 @@ _Portal Aluno_`
             })()}
           </div>
             </>
-          ) : (
+          ) : relatorioTipo === 'quantitativo' ? (
             <QuantitativoPanel nucleoFilter={nucleoFilter} dynamicNucleos={dynamicNucleos} />
+          ) : (
+            <UniformesPanel nucleoFilter={nucleoFilter} dynamicNucleos={dynamicNucleos} />
           )}
         </div>
       )}
@@ -8940,7 +8944,19 @@ _Portal Aluno_`
               </div>
               <div className="detail-item">
                 <span className="detail-label">Tipo Graduação</span>
-                <select className="edit-input" name="tipo_graduacao" value={editForm.tipo_graduacao || ''} onChange={handleEditChange}>
+                {/* v1.6.4: o valor é normalizado para minúsculas ao trocar (antes gravava
+                    "Infantil" e a comparação da lista esperava "infantil" — nunca casava).
+                    Trocar o tipo limpa a corda incompatível, como no app do aluno. */}
+                <select
+                  className="edit-input"
+                  name="tipo_graduacao"
+                  value={(editForm.tipo_graduacao || '').toLowerCase() === 'infantil' ? 'Infantil' : 'Adulto'}
+                  onChange={e => setEditForm(prev => ({
+                    ...prev,
+                    tipo_graduacao: e.target.value === 'Infantil' ? 'infantil' : 'adulta',
+                    graduacao: '',
+                  }))}
+                >
                   <option value="Adulto">Adulto</option>
                   <option value="Infantil">Infantil</option>
                 </select>
