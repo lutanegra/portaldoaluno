@@ -30,6 +30,23 @@
   --shadow-pop: 0 18px 50px rgba(0, 0, 0, 0.55);
   --radius-card: 18px;
   --radius-input: 12px;
+  /* Apelidos legados usados por telas antigas do painel (aliás de --bg-input,
+     --bg-card e --text-primary). Sem eles, selects/inputs herdam fundo branco
+     do navegador e o texto some. */
+  --input-bg: #111111;
+  --card-bg: #161616;
+}
+
+/* Dropdowns nativos: o navegador pinta a lista com cores do sistema (fundo
+   branco + texto branco no tema escuro). Fixar cores do app em TODOS os
+   selects e options do produto. */
+select {
+  background-color: var(--bg-input, #111111);
+  color: var(--text-primary, #f5f5f4);
+}
+select option, select optgroup {
+  background-color: var(--bg-card, #161616);
+  color: var(--text-primary, #f5f5f4);
 }
 
 * {

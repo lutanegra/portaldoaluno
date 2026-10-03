@@ -76,6 +76,19 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.6.2',
+    data: '2026-10-03',
+    titulo: 'Recuperação de senha restabelecida e formulários legíveis',
+    descricao: 'O fluxo "Esqueci minha senha" voltou a funcionar no painel e no app do aluno: o código chega por e-mail e a senha pode ser redefinida de ponta a ponta. Os menus de seleção do painel voltaram a mostrar o texto (fundos e cores corrigidos), e a busca de aluno em Resetar senha e Editar conta agora lista também as contas de responsável.',
+    descricaoAluno: 'O "Esqueci minha senha" do app voltou a funcionar: informe seu e-mail ou usuário, receba o código e defina a nova senha. Antes, o sistema dizia "conta não encontrada" mesmo com a conta existindo.',
+    itens: [
+      { categoria: 'correcoes', publico: 'admin', texto: 'Resetar senha de aluno funcionando de novo na aba Contas: a ação tinha sido apagada do servidor numa revisão antiga e respondia "Ação desconhecida". Também foi restaurada a verificação do código de 6 dígitos antes de salvar a nova senha.' },
+      { categoria: 'correcoes', texto: 'O "Esqueci minha senha" do app dizia "conta não encontrada" para qualquer conta: o campo digitado viajava com um nome que o servidor não lia. Corrigido — o código de recuperação volta a ser enviado e a senha redefinida.' },
+      { categoria: 'interface', publico: 'admin', texto: 'Menus de seleção do painel estavam com fundo e texto brancos ao mesmo tempo (impossível ler as opções). Corrigido de forma global: todas as listas do sistema agora usam as cores do app, dentro e fora da lista aberta.' },
+      { categoria: 'melhorias', publico: 'admin', texto: 'Resetar senha e Editar conta agora listam todas as contas de acesso, incluindo as de responsável — antes só apareciam alunos.' },
+    ],
+  },
+  {
     versao: '1.6.1',
     data: '2026-10-03',
     titulo: 'Termo só com cadastro completo e fim das contas duplicadas',

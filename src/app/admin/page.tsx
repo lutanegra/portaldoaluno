@@ -11726,7 +11726,10 @@ Assim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍�
                   {alunoContas
                     .filter(acc => {
                       if (activeNucleo === 'geral') return true;
+                      // Responsável sem núcleo próprio (só-responsável) não tem
+                      // linha em students com nucleo — não pode sumir da lista.
                       const st = students.find(s => s.id === acc.student_id);
+                      if (!st?.nucleo) return true;
                       return st?.nucleo === nucleoFilter;
                     })
                     .map(acc => {
@@ -11791,7 +11794,10 @@ Assim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍�
                   {alunoContas
                     .filter(acc => {
                       if (activeNucleo === 'geral') return true;
+                      // Responsável sem núcleo próprio (só-responsável) não tem
+                      // linha em students com nucleo — não pode sumir da lista.
                       const st = students.find(s => s.id === acc.student_id);
+                      if (!st?.nucleo) return true;
                       return st?.nucleo === nucleoFilter;
                     })
                     .map(acc => {
@@ -11851,7 +11857,10 @@ Assim que recebermos, criaremos sua conta e enviaremos os dados de acesso 👍�
                   {alunoContas
                     .filter(acc => {
                       if (activeNucleo === 'geral') return true;
+                      // Responsável sem núcleo próprio (só-responsável) não tem
+                      // linha em students com nucleo — não pode sumir da lista.
                       const st = students.find(s => s.id === acc.student_id);
+                      if (!st?.nucleo) return true;
                       return st?.nucleo === nucleoFilter;
                     })
                     .map(acc => {

@@ -1456,7 +1456,9 @@ export default function AlunoPage() {
                   });
                   const data = await res.json();
                   if (!data.success || !data.student_id) {
-                    setForgotMsg('Conta não encontrada. Verifique o e-mail ou usuário informado.');
+                    // Mostra o motivo real do servidor (ex.: falha no envio) e
+                    // só usa a mensagem genérica quando não há motivo informado.
+                    setForgotMsg(data.error || 'Conta não encontrada. Verifique o e-mail ou usuário informado.');
                   } else if (data.send_failed) {
                     // Sem canal de envio — mostra mensagem de contato do núcleo
                     setForgotMsg('Não foi possível enviar o código agora. Procure o admin do seu núcleo para redefinir sua senha.');

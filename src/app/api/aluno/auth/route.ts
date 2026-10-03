@@ -167,7 +167,9 @@ export async function POST(req: NextRequest) {
     /* ── Recuperação de senha por e-mail (sem sessão) ─────────────────────── */
 
     if (action === 'forgot-password') {
-      const ident = String(body.username || body.email || '').trim().toLowerCase();
+      // O cliente envia "username_or_email" (campo antigo preservado); aceitar
+      // também username/email por compatibilidade.
+      const ident = String(body.username_or_email || body.username || body.email || '').trim().toLowerCase();
       if (!ident) return NextResponse.json({ error: 'Informe seu usuário ou e-mail.' }, { status: 400 });
       const authMap = await loadAuthMap();
       const acc = Object.values(authMap).find(
@@ -193,7 +195,8 @@ export async function POST(req: NextRequest) {
       const ok = await enviarOtpEmail(acc.email, acc.username || '', otp);
       if (!ok) return NextResponse.json({ error: 'Não foi possível enviar o e-mail agora. Tente novamente em instantes.' }, { status: 502 });
       await appendAudit({ actor: acc.username || acc.student_id, actor_type: 'student', action: 'aluno_senha_reset_solicitado', target_id: acc.student_id });
-      return NextResponse.json({ success: true, message: 'Se existir uma conta com esse e-mail, o código foi enviado.' });
+      // student_id é necessário para o cliente avançar para o passo do código.
+      return NextResponse.json({ success: true, student_id: acc.student_id, message: 'Se existir uma conta com esse e-mail, o código foi enviado.' });
     }
 
     if (action === 'verify-reset-code') {
@@ -221,24 +224,28 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'reset-password') {
-      const code = String(body.code || '').replace(/\D/g, '');
-      const nova = String(body.password || '');
+      // Cliente envia otp + new_password + student_id; aceitar também code/password.
+      const code = String(body.otp || body.code || '').replace(/\D/g, '');
+      const nova = String(body.new_password || body.password || '');
+      const targetId = String(body.student_id || '');
       const ident = String(body.username || body.email || '').trim().toLowerCase();
       if (nova.length < 6) return NextResponse.json({ error: 'A senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
       const otpKey = 'config/aluno-otp.json';
       const stored = (await loadFromStorage(otpKey)) as Record<string, { hash: string; expira_em: number; tentativas: number; target: string }>;
-      const accEntry = Object.entries(await loadAuthMap()).find(
-        ([, a]) => a.username?.toLowerCase() === ident || (a.email || '').toLowerCase() === ident
-      );
-      const entry = accEntry ? stored[accEntry[1].student_id] : undefined;
+      const authMap = await loadAuthMap();
+      // Alvo: student_id direto quando informado; senão localiza por usuário/e-mail.
+      const acc = (targetId && authMap[targetId])
+        ? authMap[targetId]
+        : Object.values(authMap).find(
+          a => a.username?.toLowerCase() === ident || (a.email || '').toLowerCase() === ident
+        );
+      const entry = acc ? stored[acc.student_id] : undefined;
       if (!entry || entry.expira_em < Date.now()) {
         return NextResponse.json({ error: 'Código expirado. Solicite um novo.' }, { status: 400 });
       }
       if (hashOtp(code) !== entry.hash) {
         return NextResponse.json({ error: 'Código incorreto.' }, { status: 400 });
       }
-      const authMap = await loadAuthMap();
-      const acc = accEntry?.[1];
       if (!acc) return NextResponse.json({ error: 'Conta não encontrada.' }, { status: 404 });
       const salt = crypto.randomBytes(16).toString('hex');
       authMap[acc.student_id] = {
@@ -833,6 +840,70 @@ export async function POST(req: NextRequest) {
       } catch {}
 
       return NextResponse.json({ success: true, reclassificado_como: reclassificadoComo });
+    }
+
+    /* ── VERIFICAR OTP (fluxo "Esqueci minha senha" do app do aluno) ───────── */
+    // O passo final chama 'verify-otp-reset' e depois 'reset-password'; ambos
+    // precisam existir. Código/hash/tentativas vivem em config/aluno-otp.json.
+    if (action === 'verify-otp-reset') {
+      const code = String(body.otp || body.code || '').replace(/\D/g, '');
+      const target = String(body.student_id || '');
+      if (!target || code.length !== 6) return NextResponse.json({ error: 'Informe o código de 6 dígitos.' }, { status: 400 });
+      const otpKey = 'config/aluno-otp.json';
+      const stored = (await loadFromStorage(otpKey)) as Record<string, { hash: string; expira_em: number; tentativas: number; target: string }>;
+      const entry = stored[target];
+      if (!entry || entry.expira_em < Date.now()) {
+        return NextResponse.json({ error: 'Código expirado. Solicite um novo.' }, { status: 400 });
+      }
+      if ((entry.tentativas || 0) >= OTP_MAX_TENTATIVAS) {
+        return NextResponse.json({ error: 'Muitas tentativas. Solicite um novo código.' }, { status: 429 });
+      }
+      if (hashOtp(code) !== entry.hash) {
+        stored[target].tentativas = (stored[target].tentativas || 0) + 1;
+        const blob = new Blob([JSON.stringify(stored, null, 2)], { type: 'application/json' });
+        await supabaseAdmin.storage.from(BUCKET).upload(otpKey, blob, { upsert: true });
+        return NextResponse.json({ error: 'Código incorreto.' }, { status: 400 });
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    /* ── REDEFINIR SENHA DE ALUNO (exclusivo do painel) ────────────────────── */
+    // Usada pela aba Contas ("Resetar / Alterar senha de aluno"). Exige sessão
+    // administrativa válida (cookie pa_admin) — nunca senha pela URL/corpo.
+    if (action === 'admin-reset-password') {
+      if (!readPanelSession(req)) {
+        return NextResponse.json({ error: 'Sessão administrativa necessária.' }, { status: 401 });
+      }
+      const { student_id, new_password, notify_email, student_name } = body;
+      if (!student_id) return NextResponse.json({ error: 'student_id obrigatório.' }, { status: 400 });
+      if (String(new_password || '').length < 6) return NextResponse.json({ error: 'A senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
+      const authMap = await loadAuthMap();
+      if (!authMap[String(student_id)]) return NextResponse.json({ error: 'Conta não encontrada.' }, { status: 404 });
+
+      const salt = crypto.randomBytes(16).toString('hex');
+      authMap[String(student_id)] = {
+        ...authMap[String(student_id)],
+        password_hash: hashPassword(String(new_password), salt),
+        salt,
+      };
+      await saveAuthMap(authMap);
+      await appendAudit({ actor: readPanelSession(req)?.u || 'painel', actor_type: 'admin', action: 'aluno_senha_redefinida_painel', target_id: String(student_id) });
+
+      // Avisa o aluno por e-mail (quando informado e houver serviço configurado)
+      let email_sent = false;
+      let email_skipped = false;
+      const destino = String(notify_email || '').trim();
+      if (destino.includes('@')) {
+        try {
+          const { buildNewPasswordHtml, sendEmail } = await import('@/lib/email');
+          const tmpl = buildNewPasswordHtml(String(student_name || 'Aluno'), String(new_password), `${process.env.NEXT_PUBLIC_APP_URL || ''}/aluno`);
+          const result = await sendEmail(destino, tmpl.subject, tmpl.html);
+          email_sent = !!result.sent;
+          email_skipped = !!result.skipped;
+        } catch { /* melhor-esforço */ }
+      }
+
+      return NextResponse.json({ success: true, email_sent, email_skipped });
     }
 
     // ── ACCOUNT STATUS (Responsáveis & Perfis) ────────────────────────────────
