@@ -877,6 +877,24 @@ export default function AlunoViewer({ studentId, onClose }: AlunoViewerProps) {
                     <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>{String(value)}</span>
                   </div>
                 ))}
+                {(() => {
+                  const u = student as Record<string, string | null | undefined>;
+                  const linhas: Array<{ label: string; value: string }> = [
+                    { label: 'Uniforme — Camisa (tamanho)', value: (u.uniforme_camisa_tamanho as string) || '—' },
+                    { label: 'Uniforme — Calça (altura)', value: (u.uniforme_calca_altura as string) || '—' },
+                    { label: 'Uniforme — Calça (cintura)', value: (u.uniforme_calca_cintura as string) || '—' },
+                    { label: 'Uniforme — Calça (gavião)', value: (u.uniforme_calca_gaviao as string) || '—' },
+                    { label: 'Uniforme — Camisa do Grupo', value: (u.uniforme_camisa_grupo as string) || '—' },
+                    { label: 'Uniforme — Camisa do Projeto', value: (u.uniforme_camisa_projeto as string) || '—' },
+                  ];
+                  if (!linhas.some(l => l.value !== '—')) return null;
+                  return linhas.map(({ label, value }) => (
+                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid #f3f4f6' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{label}</span>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>{value}</span>
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
           </div>

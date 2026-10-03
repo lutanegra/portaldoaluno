@@ -76,6 +76,17 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.6.0',
+    data: '2026-10-03',
+    titulo: 'Ficha de Uniforme do aluno',
+    descricao: 'Nova função administrativa: as medidas do uniforme de cada aluno (camisa, calça e camisas do grupo/projeto) ficam vinculadas ao cadastro, lançadas pelo painel — e são colhidas automaticamente quando o aluno solicita um uniforme.',
+    itens: [
+      { categoria: 'novo', publico: 'admin', texto: 'Painel: no Editar Cadastro, nova seção "Uniforme" junto da graduação — tamanho da camisa, altura, cintura e gavião da calça, e tamanhos da camisa do grupo e do projeto. Os dados aparecem no botão "Ver" do aluno e na visualização completa do aluno.' },
+      { categoria: 'novo', texto: 'Ao solicitar um uniforme na aba financeiro, o aluno agora também informa as medidas (podendo deixar em branco o que já está no cadastro); o que preencher é salvo automaticamente no cadastro para a confecção.' },
+      { categoria: 'melhorias', publico: 'admin', texto: 'Painel: ao abrir a solicitação de uniforme, o formulário do aluno já vem preenchido com as medidas salvas, evitando redigitar.' },
+    ],
+  },
+  {
     versao: '1.5.5',
     data: '2026-10-02',
     titulo: 'Folha de Chamada para assinatura em papel',

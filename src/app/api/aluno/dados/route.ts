@@ -173,6 +173,9 @@ export async function PATCH(req: NextRequest) {
       'autoriza_imagem',
       'nome_responsavel', 'cpf_responsavel', 'foto_url',
       'desenvolvimento_atipico',
+      // Ficha de Uniforme (medidas colhidas na solicitação; admin edita no painel)
+      'uniforme_camisa_tamanho', 'uniforme_calca_altura', 'uniforme_calca_cintura',
+      'uniforme_calca_gaviao', 'uniforme_camisa_grupo', 'uniforme_camisa_projeto',
     ];
 
     const BOOLEAN_FIELDS = new Set(['autoriza_imagem']);

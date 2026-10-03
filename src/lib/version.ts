@@ -13,9 +13,9 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-export const APP_VERSION = '1.5.5';
+export const APP_VERSION = '1.6.0';
 
-export const APP_RELEASE_DATE = '2026-10-02';
+export const APP_RELEASE_DATE = '2026-10-03';
 
 export function versionLabel(): string {
   return `v${APP_VERSION}`;

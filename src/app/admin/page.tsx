@@ -122,6 +122,13 @@ interface Student {
   checkin_nucleo?: string | null;
   condicoes_atipicas?: string | null; // JSON array string (legado, Storage)
   desenvolvimento_atipico?: string[] | string | null; // coluna do banco — o que o ALUNO marca em Meus Dados
+  // Ficha de Uniforme (migration add_uniforme_fields_to_students)
+  uniforme_camisa_tamanho?: string | null;
+  uniforme_calca_altura?: string | null;
+  uniforme_calca_cintura?: string | null;
+  uniforme_calca_gaviao?: string | null;
+  uniforme_camisa_grupo?: string | null;
+  uniforme_camisa_projeto?: string | null;
 }
 
 /** Condições atípicas do aluno unindo as duas fontes: banco (aluno) + Storage (painel). */
@@ -1712,6 +1719,13 @@ export default function AdminPage() {
         nome_social: (editForm as any).nome_social !== undefined ? ((editForm as any).nome_social || null) : null,
         sexo: (editForm as any).sexo !== undefined ? ((editForm as any).sexo || null) : null,
         email: (editForm as any).email !== undefined ? ((editForm as any).email || null) : null,
+        // Ficha de Uniforme — lançada pelo admin ("vazio" grava null, permitindo apagar)
+        uniforme_camisa_tamanho: ((editForm as any).uniforme_camisa_tamanho ?? '').trim() || null,
+        uniforme_calca_altura:   ((editForm as any).uniforme_calca_altura   ?? '').trim() || null,
+        uniforme_calca_cintura:  ((editForm as any).uniforme_calca_cintura  ?? '').trim() || null,
+        uniforme_calca_gaviao:   ((editForm as any).uniforme_calca_gaviao   ?? '').trim() || null,
+        uniforme_camisa_grupo:   ((editForm as any).uniforme_camisa_grupo   ?? '').trim() || null,
+        uniforme_camisa_projeto: ((editForm as any).uniforme_camisa_projeto ?? '').trim() || null,
       };
 
       let { error } = await supabase
@@ -8343,6 +8357,31 @@ _Portal Aluno_`
                   </div>
                 );
               })()}
+              {(() => {
+                const u = selected as Student;
+                const temUniforme = !!(u.uniforme_camisa_tamanho || u.uniforme_calca_altura || u.uniforme_calca_cintura || u.uniforme_calca_gaviao || u.uniforme_camisa_grupo || u.uniforme_camisa_projeto);
+                if (!temUniforme) return null;
+                return (
+                  <div className="detail-item detail-full" style={{ marginTop: 8 }}>
+                    <span className="detail-label" style={{ color: '#d97706' }}>👕 Uniforme</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 6, marginTop: 6 }}>
+                      {([
+                        ['Camisa — tamanho', u.uniforme_camisa_tamanho],
+                        ['Calça — altura', u.uniforme_calca_altura],
+                        ['Calça — cintura', u.uniforme_calca_cintura],
+                        ['Calça — gavião', u.uniforme_calca_gaviao],
+                        ['Camisa do Grupo', u.uniforme_camisa_grupo],
+                        ['Camisa do Projeto', u.uniforme_camisa_projeto],
+                      ] as const).map(([rotulo, valor]) => (
+                        <div key={rotulo} style={{ background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.25)', borderRadius: 7, padding: '6px 10px' }}>
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.66rem', marginBottom: 2 }}>{rotulo}</div>
+                          <div style={{ fontWeight: 700, color: valor ? 'var(--text-primary)' : 'var(--text-secondary)', fontStyle: valor ? 'normal' : 'italic', fontSize: '0.8rem' }}>{valor || '—'}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* ── Botão Histórico de Graduações ── */}
@@ -8756,6 +8795,33 @@ _Portal Aluno_`
                     return lista.map(g => <option key={g} value={g}>{g}{nomenclaturaGraduacao[g] ? ` — ${nomenclaturaGraduacao[g]}` : ''}</option>);
                   })()}
                 </select>
+              </div>
+              <div className="detail-item detail-full" style={{ paddingTop: 8, borderTop: '1px solid var(--border)', marginTop: 4 }}>
+                <span className="detail-label" style={{ marginBottom: 8 }}>👕 Uniforme</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Camisa — Tamanho</span>
+                <input className="edit-input" name="uniforme_camisa_tamanho" placeholder="PP, P, M, G, GG, 8, 10…" value={(editForm as any).uniforme_camisa_tamanho || ''} onChange={handleEditChange} />
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Calça — Altura</span>
+                <input className="edit-input" name="uniforme_calca_altura" placeholder="Ex: 1,70 m" value={(editForm as any).uniforme_calca_altura || ''} onChange={handleEditChange} />
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Calça — Cintura</span>
+                <input className="edit-input" name="uniforme_calca_cintura" placeholder="Ex: 78 cm" value={(editForm as any).uniforme_calca_cintura || ''} onChange={handleEditChange} />
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Calça — Gavião</span>
+                <input className="edit-input" name="uniforme_calca_gaviao" placeholder="Ex: 96 cm" value={(editForm as any).uniforme_calca_gaviao || ''} onChange={handleEditChange} />
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Camisa do Grupo (tamanho)</span>
+                <input className="edit-input" name="uniforme_camisa_grupo" placeholder="Tamanho" value={(editForm as any).uniforme_camisa_grupo || ''} onChange={handleEditChange} />
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Camisa do Projeto (tamanho)</span>
+                <input className="edit-input" name="uniforme_camisa_projeto" placeholder="Tamanho" value={(editForm as any).uniforme_camisa_projeto || ''} onChange={handleEditChange} />
               </div>
               <div className="detail-item detail-full" style={{ paddingTop: 8, borderTop: '1px solid var(--border)', marginTop: 4 }}>
                 <span className="detail-label" style={{ marginBottom: 8 }}>Endereço</span>

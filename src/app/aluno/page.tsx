@@ -312,6 +312,8 @@ export default function AlunoPage() {
   const [solUnifItem, setSolUnifItem] = useState('');
   const [solUnifTam, setSolUnifTam] = useState('M');
   const [solUnifQtd, setSolUnifQtd] = useState(1);
+  // Medidas colhidas junto da solicitação de uniforme — gravadas no cadastro (uniforme_*)
+  const [solUnifMedidas, setSolUnifMedidas] = useState({ camisaTamanho: '', altura: '', cintura: '', gaviao: '', camisaGrupo: '', camisaProjeto: '' });
   const [solUnifSaving, setSolUnifSaving] = useState(false);
   const [solUnifMsg, setSolUnifMsg] = useState('');
 
@@ -2120,7 +2122,21 @@ export default function AlunoPage() {
                 <div style={{ background: 'linear-gradient(155deg, rgba(30,30,32,0.72), rgba(15,15,17,0.8))', border: `1.5px solid ${showSolUniforme ? '#d97706' : '#2e2e2e'}`, borderRadius: 14, padding: '14px 16px', flex: 1, minWidth: 240 }}>
                   <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fb923c', marginBottom: showSolUniforme ? 12 : 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconBag size={14} /> Solicitar Uniforme</span>
-                    <button onClick={() => { setShowSolUniforme(v=>!v); setSolUnifMsg(''); }}
+                    <button onClick={() => {
+                      setShowSolUniforme(v=>!v); setSolUnifMsg('');
+                      // Pré-preenche com as medidas já salvas no cadastro (admin ou solicitação anterior)
+                      if (!showSolUniforme) {
+                        const su = student as Record<string, string | null | undefined> | null;
+                        setSolUnifMedidas(p => ({
+                          camisaTamanho: p.camisaTamanho   || String(su?.uniforme_camisa_tamanho || ''),
+                          altura:        p.altura          || String(su?.uniforme_calca_altura   || ''),
+                          cintura:       p.cintura         || String(su?.uniforme_calca_cintura  || ''),
+                          gaviao:        p.gaviao          || String(su?.uniforme_calca_gaviao   || ''),
+                          camisaGrupo:   p.camisaGrupo     || String(su?.uniforme_camisa_grupo   || ''),
+                          camisaProjeto: p.camisaProjeto   || String(su?.uniforme_camisa_projeto || ''),
+                        }));
+                      }
+                    }}
                       style={{ background: showSolUniforme ? 'rgba(217,119,6,0.12)' : 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.3)', color: '#fb923c', borderRadius: 8, padding: '3px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
                       {showSolUniforme ? '✕ Fechar' : '+ Solicitar'}
                     </button>
@@ -2148,6 +2164,49 @@ export default function AlunoPage() {
                         </div>
                       </div>
                       {solUnifMsg && <div style={{ fontSize: '0.78rem', color: solUnifMsg.startsWith('✓') ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{solUnifMsg}</div>}
+                      {(() => {
+                        // Medidas do uniforme — gravadas automaticamente no cadastro
+                        // do aluno quando a solicitação é enviada.
+                        const unif = solUnifMedidas;
+                        return (
+                          <div style={{ background: 'rgba(217,119,6,0.06)', border: '1px solid rgba(217,119,6,0.2)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#fb923c' }}>Medidas para confecção do uniforme</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.7rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 3 }}>Camisa — tamanho</label>
+                                <input value={unif.camisaTamanho} onChange={e => setSolUnifMedidas(p => ({ ...p, camisaTamanho: e.target.value }))} placeholder="Ex: M"
+                                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 10px', fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }} />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.7rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 3 }}>Altura</label>
+                                <input value={unif.altura} onChange={e => setSolUnifMedidas(p => ({ ...p, altura: e.target.value }))} placeholder="Ex: 1,70 m"
+                                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 10px', fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }} />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.7rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 3 }}>Cintura</label>
+                                <input value={unif.cintura} onChange={e => setSolUnifMedidas(p => ({ ...p, cintura: e.target.value }))} placeholder="Ex: 78 cm"
+                                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 10px', fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }} />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.7rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 3 }}>Gavião</label>
+                                <input value={unif.gaviao} onChange={e => setSolUnifMedidas(p => ({ ...p, gaviao: e.target.value }))} placeholder="Ex: 96 cm"
+                                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 10px', fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }} />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.7rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 3 }}>Camisa do Grupo (tamanho)</label>
+                                <input value={unif.camisaGrupo} onChange={e => setSolUnifMedidas(p => ({ ...p, camisaGrupo: e.target.value }))} placeholder="Ex: M"
+                                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 10px', fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }} />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.7rem', color: '#d4d4d4', fontWeight: 600, marginBottom: 3 }}>Camisa do Projeto (tamanho)</label>
+                                <input value={unif.camisaProjeto} onChange={e => setSolUnifMedidas(p => ({ ...p, camisaProjeto: e.target.value }))} placeholder="Ex: M"
+                                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 10px', fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }} />
+                              </div>
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: '#8f8f8f' }}>Ficam salvas no cadastro — o admin finaliza o pedido no painel.</div>
+                          </div>
+                        );
+                      })()}
                       <button disabled={solUnifSaving || !solUnifItem.trim()} onClick={async () => {
                         if (!session || !solUnifItem.trim()) return;
                         if (!exigirConformidade(pendencias.some(p => p.campo === 'termo') ? 'termo' : 'dados')) return;
@@ -2160,6 +2219,18 @@ export default function AlunoPage() {
                           const updated = { ...ficha, uniformes: [...(ficha.uniformes || []), novoItem], student_id: alvoPerfil };
                           const saveRes = await fetch('/api/financeiro', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) });
                           if (!saveRes.ok) throw new Error();
+                          // Medidas informadas na solicitação são gravadas no cadastro
+                          // (colunas uniforme_*) — só atualiza o que veio preenchido.
+                          const med: Record<string, string> = {};
+                          if (solUnifMedidas.camisaTamanho.trim()) med.uniforme_camisa_tamanho = solUnifMedidas.camisaTamanho.trim();
+                          if (solUnifMedidas.altura.trim())        med.uniforme_calca_altura = solUnifMedidas.altura.trim();
+                          if (solUnifMedidas.cintura.trim())       med.uniforme_calca_cintura = solUnifMedidas.cintura.trim();
+                          if (solUnifMedidas.gaviao.trim())        med.uniforme_calca_gaviao = solUnifMedidas.gaviao.trim();
+                          if (solUnifMedidas.camisaGrupo.trim())   med.uniforme_camisa_grupo = solUnifMedidas.camisaGrupo.trim();
+                          if (solUnifMedidas.camisaProjeto.trim()) med.uniforme_camisa_projeto = solUnifMedidas.camisaProjeto.trim();
+                          if (Object.keys(med).length > 0) {
+                            try { await fetch('/api/aluno/dados', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: alvoPerfil, ...med }) }); } catch { /* não bloqueia a solicitação */ }
+                          }
                           setSolUnifMsg('Solicitação enviada!');
                           setSolUnifItem(''); setSolUnifTam('M'); setSolUnifQtd(1);
                           setFichaFinLoading(true);
