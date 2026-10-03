@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconUser, IconWarn, IconCheck, IconX, IconDoc } from '@/components/icons';
+import { capitalizarNome } from '@/lib/nome';
 
 type Tutorado = {
   student_id: string;
@@ -336,7 +337,17 @@ export default function PerfilGuardiaoCard({ onChanged }: { onChanged?: () => vo
         body: JSON.stringify({ action: 'criar-tutelado', ...novoForm }),
       });
       const d = await res.json();
-      if (!res.ok) { setMsg({ texto: d.error || 'Erro ao cadastrar.', tipo: 'erro' }); return; }
+      if (!res.ok) {
+        // Duplicado: aponta para o caminho certo (anexar por código) em vez de
+        // criar uma segunda conta com o mesmo nome.
+        setMsg({
+          texto: d.duplicado
+            ? `${d.error} Volte e use a opção "Anexar conta existente" com a matrícula e o código gerado na conta do aluno.`
+            : (d.error || 'Erro ao cadastrar.'),
+          tipo: 'erro',
+        });
+        return;
+      }
       setNovoResultado(`${d.nome} cadastrado(a) com a matrícula ${d.matricula}. O perfil já aparece na sua lista de tutelados e no seletor "Quem está usando?".`);
       setNovoForm({ nome_completo: '', data_nascimento: '', cpf: '', nucleo: '', relacao: 'responsavel_legal' });
       await carregar();
@@ -521,7 +532,7 @@ export default function PerfilGuardiaoCard({ onChanged }: { onChanged?: () => vo
                   <p style={{ margin: 0, fontSize: '0.74rem', color: '#737373', lineHeight: 1.5 }}>
                     Para crianças até 14 anos: cria o perfil de aluno <strong>sem conta própria</strong>, já vinculado a você. A matrícula é gerada automaticamente. A partir de 15 anos, o próprio adolescente cria a conta e você o vincula pelo código.
                   </p>
-                  <input aria-label="Nome completo da criança" value={novoForm.nome_completo} onChange={e => setNovoForm(p => ({ ...p, nome_completo: e.target.value }))} placeholder="Nome completo da criança *" style={inputStyle} />
+                  <input aria-label="Nome completo da criança" value={novoForm.nome_completo} onChange={e => setNovoForm(p => ({ ...p, nome_completo: capitalizarNome(e.target.value) }))} placeholder="Nome completo da criança *" style={inputStyle} />
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                     <input aria-label="Data de nascimento" type="date" value={novoForm.data_nascimento} onChange={e => setNovoForm(p => ({ ...p, data_nascimento: e.target.value }))} style={inputStyle} max={new Date().toISOString().slice(0, 10)} />
                     <input aria-label="CPF (opcional)" value={novoForm.cpf} onChange={e => setNovoForm(p => ({ ...p, cpf: e.target.value }))} placeholder="CPF (opcional)" style={inputStyle} inputMode="numeric" />

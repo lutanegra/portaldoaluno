@@ -10,6 +10,7 @@ interface Student {
   id: string;
   nome_completo: string;
   cpf: string;
+  identidade?: string | null;
   data_nascimento: string;
   nome_pai: string;
   nome_mae: string;
@@ -75,7 +76,7 @@ function TermoContent() {
       // Fallback: acesso direto ao Supabase
       const { data, error } = await supabase
         .from('students')
-        .select('id,nome_completo,cpf,data_nascimento,nome_pai,nome_mae,nucleo,nome_responsavel,cpf_responsavel,assinatura_responsavel,assinatura_pai,assinatura_mae,menor_de_idade')
+        .select('id,nome_completo,cpf,identidade,data_nascimento,nome_pai,nome_mae,nucleo,nome_responsavel,cpf_responsavel,assinatura_responsavel,assinatura_pai,assinatura_mae,menor_de_idade')
         .eq('id', id)
         .single();
       if (error || !data) throw new Error(error?.message || 'not found');
@@ -114,6 +115,19 @@ function TermoContent() {
 
   const nucleoFaltando = !String(student?.nucleo || '').trim();
 
+  // ── GATE: cadastro-base completo antes do termo (espelha o servidor) ──────
+  const faltandoBase = !student ? [] : (() => {
+    const out: string[] = [];
+    if (!String(student.nome_completo || '').trim()) out.push('Nome Completo');
+    const cpfD = student.cpf?.replace(/\D/g, '') || '';
+    if (!cpfD || cpfD.length !== 11 || /^(\d)\1{10}$/.test(cpfD)) out.push('CPF do aluno');
+    if (!String(student.identidade || '').trim()) out.push('RG do aluno');
+    if (!String(student.data_nascimento || '').trim()) out.push('Data de Nascimento');
+    if (nucleoFaltando) out.push('Núcleo');
+    return out;
+  })();
+  const cadastroBaseOk = faltandoBase.length === 0;
+
   const handleSave = async () => {
     if (!student) return;
     if (!form.nome_responsavel.trim()) {
@@ -124,8 +138,8 @@ function TermoContent() {
       setErro('Falta a assinatura — desenhe no espaço indicado.');
       return;
     }
-    if (nucleoFaltando) {
-      setErro('Falta o núcleo de treino do aluno — peça ao admin do núcleo para completar o cadastro antes de assinar.');
+    if (!cadastroBaseOk) {
+      setErro(`Complete os dados obrigatórios do cadastro antes de preencher o Termo de Responsabilidade: ${faltandoBase.join(', ')}.`);
       return;
     }
     setErro('');
@@ -288,6 +302,13 @@ function TermoContent() {
           </div>
         )}
 
+        {/* Gate: cadastro-base incompleto — termo indisponível com motivo */}
+        {!saved && !cadastroBaseOk && (
+          <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.4)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, color: '#fbbf24', fontSize: '0.84rem', fontWeight: 600 }}>
+            ⚠ Complete os dados obrigatórios do cadastro antes de preencher o Termo de Responsabilidade. Faltando: <strong>{faltandoBase.join(', ')}</strong>. Peça ao admin do núcleo para completar o cadastro do aluno.
+          </div>
+        )}
+
         {/* Núcleo pendente — o termo precisa dele para ser salvo */}
         {!saved && nucleoFaltando && (
           <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.4)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, color: '#fbbf24', fontSize: '0.84rem', fontWeight: 600 }}>
@@ -317,19 +338,19 @@ function TermoContent() {
         ) : (
           <button
             onClick={handleSave}
-            disabled={saving || !podeAssinar || nucleoFaltando}
+            disabled={saving || !podeAssinar || !cadastroBaseOk}
             style={{
               width: '100%', padding: '16px',
-              background: podeAssinar && !nucleoFaltando ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : 'var(--bg-input)',
-              border: podeAssinar && !nucleoFaltando ? 'none' : '1px solid var(--border)',
-              color: podeAssinar && !nucleoFaltando ? '#fff' : 'var(--text-secondary)',
+              background: podeAssinar && cadastroBaseOk ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : 'var(--bg-input)',
+              border: podeAssinar && cadastroBaseOk ? 'none' : '1px solid var(--border)',
+              color: podeAssinar && cadastroBaseOk ? '#fff' : 'var(--text-secondary)',
               borderRadius: 12, fontWeight: 700, fontSize: '1rem',
-              cursor: podeAssinar && !nucleoFaltando ? 'pointer' : 'not-allowed',
+              cursor: podeAssinar && cadastroBaseOk ? 'pointer' : 'not-allowed',
               transition: 'all 0.2s',
-              boxShadow: podeAssinar && !nucleoFaltando ? '0 4px 16px rgba(220,38,38,0.3)' : 'none',
+              boxShadow: podeAssinar && cadastroBaseOk ? '0 4px 16px rgba(220,38,38,0.3)' : 'none',
             }}
           >
-            {saving ? 'Salvando...' : '✍ Confirmar e Assinar Termo'}
+            {saving ? 'Salvando...' : !cadastroBaseOk ? 'Termo bloqueado — complete o cadastro' : '✍ Confirmar e Assinar Termo'}
           </button>
         )}
       </div>

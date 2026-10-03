@@ -4,6 +4,7 @@ import { readPanelSession } from '@/lib/panelSession';
 import { readAlunoSessionFromReq } from '@/lib/alunoSession';
 import { resolverAtor } from '@/lib/ator';
 import { alunoEmConformidade, pendenciasAluno, resumoPendencias, isValidCPF, isValidRG, cpfDigits } from '@/lib/studentCompliance';
+import { capitalizarNome } from '@/lib/nome';
 
 export const dynamic = 'force-dynamic';
 
@@ -187,6 +188,13 @@ export async function PATCH(req: NextRequest) {
         } else {
           payload[key] = updates[key] === '' ? null : updates[key];
         }
+      }
+    }
+
+    // Nomes sempre gravados no padrão "Nome Sobrenome" (CAPSLOCK vira capitalização)
+    for (const campoNome of ['nome_completo', 'nome_pai', 'nome_mae', 'nome_responsavel']) {
+      if (typeof payload[campoNome] === 'string') {
+        payload[campoNome] = capitalizarNome(payload[campoNome] as string);
       }
     }
 

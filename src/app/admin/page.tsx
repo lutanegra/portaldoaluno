@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getCordaColors, graduacoes, nomenclaturaGraduacao } from '@/lib/graduacoes';
+import { capitalizarNome } from '@/lib/nome';
 import { getCheckins, getHistorico, removeCheckin, CheckinRecord } from '@/lib/checkins';
 import ChamadaPanel from '@/components/ChamadaPanel';
 import Link from 'next/link';
@@ -1684,8 +1685,9 @@ export default function AdminPage() {
       const nucleoIdEdit = dynamicNucleos.find(n => n.nome === editForm.nucleo)?.id;
 
       // Core fields — always present in DB
+      // Nomes gravados no padrão "Nome Sobrenome" (CAPSLOCK vira capitalização)
       const corePayload: Record<string, any> = {
-        nome_completo: editForm.nome_completo,
+        nome_completo: capitalizarNome(editForm.nome_completo || ''),
         cpf: editForm.cpf,
         identidade: editForm.identidade,
         data_nascimento: dataNascEdit,
@@ -1700,9 +1702,9 @@ export default function AdminPage() {
         graduacao: editForm.graduacao,
         tipo_graduacao: (() => { const t = (editForm.tipo_graduacao || (menorDeIdadeComputed ? 'infantil' : 'adulta')).toLowerCase(); return t === 'infantil' ? 'Infantil' : 'Adulto'; })(),
         nucleo: editForm.nucleo,
-        nome_pai: editForm.nome_pai,
-        nome_mae: editForm.nome_mae,
-        nome_responsavel: editForm.nome_responsavel,
+        nome_pai: capitalizarNome(editForm.nome_pai || ''),
+        nome_mae: capitalizarNome(editForm.nome_mae || ''),
+        nome_responsavel: capitalizarNome(editForm.nome_responsavel || ''),
         cpf_responsavel: editForm.cpf_responsavel,
         menor_de_idade: menorDeIdadeComputed,
         autoriza_imagem: !!(editForm as any).autoriza_imagem,

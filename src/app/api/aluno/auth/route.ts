@@ -13,6 +13,7 @@ import { readPanelSession } from '@/lib/panelSession';
 import { PROFILE_COOKIE, profileCookieOptions } from '@/lib/ator';
 import { appendAudit } from '@/lib/audit';
 import { idadeEm, faixaCadastro, mensagemFaixa } from '@/lib/idade';
+import { capitalizarNome, chaveDeNome } from '@/lib/nome';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -512,7 +513,7 @@ export async function POST(req: NextRequest) {
     // aluno: some das listas de alunos via filtro no cliente e nas rotas
     // administrativas; guarda presença/graduação bloqueadas no servidor.
     if (action === 'register-responsavel') {
-      const nomeTrim = String(body.nome_completo || '').trim().replace(/\s+/g, ' ');
+      const nomeTrim = capitalizarNome(String(body.nome_completo || '').replace(/\s+/g, ' ').trim());
       const emailNorm = String(body.email || '').trim().toLowerCase();
       const senha = String(body.password || '');
       const cpfDigitsIn = String(body.cpf || '').replace(/\D/g, '');
@@ -688,7 +689,7 @@ export async function POST(req: NextRequest) {
       type StudentRef = { id: string; nome_completo: string; telefone: string | null; email: string | null; cpf: string | null };
       let target: StudentRef | null = existing ?? null;
       if (!target) {
-        const nomeTrim = nome_completo.trim().replace(/\s+/g, ' ');
+        const nomeTrim = capitalizarNome(nome_completo.trim().replace(/\s+/g, ' '));
         if (nomeTrim.split(' ').filter(Boolean).length < 2) {
           return NextResponse.json({ error: 'Informe seu nome completo (nome e sobrenome).' }, { status: 400 });
         }
@@ -1018,7 +1019,7 @@ export async function POST(req: NextRequest) {
     if (action === 'criar-tutelado') {
       const sessT = readAlunoSessionFromReq(req);
       if (!sessT) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
-      const nomeTrim = String(body.nome_completo || '').trim().replace(/\s+/g, ' ');
+      const nomeTrim = capitalizarNome(String(body.nome_completo || '').replace(/\s+/g, ' ').trim());
       const dataNasc = String(body.data_nascimento || '').slice(0, 10);
       const cpfIn = String(body.cpf || '').replace(/\D/g, '');
       const nucleo = String(body.nucleo || '').trim();
@@ -1037,6 +1038,39 @@ export async function POST(req: NextRequest) {
       const { isValidCPF } = await import('@/lib/studentCompliance');
       if (cpfIn && !isValidCPF(cpfIn)) {
         return NextResponse.json({ error: 'CPF do tutelado inválido.' }, { status: 400 });
+      }
+
+      // ── TRAVA DE DUPLICIDADE: nenhuma segunda conta com o mesmo nome ──────
+      // Ignora maiúsculas/acentos/espaços (JOÃO == Joao == joão). Se o nome já
+      // existe, recusa — o responsável deve VINCULAR o cadastro existente pelo
+      // código de 6 dígitos em vez de criar outro.
+      const chaveNovo = chaveDeNome(nomeTrim);
+      const { data: candidatos } = await supabaseAdmin
+        .from('students')
+        .select('id, nome_completo, deleted_at')
+        .ilike('nome_completo', `${nomeTrim.charAt(0)}%`)
+        .limit(2000);
+      const dupNome = (candidatos || []).find(s => chaveDeNome(s.nome_completo || '') === chaveNovo);
+      if (dupNome) {
+        return NextResponse.json({
+          error: `Já existe um cadastro com o nome "${dupNome.nome_completo}" no sistema. Não é permitido criar outro com o mesmo nome — use "Anexar conta existente" com o código do aluno para vincular este cadastro ao seu perfil.`,
+          duplicado: true,
+          student_id: dupNome.id,
+        }, { status: 409 });
+      }
+      if (cpfIn) {
+        const { data: dupCpf } = await supabaseAdmin
+          .from('students')
+          .select('id, nome_completo')
+          .eq('cpf', cpfIn)
+          .maybeSingle();
+        if (dupCpf) {
+          return NextResponse.json({
+            error: `Este CPF já pertence ao cadastro de "${dupCpf.nome_completo}". Não é permitido criar outro com o mesmo documento.`,
+            duplicado: true,
+            student_id: dupCpf.id,
+          }, { status: 409 });
+        }
       }
 
       const idadeT = idadeEm(dataNasc);

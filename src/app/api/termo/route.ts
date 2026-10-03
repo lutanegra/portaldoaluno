@@ -3,7 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { readPanelSession } from '@/lib/panelSession';
 import { SESSION_COOKIE, verifyAlunoSession } from '@/lib/alunoSession';
-import { isValidCPF, cpfDigits } from '@/lib/studentCompliance';
+import { isValidCPF, cpfDigits, pendenciasAluno, resumoPendencias } from '@/lib/studentCompliance';
+import { menorDeIdade as calcularMenoridade } from '@/lib/idade';
 import { assinaturaPngDataUri } from '@/lib/assinatura';
 
 export const dynamic = 'force-dynamic';
@@ -17,13 +18,24 @@ const admin = createClient(
 const BUCKET = 'photos';
 const DOCS_DIR = 'docs/termos';
 
+/** Campos mínimos que o cadastro do aluno precisa ter antes do termo. */
+function cadastroBaseIncompleto(st: Record<string, unknown>): string[] {
+  const faltando: string[] = [];
+  if (!String(st.nome_completo || '').trim()) faltando.push('Nome Completo');
+  if (!String(st.cpf || '').replace(/\D/g, '')) faltando.push('CPF do aluno');
+  if (!String(st.identidade || '').trim()) faltando.push('RG do aluno');
+  if (!String(st.data_nascimento || '').trim()) faltando.push('Data de Nascimento');
+  if (!String(st.nucleo || '').trim()) faltando.push('Núcleo');
+  return faltando;
+}
+
 export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
   const { data, error } = await admin
     .from('students')
-    .select('id,nome_completo,cpf,data_nascimento,nome_pai,nome_mae,nucleo,nome_responsavel,cpf_responsavel,assinatura_responsavel,menor_de_idade')
+    .select('id,nome_completo,cpf,identidade,data_nascimento,nome_pai,nome_mae,nucleo,nome_responsavel,cpf_responsavel,assinatura_responsavel,menor_de_idade')
     .eq('id', id)
     .single();
 
@@ -82,6 +94,58 @@ export async function POST(req: NextRequest) {
   }
   if (!assinatura_trajeto || String(assinatura_trajeto).length < 20) {
     return NextResponse.json({ error: 'A assinatura do responsável é obrigatória — desenhe no espaço indicado.' }, { status: 400 });
+  }
+
+  // ── SEGUNDA VALIDAÇÃO NO SERVIDOR: cadastro-base completo antes do termo ──
+  // O botão já bloqueia na interface; aqui o servidor recusa qualquer tentativa
+  // direta com cadastro incompleto (não confia só na tela).
+  const { data: student } = await admin
+    .from('students')
+    .select('id,nome_completo,cpf,identidade,data_nascimento,nucleo,menor_de_idade,assinatura_responsavel')
+    .eq('id', id)
+    .maybeSingle();
+  if (!student) {
+    return NextResponse.json({ error: 'Aluno não encontrado.' }, { status: 404 });
+  }
+
+  // Termo já assinado: nunca gera outro indevidamente — preserva o existente.
+  if (student.assinatura_responsavel === true) {
+    return NextResponse.json({ error: 'O termo deste aluno já está assinado.' }, { status: 409 });
+  }
+
+  // Só faz sentido ter termo quem é (ou virou) menor de idade.
+  const ehMenor = calcularMenoridade(String(student.data_nascimento || ''), student.menor_de_idade as boolean | null);
+  if (!ehMenor) {
+    return NextResponse.json({ error: 'Este aluno é maior de idade e não necessita de termo.' }, { status: 422 });
+  }
+
+  const faltandoBase = cadastroBaseIncompleto(student as Record<string, unknown>);
+  if (faltandoBase.length > 0) {
+    return NextResponse.json({
+      error: `Complete os dados obrigatórios do cadastro antes de preencher o Termo de Responsabilidade: ${faltandoBase.join(', ')}.`,
+      cadastro_incompleto: true,
+      pendencias: faltandoBase,
+    }, { status: 422 });
+  }
+
+  // Pendências residuais (defensivo): documentos presentes mas em formato
+  // inválido (CPF dígito-verificador errado, RG curto) também impedem o termo.
+  const docsBase = {
+    cpf: String(student.cpf || ''),
+    identidade: String(student.identidade || ''),
+    data_nascimento: String(student.data_nascimento || ''),
+    menor_de_idade: true,
+    assinatura_responsavel: false,
+    nome_responsavel: '',
+    cpf_responsavel: '',
+  };
+  const pendFormato = pendenciasAluno(docsBase, true)
+    .filter(p => p.campo === 'cpf' || p.campo === 'identidade');
+  if (pendFormato.length > 0) {
+    return NextResponse.json({
+      error: `Complete os dados obrigatórios do cadastro antes de preencher o Termo de Responsabilidade: ${resumoPendencias(docsBase, true)}.`,
+      cadastro_incompleto: true,
+    }, { status: 422 });
   }
 
   // Formata o CPF no padrão xxx.xxx.xxx-xx para consistência do documento

@@ -76,6 +76,20 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.6.1',
+    data: '2026-10-03',
+    titulo: 'Termo só com cadastro completo e fim das contas duplicadas',
+    descricao: 'O Termo de Responsabilidade agora só pode ser iniciado com o cadastro do aluno completo (com salvamento automático dos dados antes de assinar), e nenhuma conta pode mais ser criada com o nome de outra — inclusive quando o responsável cadastra um dependente.',
+    descricaoAluno: 'O Termo de Responsabilidade agora só abre depois que o cadastro do aluno está completo, salvando automaticamente o que foi digitado antes de assinar. Também não é mais possível criar uma segunda conta com o mesmo nome de um aluno já cadastrado — o sistema orienta a vincular a conta existente. Nomes passam a ser gravados sempre no padrão "Nome Sobrenome", e os que estavam em maiúsculas já foram corrigidos.',
+    itens: [
+      { categoria: 'correcoes', texto: 'O botão do termo não falha mais ao ser tocado antes de terminar o cadastro: enquanto faltar qualquer dado obrigatório (nome, CPF, RG, nascimento ou núcleo), o termo fica indisponível com um aviso dizendo exatamente o que falta e um atalho para Meus Dados.' },
+      { categoria: 'melhorias', texto: 'Ao confirmar o termo, os dados preenchidos em Meus Dados são salvos automaticamente antes da assinatura — o documento sai com as informações atualizadas, sem precisar voltar e salvar à mão.' },
+      { categoria: 'seguranca', texto: 'O servidor também recusa o termo com cadastro incompleto (a validação não depende só do botão), não gera termo repetido para quem já assinou e confirma que o aluno é mesmo menor de idade antes de aceitar a assinatura.' },
+      { categoria: 'seguranca', texto: 'Nenhuma conta nova pode ser criada com o mesmo nome de um cadastro existente — vale para a criação de dependente pelo responsável e para o restante do app. No lugar de duplicar, o sistema orienta usar o código de vínculo da conta que já existe. CPF repetido também é bloqueado na criação de dependente.' },
+      { categoria: 'melhorias', texto: 'Nomes passam a ser gravados sempre no padrão "Nome Sobrenome" — quem digitar em CAIXA ALTA tem o nome corrigido automaticamente ao salvar, em todas as telas.' },
+    ],
+  },
+  {
     versao: '1.6.0',
     data: '2026-10-03',
     titulo: 'Ficha de Uniforme do aluno',

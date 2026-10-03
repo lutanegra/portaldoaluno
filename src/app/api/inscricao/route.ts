@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getTenantId } from '@/lib/tenants';
 import { autoBackupAfterChange } from '@/lib/backupAlunos';
 import { isValidCPF, isValidRG, cpfDigits, idadeEm } from '@/lib/studentCompliance';
+import { capitalizarNome } from '@/lib/nome';
 
 export const dynamic = 'force-dynamic';
 
@@ -140,7 +141,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Verificar nome completo: obrigatório nome + sobrenome
-    const nomeRaw = (payload.nome_completo as string || '').trim();
+    const nomeRaw = capitalizarNome(String(payload.nome_completo as string || '').trim());
+    payload.nome_completo = nomeRaw;
     const nomeParts = nomeRaw.split(/\s+/).filter(Boolean);
     if (nomeParts.length < 2) {
       return NextResponse.json(

@@ -14,6 +14,7 @@ import {
 } from '@/components/icons';
 import { pendenciasAluno, resumoPendencias, isValidCPF, isValidRG, cpfDigits, type StudentDocsLike } from '@/lib/studentCompliance';
 import { idadeEm, menorDeIdade } from '@/lib/idade';
+import { capitalizarNome, chaveDeNome } from '@/lib/nome';
 import AppFooter from '@/components/AppFooter';
 import PerfilGuardiaoCard from '@/components/PerfilGuardiaoCard';
 import NotificationsCenter from '@/components/NotificationsCenter';
@@ -1122,7 +1123,7 @@ export default function AlunoPage() {
                   <div className="pa-field">
                     <label htmlFor="resp-nome">Nome completo *</label>
                     <input id="resp-nome" type="text" value={respForm.nome_completo}
-                      onChange={e => setRespForm(p => ({ ...p, nome_completo: e.target.value }))}
+                      onChange={e => setRespForm(p => ({ ...p, nome_completo: capitalizarNome(e.target.value) }))}
                       placeholder="Ex: Carlos da Silva" required autoFocus />
                   </div>
                   <div className="pa-field">
@@ -1235,7 +1236,7 @@ export default function AlunoPage() {
                   id="reg-nome"
                   type="text"
                   value={registerForm.username}
-                  onChange={e => setRegisterForm(p => ({ ...p, username: e.target.value }))}
+                  onChange={e => setRegisterForm(p => ({ ...p, username: capitalizarNome(e.target.value) }))}
                   placeholder="Ex: João da Silva Santos"
                   required autoFocus
                 />
@@ -3716,30 +3717,74 @@ export default function AlunoPage() {
             if (d.length <= 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
             return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
           };
+
+          // ── GATE: cadastro-base completo antes do termo ────────────────────
+          // O estado real vem do BANCO (student), não só do formulário na tela —
+          // os campos do formulário são computados como pendências visuais para
+          // orientar o que falta preencher em Meus Dados.
+          const docsDoAluno: StudentDocsLike = {
+            cpf: String(student.cpf || ''),
+            identidade: String(student.identidade || ''),
+            data_nascimento: String(student.data_nascimento || ''),
+            menor_de_idade: true,
+            assinatura_responsavel: false,
+            nome_responsavel: '',
+            cpf_responsavel: '',
+          };
+          const faltandoBase = (() => {
+            const out: string[] = [];
+            if (!String(student.nome_completo || '').trim()) out.push('Nome Completo');
+            if (!cpfDigits(docsDoAluno.cpf!) || !isValidCPF(docsDoAluno.cpf!)) out.push('CPF do aluno');
+            if (!docsDoAluno.identidade!.trim() || !isValidRG(docsDoAluno.identidade!)) out.push('RG do aluno');
+            if (!docsDoAluno.data_nascimento!.trim()) out.push('Data de Nascimento');
+            if (!String(student.nucleo || '').trim()) out.push('Núcleo');
+            return out;
+          })();
+          const cadastroBaseOk = faltandoBase.length === 0;
+
+          // Autosave: grava os dados digitados (Meus Dados) antes de iniciar o
+          // termo — reutiliza a mesma chamada do botão salvar. Falha não trava:
+          // o servidor revalida tudo e a mensagem mostra o que está faltando.
+          const salvarDadosAntesDoTermo = async (): Promise<boolean> => {
+            const cpfLimpo = cpfDigits(dadosForm.cpf || '');
+            if (!cpfLimpo || !isValidCPF(cpfLimpo) || !dadosForm.identidade?.trim() || !isValidRG(dadosForm.identidade) || !String(dadosForm.data_nascimento || '').trim()) {
+              return false; // sem o mínimo digitado, deixa o servidor/gate orientar
+            }
+            try {
+              const res = await fetch('/api/aluno/dados', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_id: alvoPerfil, ...dadosForm, data_nascimento: (dadosForm.data_nascimento || '').trim() }),
+              });
+              if (res.ok) {
+                const d = await res.json().catch(() => ({}));
+                if (d.student) setStudent(d.student);
+                return true;
+              }
+              const d = await res.json().catch(() => ({}));
+              if (d?.error) setTermoMsg(d.error);
+              return false;
+            } catch {
+              return false;
+            }
+          };
+
           const handleSaveTermo = async () => {
             if (!termoForm.nome_responsavel.trim()) { setTermoMsg('Preencha o nome do responsável antes de confirmar.'); return; }
             const cpfRespDigits = cpfDigits(termoForm.cpf_responsavel || '');
             if (!cpfRespDigits) { setTermoMsg('O CPF do responsável é obrigatório.'); return; }
             if (!isValidCPF(cpfRespDigits)) { setTermoMsg('CPF do responsável inválido — confira os 11 dígitos.'); return; }
             if (!termoAssinatura) { setTermoMsg('Falta a assinatura do responsável — desenhe no espaço indicado.'); return; }
-            // O termo carrega o núcleo no documento; sem núcleo o salvar falha
-            // mais tarde com erro genérico — avisar aqui, apontando o preenchimento.
-            if (!String(dadosForm.nucleo || '').trim()) {
-              setTermoMsg('Falta preencher o Núcleo do aluno em Meus Dados antes de assinar o termo.');
+            // Garantia dupla do gate: nunca assina com cadastro-base incompleto
+            if (!cadastroBaseOk) {
+              setTermoMsg(`Complete os dados obrigatórios do cadastro antes de preencher o Termo de Responsabilidade: ${faltandoBase.join(', ')}.`);
               return;
             }
             setTermoSaving(true); setTermoMsg('');
             try {
-              const res = await fetch('/api/aluno/dados', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  student_id: alvoPerfil,
-                  nome_responsavel: termoForm.nome_responsavel,
-                  cpf_responsavel: termoForm.cpf_responsavel,
-                }),
-              });
-              if (!res.ok) throw new Error('api');
+              // Autosave: os dados do formulário de Meus Dados são gravados
+              // ANTES do termo — o servidor recebe a linha completa e atual.
+              await salvarDadosAntesDoTermo();
               // Registra assinatura + evidências e marca o termo como assinado
               const resTermo = await fetch(`/api/termo?id=${alvoPerfil}`, {
                 method: 'POST',
@@ -3757,10 +3802,9 @@ export default function AlunoPage() {
               setStudent(prev => prev ? { ...prev, nome_responsavel: termoForm.nome_responsavel, cpf_responsavel: termoForm.cpf_responsavel, assinatura_responsavel: true } : prev);
               setTermoMsg('✓ Termo assinado e salvo com sucesso!');
             } catch (e) {
-              // 'api' = falha no salvamento dos dados; rede cai no TypeError.
+              // 'termo' = resposta sem mensagem; rede cai no TypeError.
               const msg = e instanceof Error ? e.message : '';
-              if (msg && msg !== 'api' && msg !== 'termo') setTermoMsg(msg);
-              else if (!String(dadosForm.nucleo || '').trim()) setTermoMsg('Não foi possível salvar — confira se o Núcleo está preenchido em Meus Dados e tente de novo.');
+              if (msg && msg !== 'termo') setTermoMsg(msg);
               else setTermoMsg('Erro ao salvar. Tente novamente.');
             }
             setTermoSaving(false);
@@ -3835,6 +3879,26 @@ export default function AlunoPage() {
                   </button>
                 )}
               </div>
+
+              {/* Gate: cadastro-base incompleto — termo indisponível com motivo */}
+              {!cadastroBaseOk && !termoSaved && (
+                <div style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.45)', borderRadius: 12, padding: '12px 16px' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#fbbf24', marginBottom: 4 }}>
+                    ⚠ Termo indisponível — complete o cadastro primeiro
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#d4b06a', lineHeight: 1.55 }}>
+                    Complete os dados obrigatórios do cadastro antes de preencher o Termo de Responsabilidade. Faltando: <strong>{faltandoBase.join(', ')}</strong>.
+                    {faltandoBase.some(f => f !== 'Núcleo') ? ' Preencha em Meus Dados e salve.' : ''}
+                    {faltandoBase.includes('Núcleo') ? ' O Núcleo fica no topo de Meus Dados.' : ''}
+                  </div>
+                  {faltandoBase.some(f => f !== 'Núcleo') && (
+                    <button type="button" onClick={() => setActiveTab('dados')} className="press"
+                      style={{ marginTop: 8, background: '#FF9200', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
+                      Ir para Meus Dados →
+                    </button>
+                  )}
+                </div>
+              )}
 
               {termoMsg && (
                 <div style={{ padding: '10px 14px', borderRadius: 10, background: termoMsg.startsWith('✓') ? 'rgba(34,197,94,0.1)' : 'rgba(220,38,38,0.1)', border: `1px solid ${termoMsg.startsWith('✓') ? 'rgba(34,197,94,0.35)' : 'rgba(220,38,38,0.35)'}`, color: termoMsg.startsWith('✓') ? '#86efac' : '#fca5a5', fontSize: '0.83rem', fontWeight: 600 }}>
@@ -3915,10 +3979,16 @@ export default function AlunoPage() {
               </div>
 
               {!termoSaved ? (
-                <button onClick={handleSaveTermo} disabled={termoSaving || !termoForm.nome_responsavel.trim() || !cpfDigits(termoForm.cpf_responsavel || '') || !termoAssinatura}
-                  style={{ background: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') && termoAssinatura ? `linear-gradient(135deg, #dc2626, #b91c1c)` : '#2e2e2e', color: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') && termoAssinatura ? '#fff' : '#9ca3af', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') && termoAssinatura ? 'pointer' : 'not-allowed', boxShadow: termoForm.nome_responsavel.trim() && cpfDigits(termoForm.cpf_responsavel || '') && termoAssinatura ? '0 4px 14px rgba(220,38,38,0.35)' : 'none' }}>
-                  {termoSaving ? 'Salvando...' : 'Confirmar e Assinar Termo'}
-                </button>
+                (() => {
+                  const preenchidoResp = !!termoForm.nome_responsavel.trim() && !!cpfDigits(termoForm.cpf_responsavel || '') && !!termoAssinatura;
+                  const pode = preenchidoResp && cadastroBaseOk;
+                  return (
+                    <button onClick={handleSaveTermo} disabled={termoSaving || !pode}
+                      style={{ background: pode ? `linear-gradient(135deg, #dc2626, #b91c1c)` : '#2e2e2e', color: pode ? '#fff' : '#9ca3af', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: pode ? 'pointer' : 'not-allowed', boxShadow: pode ? '0 4px 14px rgba(220,38,38,0.35)' : 'none' }}>
+                      {termoSaving ? 'Salvando...' : !cadastroBaseOk ? 'Termo bloqueado — complete o cadastro' : 'Confirmar e Assinar Termo'}
+                    </button>
+                  );
+                })()
               ) : (
                 <button onClick={handlePrint}
                   style={{ background: 'linear-gradient(135deg, #1e40af, #1d4ed8)', color: '#fff', border: 'none', borderRadius: 12, padding: '15px', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(30,64,175,0.3)' }}>
