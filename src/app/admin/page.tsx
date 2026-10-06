@@ -310,7 +310,10 @@ const EMPTY_GRAD_FORM = { data_graduacao: '', graduacao_recebida: '', evento: ''
 const GRAD_OPCOES_ADULTO = [
   'Crua','Crua e Amarela','Amarela','Amarela e Laranja','Laranja','Laranja e Azul',
   'Azul','Azul e Verde','Verde','Verde e Roxa','Roxa','Roxa e Marrom',
-  'Marrom','Marrom e Vermelha','Vermelha','Vermelha e Branco','Branco Mor',
+  'Marrom','Marrom e Vermelha',
+  // Estagiários (entre Mestrando e Mestre)
+  'Cinza e Roxa','Cinza e Marrom','Cinza e Vermelha',
+  'Vermelha','Vermelha e Branco','Branco Mor',
 ];
 const GRAD_OPCOES_INFANTIL = [
   'Crua','Crua Ponta Cinza','Crua Ponta Amarela','Crua Ponta Laranja','Crua Ponta Verde','Crua Ponta Azul','Crua Ponta Roxa',
@@ -3059,6 +3062,7 @@ export default function AdminPage() {
                             const isMestre = nivel.startsWith('Mestre');
                             const isProf = nivel.startsWith('Professor');
                             const isMestrando = nivel === 'Mestrando';
+                            const isEstagiario = nivel.startsWith('Estagiário');
                             const isInstrutor = nivel.startsWith('Instrutor');
                             const isMonitor = nivel === 'Monitor';
                             const isGraduado = nivel.startsWith('Aluno Graduado');
@@ -3070,6 +3074,9 @@ export default function AdminPage() {
                             }
                             if (isMestrando || isProf) {
                               return <span style={{ fontSize: '0.65rem', background: 'rgba(139,92,246,0.12)', color: '#7c3aed', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>{nivel}</span>;
+                            }
+                            if (isEstagiario) {
+                              return <span style={{ fontSize: '0.65rem', background: 'rgba(20,184,166,0.12)', color: '#2dd4bf', border: '1px solid rgba(20,184,166,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>{nivel}</span>;
                             }
                             if (isInstrutor) {
                               return <span style={{ fontSize: '0.65rem', background: 'rgba(8,145,178,0.12)', color: '#93c5fd', border: '1px solid rgba(8,145,178,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>{nivel}</span>;

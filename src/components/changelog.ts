@@ -76,6 +76,18 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.6.6',
+    data: '2026-10-06',
+    titulo: 'Novas graduações de Estagiário',
+    descricao: 'A escala adulta ganhou três cordas de Estagiário, posicionadas entre Mestrando e Mestre: Cinza e Roxa (Estagiário para Instrutor), Cinza e Marrom (Estagiário para Professor) e Cinza e Vermelha (Estagiário para Mestrando), com representação de cores própria em todo o sistema.',
+    descricaoAluno: 'A escala de graduações ganhou três novas cordas adultas de Estagiário — Cinza e Roxa, Cinza e Marrom e Cinza e Vermelha —, já disponíveis para seleção e com as cores representadas na carteirinha.',
+    itens: [
+      { categoria: 'novo', texto: 'Novas graduações adultas de Estagiário: Cinza e Roxa (Estagiário para Instrutor), Cinza e Marrom (Estagiário para Professor) e Cinza e Vermelha (Estagiário para Mestrando), posicionadas entre Mestrando e Mestre.', publico: 'todos' },
+      { categoria: 'melhorias', texto: 'As novas cordas têm cores próprias (cinza + cor da função) na barra de graduação do painel, na carteirinha e na verificação de autenticidade.', publico: 'todos' },
+      { categoria: 'interface', texto: 'Selo de posto "Estagiário…" (verde-água) na listagem de alunos do painel para quem ocupa um dos novos níveis.', publico: 'admin' },
+    ],
+  },
+  {
     versao: '1.6.5',
     data: '2026-10-03',
     titulo: 'Gestão completa de responsáveis no painel',
