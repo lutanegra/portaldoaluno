@@ -14,7 +14,7 @@ import {
 } from '@/components/icons';
 import { pendenciasAluno, resumoPendencias, isValidCPF, isValidRG, cpfDigits, type StudentDocsLike } from '@/lib/studentCompliance';
 import { idadeEm, menorDeIdade } from '@/lib/idade';
-import { capitalizarNome, chaveDeNome } from '@/lib/nome';
+import { capitalizarNome, chaveDeNome, entradaNome } from '@/lib/nome';
 import AppFooter from '@/components/AppFooter';
 import PerfilGuardiaoCard from '@/components/PerfilGuardiaoCard';
 import NotificationsCenter from '@/components/NotificationsCenter';
@@ -1123,7 +1123,7 @@ export default function AlunoPage() {
                   <div className="pa-field">
                     <label htmlFor="resp-nome">Nome completo *</label>
                     <input id="resp-nome" type="text" value={respForm.nome_completo}
-                      onChange={e => setRespForm(p => ({ ...p, nome_completo: capitalizarNome(e.target.value) }))}
+                      onChange={e => setRespForm(p => ({ ...p, nome_completo: entradaNome(e.target.value) }))}
                       placeholder="Ex: Carlos da Silva" required autoFocus />
                   </div>
                   <div className="pa-field">
@@ -1236,7 +1236,7 @@ export default function AlunoPage() {
                   id="reg-nome"
                   type="text"
                   value={registerForm.username}
-                  onChange={e => setRegisterForm(p => ({ ...p, username: capitalizarNome(e.target.value) }))}
+                  onChange={e => setRegisterForm(p => ({ ...p, username: entradaNome(e.target.value) }))}
                   placeholder="Ex: João da Silva Santos"
                   required autoFocus
                 />

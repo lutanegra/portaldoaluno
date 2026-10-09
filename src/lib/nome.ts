@@ -17,6 +17,19 @@
 const CONECTIVOS = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
 
 /**
+ * Normaliza o nome ENQUANTO O USUÁRIO DIGITA (onChange): colapsa espaços
+ * duplicados, mas PRESERVA espaço no final — typing "Maria " não pode perder
+ * o espaço antes do sobrenome. NÃO capitaliza (a correção de maiúsculas é
+ * feita pelo capitalizarNome no servidor, ao salvar, sem atrapalhar a digitação).
+ */
+export function entradaNome(input: string): string {
+  const bruto = String(input || '');
+  const fimComEspaco = /\s$/.test(bruto);
+  const limpo = bruto.replace(/\s+/g, ' ');
+  return fimComEspaco ? limpo + ' ' : limpo;
+}
+
+/**
  * Capitaliza um nome no padrão "Nome Sobrenome": cada palavra com inicial
  * maiúscula e restante minúsculo; conectivos em minúscula (a primeira palavra
  * sempre capitalizada). Idempotente — já capitalizado volta igual.

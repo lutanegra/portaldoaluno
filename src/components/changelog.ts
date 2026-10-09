@@ -76,6 +76,17 @@ export const CATEGORIA_META: Record<ChangelogCategoria, { label: string; cor: st
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    versao: '1.6.7',
+    data: '2026-10-09',
+    titulo: 'Digitação de nome corrigida',
+    descricao: 'Os campos de nome completo voltaram a aceitar espaços normalmente durante a digitação — o corretor automático de maiúsculas, que antes rodava a cada tecla e apagava o espaço recém-digitado, agora acontece apenas ao salvar. Todos os cadastros continuam sendo gravados no padrão "Nome Sobrenome".',
+    descricaoAluno: 'Correção importante na criação de conta e nos cadastros: o campo de nome completo não apaga mais o espaço entre as palavras enquanto você digita. Nomes em CAIXA ALTA continuam sendo corrigidos para o padrão "Nome Sobrenome" no salvamento.',
+    itens: [
+      { categoria: 'correcoes', publico: 'todos', texto: 'Dar espaço nos campos de nome voltou a funcionar — na criação de conta, no cadastro de dependente e no cadastro de responsável — sem colar as palavras.' },
+      { categoria: 'melhorias', publico: 'todos', texto: 'A padronização de nomes (CAIXA ALTA → "Nome Sobrenome") agora acontece no salvamento, sem interferir na digitação.' },
+    ],
+  },
+  {
     versao: '1.6.6',
     data: '2026-10-06',
     titulo: 'Novas graduações de Estagiário',
